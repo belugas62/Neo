@@ -1,0 +1,10 @@
+{"data":[{"c_iptv":[
+  {"id":"1","name":"Demo Channel A","parent":"Demo Group","lang":"FR",
+   "logo":"https://example.org/logo_a.png","epgid":"demoA",
+   "link":"https://example.org/stream/a.m3u8"},
+  {"id":"2","title":"Demo Channel B","genre":"News",
+   "logo":"https://example.org/logo_b.png",
+   "link":"https://example.org/stream/b.m3u8"},
+  {"id":"3","name":"Entree sans URL lisible","parent":"Test",
+   "link":"ENCODED_7f3a9b__not_a_url"}
+]}]}

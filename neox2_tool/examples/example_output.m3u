@@ -1,0 +1,5 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="demoA" tvg-name="Demo Channel A" tvg-logo="https://example.org/logo_a.png" group-title="Demo Group",Demo Channel A
+https://example.org/stream/a.m3u8
+#EXTINF:-1 tvg-id="2" tvg-name="Demo Channel B" tvg-logo="https://example.org/logo_b.png" group-title="News",Demo Channel B
+https://example.org/stream/b.m3u8
