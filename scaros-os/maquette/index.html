@@ -91,7 +91,11 @@ button { font: inherit; color: inherit; }
 @keyframes heroIn { from { opacity: 0; transform: translateY(.7rem); } to { opacity: 1; transform: none; } }
 .eyebrow { display: flex; align-items: center; gap: .7rem; margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
 .num { font-variant-numeric: tabular-nums; letter-spacing: .06em; color: var(--text); padding: .1rem .5rem; border: 1px solid var(--line); border-radius: .4rem; }
-.hero-title { margin: .9rem 0 1.1rem; font-family: var(--font-display); font-weight: 500; font-size: 4.6rem; line-height: 1; letter-spacing: -.015em; text-wrap: balance; }
+.hero-head { display: flex; align-items: center; gap: 1.5rem; margin: .9rem 0 1.1rem; }
+.hero-logo { display: grid; place-items: center; }
+.hero-logo .ic { width: 3.6rem; height: 3.6rem; color: var(--text-2); }
+.hero-logo .logo { width: auto; height: 4rem; }
+.hero-title { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 4.6rem; line-height: 1; letter-spacing: -.015em; text-wrap: balance; }
 .hero-desc { margin: 0; max-width: 46rem; font-size: 1.4rem; color: var(--text-2); text-wrap: pretty; }
 .chips { display: flex; flex-wrap: wrap; gap: .7rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
 .chips li { padding: .38rem .9rem; font-size: .95rem; font-weight: 500; border: 1px solid var(--line); border-radius: 99px; background: #ffffff0d; }
@@ -122,11 +126,11 @@ button { font: inherit; color: inherit; }
 .tile.bump { animation: bump .32s ease; }
 @keyframes bump { 40% { transform: scale(1.07) translate(var(--bx, 0), var(--by, 0)); } }
 .glyph, .name, .ch { position: relative; z-index: 2; }
-.tile.app .glyph .ic { width: 2.8rem; height: 2.8rem; }
+.tile.app .glyph .logo { width: auto; height: 2.6rem; filter: drop-shadow(0 .3rem .6rem #0000004d); }
 .name { font-size: 1.35rem; font-weight: 700; letter-spacing: .01em; }
 .ch { position: absolute; top: 1.15rem; right: 1.25rem; font-size: .9rem; font-weight: 600; letter-spacing: .08em; font-variant-numeric: tabular-nums; opacity: .8; }
-.wm { position: absolute; right: -1.8rem; bottom: -2.6rem; z-index: 1; opacity: .14; }
-.wm .ic { width: 10rem; height: 10rem; }
+.wm { position: absolute; right: -2rem; bottom: -2.4rem; z-index: 1; opacity: .13; transform: rotate(-8deg); }
+.wm .logo { width: auto; height: 9rem; }
 .tile.sys { width: 10.6rem; height: 6.2rem; aspect-ratio: auto; padding: 1rem 1.1rem; border-radius: 1rem; background: color-mix(in oklab, var(--c2) 55%, var(--ink-raised)); }
 .tile.sys .glyph .ic { width: 1.9rem; height: 1.9rem; }
 .tile.sys .name { font-size: 1.05rem; font-weight: 600; }
@@ -207,7 +211,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
 }
 .launch.on { clip-path: circle(150vmax at var(--x, 50%) var(--y, 50%)); }
 .launch-inner { display: flex; flex-direction: column; align-items: center; gap: 1rem; max-width: 52rem; padding: 0 max(16px, env(safe-area-inset-right, 0px)); }
-.launch-glyph .ic { width: 6rem; height: 6rem; }
+.launch-glyph .logo { width: auto; height: 6.5rem; filter: drop-shadow(0 .8rem 1.6rem #00000059); }
 .launch .eyebrow { color: #ffffffb0; margin-top: 1rem; }
 .launch-title { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 4rem; line-height: 1.05; }
 .launch-status { margin: 0; font-size: 1.3rem; color: #ffffffd0; }
@@ -335,6 +339,9 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   .home { justify-content: flex-start; gap: 2.2rem; }
   .hero { margin-top: 2.6rem; min-height: 15rem; }
   .hero-title { font-size: 2.6rem; }
+  .hero-head { gap: 1rem; }
+  .hero-logo .logo { height: 2.6rem; }
+  .hero-logo .ic { width: 2.4rem; height: 2.4rem; }
   .hero-desc { font-size: 1.12rem; }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .tile, .tile.sys { width: auto; }
@@ -386,7 +393,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
         <section class="hero" aria-label="Sélection">
           <div class="hero-inner" id="hero">
             <p class="eyebrow" id="h-eyebrow"></p>
-            <h1 class="hero-title" id="h-title"></h1>
+            <div class="hero-head"><span class="hero-logo" id="h-logo"></span><h1 class="hero-title" id="h-title"></h1></div>
             <p class="hero-desc" id="h-desc"></p>
             <ul class="chips" id="h-chips"></ul>
           </div>
@@ -524,6 +531,21 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'
   };
   const icon = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+  // app logos (in the installed version they come from each app's own icon file)
+  let uid = 0;
+  const LOGOS = {
+    youtube: () => '<svg class="ic logo" viewBox="0 0 28 20" style="aspect-ratio:28/20" aria-hidden="true"><rect width="28" height="20" rx="5.6" fill="#ff0033"/><path d="M11.2 5.6v8.8l7.6-4.4z" fill="#fff"/></svg>',
+    jellyfin: () => {
+      const g = 'jf' + (++uid);
+      return `<svg class="ic logo" viewBox="20 18 483 483" style="aspect-ratio:1" aria-hidden="true"><defs><linearGradient id="${g}" x1="110.25" y1="213.3" x2="496.14" y2="436.09" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aa5cc3"/><stop offset="1" stop-color="#00a4dc"/></linearGradient></defs>`
+        + `<path fill="url(#${g})" d="M261.42 201.62c-20.44 0-86.24 119.29-76.2 139.43s142.48 19.92 152.4 0S281.86 201.63 261.42 201.62z"/>`
+        + `<path fill="url(#${g})" d="M261.42 23.3C199.83 23.3 1.57 382.73 31.8 443.43s429.34 60 459.24 0S323 23.3 261.42 23.3zM411.9 390.76c-19.59 39.33-281.08 39.77-300.9 0S221.1 115.48 261.45 115.48 431.49 351.42 411.9 390.76z"/></svg>`;
+    },
+    plex: () => '<svg class="ic logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1f1f1f"/><path d="M6.6 3.8h5.4l6 8.2-6 8.2H6.6l6-8.2z" fill="#ebaf00"/></svg>',
+    spotify: () => '<svg class="ic logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1ed760"/><g fill="none" stroke="#000" stroke-linecap="round"><path d="M5.6 9.2c4-1.3 9.1-1 12.9 1.3" stroke-width="2"/><path d="M6.4 12.7c3.4-1 7.3-.7 10.3 1.1" stroke-width="1.7"/><path d="M7.1 16c2.8-.8 5.7-.6 8 .8" stroke-width="1.45"/></g></svg>'
+  };
+  const logo = id => LOGOS[id] ? LOGOS[id]() : '';
+  const mark = t => t.ch ? logo(t.id) : icon(t.glyph);
   document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon) + el.innerHTML; });
 
   // ---------- content ----------
@@ -560,8 +582,8 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   let lastOut = 'pc';
 
   const tileHTML = t => `<button type="button" class="tile ${t.ch ? 'app' : 'sys'}" id="t-${t.id}" data-id="${t.id}" style="--c1:${t.c1};--c2:${t.c2}" tabindex="-1">`
-    + (t.ch ? `<span class="ch">${pad2(t.ch)}</span><span class="wm">${icon(t.glyph)}</span>` : '')
-    + `<span class="glyph">${icon(t.glyph)}</span><span class="name">${t.name}</span></button>`;
+    + (t.ch ? `<span class="ch">${pad2(t.ch)}</span><span class="wm">${logo(t.id)}</span>` : '')
+    + `<span class="glyph">${mark(t)}</span><span class="name">${t.name}</span></button>`;
   $('#apps').innerHTML = APPS.map(tileHTML).join('');
   $('#sys').innerHTML = SYS.map(tileHTML).join('');
   $('#amb').innerHTML = ALL.map(t => `<div class="amb" data-id="${t.id}" style="--c1:${t.c1};--c2:${t.c2}"></div>`).join('');
@@ -583,6 +605,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   function renderHero() {
     const t = heroData(byId[state.focus]);
     $('#h-eyebrow').innerHTML = t.ch ? `Chaîne <span class="num">${pad2(t.ch)}</span>` : 'Système';
+    $('#h-logo').innerHTML = mark(t);
     $('#h-title').textContent = t.name;
     $('#h-desc').textContent = t.desc;
     $('#h-chips').innerHTML = (t.chips || []).map(c => `<li>${c}</li>`).join('');
@@ -778,7 +801,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     L.style.setProperty('--x', `${r.left + r.width / 2}px`);
     L.style.setProperty('--y', `${r.top + r.height / 2}px`);
     L.style.setProperty('--c1', t.c1); L.style.setProperty('--c2', t.c2);
-    $('#l-glyph').innerHTML = icon(t.glyph);
+    $('#l-glyph').innerHTML = logo(t.id);
     $('#l-eyebrow').innerHTML = `Chaîne <span class="num">${pad2(t.ch)}</span>`;
     $('#l-title').textContent = t.name;
     $('#l-status').textContent = `Ouverture de ${t.name}…`;
