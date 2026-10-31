@@ -1,0 +1,1651 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rated Chats</title>
+<style>
+:root{
+  --bg:#0c0d10; --panel:#14161b; --panel2:#1b1e25; --panel3:#232731; --line:#2a2e38;
+  --text:#e9ebf1; --muted:#8a90a0; --green:#81b64c; --green2:#6fa13c; --blue:#2aabff; --red:#ff4b3a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{display:grid;grid-template-columns:minmax(400px,520px) 1fr;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--blue)}
+
+/* ---------- Panneau de gauche ---------- */
+#side{height:100vh;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line)}
+#side header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
+#side header img{width:30px;height:30px}
+#side header h1{font-size:18px;margin:0;flex:1;letter-spacing:.2px}
+#side header h1 small{color:var(--muted);font-weight:500;font-size:12px;margin-left:6px}
+.card{margin:14px 14px 0;padding:14px;background:var(--panel2);border:1px solid var(--line);border-radius:14px}
+.card:last-child{margin-bottom:24px}
+.card h2{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:15px}
+.card h2 .num{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--green);color:#10140c;font-size:13px;font-weight:800}
+.card h2 .grow{flex:1}
+.hint{color:var(--muted);font-size:12.5px;margin:6px 0 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.end{justify-content:flex-end}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+label.f input,label.f select,.inp{background:var(--panel3);border:1px solid var(--line);border-radius:8px;padding:8px 10px;outline:none;color:var(--text);min-width:0}
+label.f input:focus,.inp:focus,textarea:focus{border-color:#4a5263}
+label.chk{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;user-select:none}
+label.chk input{accent-color:var(--green);width:16px;height:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel3);cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap}
+.btn:hover{background:#2b303b}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--green);border-color:var(--green);color:#11160c}
+.btn.primary:hover{background:#8fc657}
+.btn.blue{background:var(--blue);border-color:var(--blue);color:#04121d}
+.btn.wide{width:100%;padding:11px 12px;font-size:14px}
+.btn.icon{padding:6px 8px;min-width:32px}
+.btn.ghost{background:transparent}
+.banner{margin:14px 14px 0;padding:12px 14px;border-radius:12px;background:#2a2312;border:1px solid #5a4a1c;color:#ffd98a;font-size:13px;display:flex;gap:10px;align-items:center}
+.banner .btn{margin-left:auto}
+
+/* Dépôt de captures */
+#drop{border:2px dashed #3a404d;border-radius:12px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s}
+#drop.over,#drop:hover{border-color:var(--green);color:var(--text);background:#1e2419}
+#drop b{color:var(--text)}
+#thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+#thumbs:empty{display:none}
+.thumb{position:relative;width:74px;height:130px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#000}
+.thumb img{width:100%;height:100%;object-fit:cover;object-position:top}
+.thumb .n{position:absolute;left:4px;top:4px;background:#000c;border-radius:6px;padding:0 6px;font-size:11px;font-weight:700}
+.thumb .tools{position:absolute;inset:auto 0 0 0;display:flex;justify-content:space-between;background:#000b}
+.thumb .tools button{border:0;background:none;cursor:pointer;padding:3px 6px;font-size:12px}
+.thumb .tools button:hover{color:var(--green)}
+
+/* Liste des messages */
+#msgs{display:flex;flex-direction:column;gap:6px;margin:12px 0 10px}
+.msg{display:grid;grid-template-columns:34px 1fr 40px auto;gap:6px;align-items:start;padding:6px;border-radius:10px;background:var(--panel3);border:1px solid transparent}
+.msg.R{background:#16283a}
+.msg .side{height:34px;border-radius:8px;border:0;cursor:pointer;font-weight:800;font-size:12px}
+.msg.L .side{background:#3a383d;color:#ddd}
+.msg.R .side{background:var(--blue);color:#032036}
+.msg textarea{resize:none;overflow:hidden;min-height:34px;border-radius:8px;border:1px solid var(--line);background:#0f1115;padding:7px 9px;outline:none;line-height:1.35}
+.msg .cat{width:40px;height:34px;border-radius:8px;border:1px dashed #444b59;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0}
+.msg .cat img{width:28px;height:28px}
+.msg .acts{display:flex;gap:2px}
+.msg .acts button{border:0;background:none;cursor:pointer;color:var(--muted);padding:6px 4px;font-size:13px;line-height:1}
+.msg .acts button:hover{color:var(--text)}
+.msg .comment{grid-column:2 / 5;font-size:12.5px;padding:5px 8px;border-radius:7px;border:1px solid transparent;background:transparent;color:#c9cdd6;outline:none}
+.msg .comment:hover,.msg .comment:focus{border-color:var(--line);background:#0f1115}
+.msg .comment::placeholder{color:#5c6271}
+#empty{color:var(--muted);text-align:center;padding:14px;border:1px dashed var(--line);border-radius:10px}
+
+/* Choix de l'icône */
+#catpop{position:fixed;z-index:50;display:none;grid-template-columns:repeat(2,1fr);gap:4px;padding:8px;background:#1d2028;border:1px solid #394050;border-radius:12px;box-shadow:0 12px 40px #000a;width:300px}
+#catpop.on{display:grid}
+#catpop button{display:flex;align-items:center;gap:8px;padding:6px 8px;border:0;background:transparent;border-radius:8px;cursor:pointer;text-align:left;font-size:13px}
+#catpop button:hover{background:#2a2f3b}
+#catpop img{width:26px;height:26px}
+#catpop .none{grid-column:1 / 3;justify-content:center;color:var(--muted)}
+
+/* Résultat analyse */
+#result{display:none;margin-top:12px;padding:10px 12px;border-radius:10px;background:#11151b;border:1px solid var(--line)}
+#result.on{display:block}
+#result .verdict{font-style:italic;margin-bottom:8px}
+#result .cap{white-space:pre-wrap;background:#0b0d11;border-radius:8px;padding:8px 10px;font-size:13px}
+.range{display:flex;align-items:center;gap:10px;font-size:13px}
+.range input{flex:1;accent-color:var(--green)}
+.range output{width:44px;text-align:right;color:var(--muted)}
+
+/* ---------- Aperçu ---------- */
+#main{height:100vh;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}
+#stage{position:relative;height:calc(100vh - 96px);aspect-ratio:9/16;max-width:100%;border-radius:22px;overflow:hidden;box-shadow:0 0 0 1px #262a33,0 30px 80px #000c;background:#000}
+#cv{width:100%;height:100%;display:block}
+#controls{display:flex;align-items:center;gap:10px;width:min(100%,640px)}
+#scrub{flex:1;accent-color:var(--green)}
+#tlabel{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px;width:96px;text-align:right}
+#play{width:42px;height:42px;border-radius:50%;font-size:16px}
+
+/* Fenêtres */
+.modal{position:fixed;inset:0;z-index:100;background:#000a;display:none;align-items:center;justify-content:center;padding:16px}
+.modal.on{display:flex}
+.modal .box{width:min(560px,100%);max-height:90vh;overflow:auto;background:var(--panel2);border:1px solid #363b47;border-radius:16px;padding:18px}
+.modal h3{margin:0 0 12px;font-size:17px}
+.modal .stack{display:flex;flex-direction:column;gap:12px}
+.modal textarea.big{width:100%;min-height:220px;background:#0f1115;border:1px solid var(--line);border-radius:10px;padding:10px;outline:none;font-family:ui-monospace,Consolas,monospace;font-size:13px}
+.steps{margin:0;padding-left:20px;color:#cdd1da;font-size:13px}
+.steps li{margin:3px 0}
+#keystate{font-size:12.5px}
+.ok{color:#8fd16a}.err{color:#ff8a7a}
+.bar{height:10px;border-radius:6px;background:#0e1014;overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;width:0;background:var(--green);transition:width .1s}
+
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;z-index:200;background:#232731;border:1px solid #3a404d;padding:10px 16px;border-radius:12px;box-shadow:0 10px 30px #0009;transition:.2s;max-width:min(680px,90vw);font-size:13.5px}
+#toast.on{opacity:1;transform:translateX(-50%)}
+#toast.err{border-color:#7a2a22;background:#2a1513}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #fff3;border-top-color:#fff;border-radius:50%;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+@media (max-width:900px){
+  body{grid-template-columns:1fr;overflow:auto}
+  #side,#main{height:auto}
+  #stage{height:auto;width:100%}
+}
+</style>
+</head>
+<body>
+
+<aside id="side">
+  <header>
+    <img id="logo" alt="">
+    <h1>Rated Chats <small>analyse de conversations</small></h1>
+    <button class="btn icon" id="btnSettings" title="Réglages (clé Groq)">⚙️</button>
+  </header>
+
+  <div class="banner" id="keyBanner" hidden>
+    <span>🔑 Ajoute ta clé Groq gratuite pour activer l'IA.</span>
+    <button class="btn" data-open="settings">Ajouter</button>
+  </div>
+
+  <section class="card">
+    <h2><span class="num">1</span> Captures d'écran</h2>
+    <div id="drop">
+      <b>Glisse tes captures ici</b><br>ou clique pour choisir · ou <b>Ctrl+V</b> pour coller
+      <input type="file" id="file" accept="image/*" multiple hidden>
+    </div>
+    <div id="thumbs"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary wide" id="btnRead" disabled>🔍 Lire les captures avec l'IA</button>
+    </div>
+    <p class="hint">L'IA lit les bulles (gauche = l'autre personne, droite = toi). Tu pourras tout corriger juste en dessous. Sans capture, tu peux aussi <a href="#" data-open="import">coller le texte</a>.</p>
+  </section>
+
+  <section class="card">
+    <h2><span class="num">2</span> <span class="grow">Conversation</span>
+      <button class="btn icon ghost" id="btnNew" title="Vider la conversation">🗑️</button>
+    </h2>
+    <div class="grid2">
+      <label class="f">Nom du contact (en haut)<input id="contactName" placeholder="Vanessa (Ex)"></label>
+      <label class="f">Ton nom (pour le bilan)<input id="meName" placeholder="Moi"></label>
+      <label class="f">Ligne d'horodatage<input id="headerLine" placeholder="Today 2:14 AM"></label>
+      <label class="f">Accusé de lecture<input id="receipt" placeholder="Read 2:14 AM"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="btnAvatar">🖼️ Photo du contact</button>
+      <button class="btn ghost" id="btnAvatarDel" hidden>Retirer la photo</button>
+      <input type="file" id="avatarFile" accept="image/*" hidden>
+    </div>
+    <div id="msgs"></div>
+    <div class="row">
+      <button class="btn" id="addL">+ Message gauche</button>
+      <button class="btn" id="addR">+ Message droite</button>
+      <button class="btn ghost" data-open="import">Coller du texte</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="num">3</span> Analyse IA</h2>
+    <div class="grid2">
+      <label class="f">Ton des commentaires
+        <select id="tone">
+          <option value="drole">Drôle / TikTok 😂</option>
+          <option value="roast">Sans pitié 💀</option>
+          <option value="serieux">Sérieux (coach)</option>
+        </select>
+      </label>
+      <label class="f">Langue (commentaires + bilan)
+        <select id="lang">
+          <option value="fr">Français</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary wide" id="btnAnalyze">♟️ Analyser la conversation</button>
+    </div>
+    <p class="hint">Clique sur une icône à côté d'un message pour la changer à la main.</p>
+    <div id="result">
+      <div class="verdict" id="verdict"></div>
+      <div class="row" style="justify-content:space-between;margin-bottom:6px"><b style="font-size:13px">Légende TikTok</b><button class="btn icon" id="btnCopy">📋 Copier</button></div>
+      <div class="cap" id="caption"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="num">4</span> Vidéo</h2>
+    <div class="stack" style="display:flex;flex-direction:column;gap:10px">
+      <div class="range">Vitesse <input type="range" id="speed" min="0.5" max="2" step="0.1" value="1"><output id="speedOut">1.0×</output></div>
+      <div class="range">Taille du texte <input type="range" id="textScale" min="0.7" max="1.2" step="0.05" value="1"><output id="textScaleOut">100%</output></div>
+      <div class="grid2">
+        <label class="chk"><input type="checkbox" id="optTyping" checked> Bulle « en train d'écrire »</label>
+        <label class="chk"><input type="checkbox" id="optBar" checked> Barre d'évaluation</label>
+        <label class="chk"><input type="checkbox" id="optEnd" checked> Écran de bilan à la fin</label>
+        <label class="chk"><input type="checkbox" id="optComments"> Commentaires dans la vidéo</label>
+      </div>
+      <div class="grid2">
+        <button class="btn blue wide" id="btnVideo">🎬 Exporter la vidéo</button>
+        <button class="btn wide" id="btnPng">🖼️ Exporter l'image</button>
+      </div>
+      <p class="hint" style="margin:0">Vidéo 1080×1920 (9:16) en MP4. L'image exporte ce que montre l'aperçu à l'instant choisi.</p>
+    </div>
+  </section>
+</aside>
+
+<main id="main">
+  <div id="stage"><canvas id="cv" width="1080" height="1920"></canvas></div>
+  <div id="controls">
+    <button class="btn" id="play" title="Lecture / pause (Espace)">▶</button>
+    <button class="btn icon" id="restart" title="Revenir au début">⏮</button>
+    <input type="range" id="scrub" min="0" max="10" step="0.01" value="0">
+    <span id="tlabel">0:00 / 0:00</span>
+    <button class="btn" id="btnFinal" title="Afficher la conversation complète">Vue finale</button>
+  </div>
+</main>
+
+<div id="catpop"></div>
+
+<!-- Réglages -->
+<div class="modal" id="settings">
+  <div class="box">
+    <h3>⚙️ Réglages de l'IA (Groq, gratuit)</h3>
+    <div class="stack">
+      <ol class="steps">
+        <li>Va sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> et connecte-toi (Google ou e-mail, pas de carte bancaire).</li>
+        <li>Clique sur <b>Create API Key</b>, copie la clé (elle commence par <code>gsk_</code>).</li>
+        <li>Colle-la ci-dessous. Elle reste enregistrée uniquement sur ce PC.</li>
+      </ol>
+      <label class="f">Clé API Groq
+        <div class="row" style="flex-wrap:nowrap"><input id="apiKey" class="inp" type="password" placeholder="gsk_..." style="flex:1" autocomplete="off"><button class="btn icon" id="toggleKey" title="Afficher">👁️</button></div>
+      </label>
+      <div class="grid2">
+        <label class="f">Modèle qui lit les captures (vision)<input id="visionModel" list="modelList"></label>
+        <label class="f">Modèle qui analyse<input id="textModel" list="modelList"></label>
+      </div>
+      <datalist id="modelList"></datalist>
+      <div class="row"><button class="btn" id="btnTestKey">Tester la clé</button><span id="keystate"></span></div>
+      <p class="hint" style="margin:0">Si un modèle disparaît chez Groq, clique sur « Tester la clé » : la liste des modèles disponibles s'affiche dans les champs ci-dessus.</p>
+      <div class="row end"><button class="btn primary" data-close>Fermer</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Import texte -->
+<div class="modal" id="import">
+  <div class="box">
+    <h3>📋 Coller une conversation en texte</h3>
+    <div class="stack">
+      <p class="hint" style="margin:0">Une ligne par message. Commence par <b>G:</b> pour l'autre personne (bulle grise à gauche) et <b>D:</b> pour toi (bulle bleue à droite). Une ligne sans préfixe garde le côté de la ligne précédente.</p>
+      <textarea class="big" id="importText" placeholder="G: i miss you&#10;D: it's 2am bro&#10;G: omg wrong chat&#10;G: that was for my new boyfriend lol"></textarea>
+      <label class="chk"><input type="checkbox" id="importReplace" checked> Remplacer la conversation actuelle</label>
+      <div class="row end"><button class="btn ghost" data-close>Annuler</button><button class="btn primary" id="btnImport">Importer</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Export -->
+<div class="modal" id="exporting">
+  <div class="box">
+    <h3 id="expTitle">🎬 Export de la vidéo…</h3>
+    <div class="stack">
+      <div class="bar"><i id="expBar"></i></div>
+      <div class="hint" id="expInfo" style="margin:0">Préparation…</div>
+      <div class="row end"><button class="btn" id="btnCancelExp">Annuler</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   Rated Chats : captures de conversation -> vidéo TikTok façon "Game Review"
+   ===================================================================== */
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+const GROQ_URL = 'https://api.groq.com/openai/v1';
+const MEDIABUNNY_URL = 'https://cdn.jsdelivr.net/npm/mediabunny@1.61.3/dist/bundles/mediabunny.min.mjs';
+const DEFAULT_VISION_MODEL = 'qwen/qwen3.8-27b';
+const DEFAULT_TEXT_MODEL = 'openai/gpt-oss-120b';
+
+/* ---------- Catégories (icônes façon échecs) ---------- */
+const CATS = {
+  brilliant:  { color: '#1fc7a8', glyph: '!!',    fr: 'Brillant',      en: 'Brilliant',  score: 100, ev:  2.4 },
+  great:      { color: '#6f9fd0', glyph: '!',     fr: 'Très bon coup', en: 'Great',      score: 100, ev:  1.6 },
+  best:       { color: '#94d156', glyph: 'star',  fr: 'Meilleur coup', en: 'Best',       score: 100, ev:  1.0 },
+  excellent:  { color: '#93cf56', glyph: 'thumb', fr: 'Excellent',     en: 'Excellent',  score: 95,  ev:  0.7 },
+  good:       { color: '#9dbb84', glyph: 'check', fr: 'Bon',           en: 'Good',       score: 85,  ev:  0.35 },
+  book:       { color: '#f2b487', glyph: 'book',  fr: 'Théorie',       en: 'Book',       score: 90,  ev:  0.05 },
+  inaccuracy: { color: '#ffe237', glyph: '?!',    fr: 'Imprécision',   en: 'Inaccuracy', score: 62,  ev: -0.6 },
+  mistake:    { color: '#ffbb6b', glyph: '?',     fr: 'Erreur',        en: 'Mistake',    score: 40,  ev: -1.2 },
+  miss:       { color: '#ff7a6b', glyph: 'x',     fr: 'Raté',          en: 'Miss',       score: 30,  ev: -1.4 },
+  blunder:    { color: '#ff4b3a', glyph: '??',    fr: 'Gaffe',         en: 'Blunder',    score: 8,   ev: -2.6 },
+};
+const CAT_KEYS = Object.keys(CATS);
+
+/* ---------- Mise en page de la vidéo (1080×1920) ---------- */
+const W = 1080, H = 1920;
+const FF = '"Helvetica Neue", Helvetica, Arial, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+const LY = {
+  avatarCY: 190, avatarR: 85,
+  pillCY: 323, pillH: 96, pillFont: 47,
+  clipTop: 400, fadeH: 70,
+  contentTop: 462, contentBottom: 1585,
+  leftX: 32, rightX: 924, maxW: 820,
+  font: 50, lineH: 61, padX: 42, padY: 28, radius: 58,
+  gapSame: 18, gapDiff: 50,
+  iconD: 74,
+  headerFont: 31, receiptFont: 29,
+  barW: 11, barTop: 420, barBottom: 1585,
+  commentTop: 1612,
+};
+const COL = {
+  bg: '#000', left: '#2e2b30', right: '#2aabff', text: '#fff', meta: '#a3a2a7',
+  pillBg: '#1e1d1e', pillBorder: '#4b494d', typingDot: '#8e8d93',
+};
+
+/* =====================================================================
+   État
+   ===================================================================== */
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem('ratedchats.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('ratedchats.' + k, JSON.stringify(v)); } catch { /* stockage indisponible */ } },
+};
+
+const settings = Object.assign({
+  apiKey: '', visionModel: DEFAULT_VISION_MODEL, textModel: DEFAULT_TEXT_MODEL,
+  tone: 'drole', lang: 'fr', speed: 1, textScale: 1,
+  typing: true, bar: true, endScreen: true, comments: false,
+}, LS.get('settings', {}));
+
+const DEMO = {
+  contactName: 'Vanessa (Ex)', meName: 'Moi', headerLine: 'Today 2:14 AM', receipt: 'Read 2:14 AM', avatar: null,
+  messages: [
+    { side: 'L', text: 'i miss you', cat: 'book', comment: "L'ouverture classique de 2h du mat" },
+    { side: 'R', text: "it's 2am bro", cat: 'excellent', comment: 'Calme, froid, efficace' },
+    { side: 'L', text: 'omg wrong chat', cat: 'blunder', comment: 'Personne ne croit à cette excuse 💀' },
+    { side: 'L', text: 'that was for my new boyfriend lol', cat: 'inaccuracy', comment: 'Elle creuse encore' },
+    { side: 'R', text: 'sure it was', cat: 'best', comment: 'Trois mots, partie terminée' },
+    { side: 'L', text: "he's 6'4 and drives a porsche", cat: 'mistake', comment: 'Le copain imaginaire a une Porsche 😭' },
+  ],
+  verdict: "Elle a tenté le coup du « mauvais chat », il a joué la défense parfaite.",
+  caption: "Elle a écrit à son ex à 2h du mat et a essayé de mentir 💀\n#ratedchats #chess #ex #texting",
+};
+
+let conv = LS.get('conv', null) || structuredClone(DEMO);
+conv.messages.forEach(m => { m.id = m.id || uid(); });
+let shots = [];        // captures chargées : {id, name, url, img}
+let avatarImg = null;  // HTMLImageElement de la photo du contact
+
+function saveConv() {
+  const { messages, ...rest } = conv;
+  LS.set('conv', { ...rest, messages: messages.map(({ id, ...m }) => m) });
+}
+function saveSettings() { LS.set('settings', settings); }
+
+/* =====================================================================
+   Dessin des icônes
+   ===================================================================== */
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = c => clamp(Math.round(c + (amt > 0 ? (255 - c) * amt : c * amt)), 0, 255);
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+}
+
+// Le pictogramme est dessiné dans une boîte 100×100 centrée sur l'icône.
+function drawGlyph(ctx, glyph) {
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#fff';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = 'rgba(0,0,0,0.28)';
+  ctx.shadowBlur = 3;
+  ctx.shadowOffsetY = 3;
+  if (glyph === 'star') {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 ? 13 : 30, a = -Math.PI / 2 + i * Math.PI / 5;
+      ctx.lineTo(50 + r * Math.cos(a), 52 + r * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.lineWidth = 4;
+    ctx.fill(); ctx.stroke();
+  } else if (glyph === 'thumb') {
+    ctx.beginPath();
+    ctx.roundRect(25, 47, 12, 29, 3);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(41, 48);
+    ctx.lineTo(51, 31);
+    ctx.quadraticCurveTo(53, 23, 58, 24);
+    ctx.quadraticCurveTo(64, 26, 62, 35);
+    ctx.lineTo(59, 44);
+    ctx.lineTo(71, 44);
+    ctx.quadraticCurveTo(78, 45, 76, 52);
+    ctx.lineTo(72, 70);
+    ctx.quadraticCurveTo(70, 76, 64, 76);
+    ctx.lineTo(41, 76);
+    ctx.closePath();
+    ctx.fill();
+  } else if (glyph === 'check') {
+    ctx.beginPath();
+    ctx.moveTo(30, 52); ctx.lineTo(44, 66); ctx.lineTo(71, 37);
+    ctx.lineWidth = 11;
+    ctx.stroke();
+  } else if (glyph === 'x') {
+    ctx.beginPath();
+    ctx.moveTo(35, 35); ctx.lineTo(65, 65); ctx.moveTo(65, 35); ctx.lineTo(35, 65);
+    ctx.lineWidth = 11;
+    ctx.stroke();
+  } else if (glyph === 'book') {
+    ctx.beginPath();
+    ctx.moveTo(48, 33); ctx.quadraticCurveTo(38, 27, 24, 29); ctx.lineTo(24, 70);
+    ctx.quadraticCurveTo(38, 68, 48, 74); ctx.closePath();
+    ctx.moveTo(52, 33); ctx.quadraticCurveTo(62, 27, 76, 29); ctx.lineTo(76, 70);
+    ctx.quadraticCurveTo(62, 68, 52, 74); ctx.closePath();
+    ctx.fill();
+  } else {
+    ctx.font = `900 ${glyph.length > 1 ? 56 : 62}px Arial, Helvetica, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = glyph.length > 1 ? '-3px' : '0px';
+    const m = ctx.measureText(glyph);
+    const asc = m.actualBoundingBoxAscent, desc = m.actualBoundingBoxDescent;
+    ctx.fillText(glyph, 50, 50 + (asc - desc) / 2);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  }
+}
+
+function drawIcon(ctx, cat, cx, cy, d) {
+  const C = CATS[cat];
+  if (!C) return;
+  const r = d / 2;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = d * 0.1;
+  ctx.shadowOffsetY = d * 0.03;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = shade(C.color, -0.18);
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  const g = ctx.createLinearGradient(0, cy - r, 0, cy + r);
+  g.addColorStop(0, shade(C.color, 0.08));
+  g.addColorStop(1, C.color);
+  ctx.beginPath(); ctx.arc(cx, cy - d * 0.025, r * 0.94, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.translate(cx - r, cy - r);
+  ctx.scale(d / 100, d / 100);
+  drawGlyph(ctx, C.glyph);
+  ctx.restore();
+}
+
+const iconURLs = {};
+function buildIconURLs() {
+  for (const k of CAT_KEYS) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    drawIcon(c.getContext('2d'), k, 32, 31, 56);
+    iconURLs[k] = c.toDataURL();
+  }
+}
+
+/* =====================================================================
+   Mise en page des bulles
+   ===================================================================== */
+function wrapText(ctx, text, maxW) {
+  const out = [];
+  for (const para of String(text).split('\n')) {
+    const words = para.split(/(\s+)/).filter(w => w.length);
+    let line = '';
+    for (const w of words) {
+      const test = line + w;
+      if (ctx.measureText(test).width <= maxW || !line.trim()) {
+        if (ctx.measureText(test).width > maxW && !line.trim()) {
+          // mot plus long que la bulle : on le coupe
+          let part = '';
+          for (const ch of [...w]) {
+            if (ctx.measureText(line + part + ch).width > maxW && (line + part)) { out.push((line + part).trimEnd()); line = ''; part = ch; }
+            else part += ch;
+          }
+          line += part;
+        } else line = test;
+      } else {
+        out.push(line.trimEnd());
+        line = /^\s+$/.test(w) ? '' : w;
+      }
+    }
+    out.push(line.trimEnd());
+  }
+  return out.length ? out : [''];
+}
+
+function computeLayout(ctx) {
+  const s = settings.textScale;
+  const font = LY.font * s, lineH = LY.lineH * s, padX = LY.padX * s, padY = LY.padY * s;
+  const msgs = conv.messages;
+  const items = [];
+  let y = LY.contentTop;
+  let headerY = null;
+  if (conv.headerLine) { headerY = y + 18; y += 63; }
+  let lastR = -1;
+  msgs.forEach((m, i) => { if (m.side === 'R') lastR = i; });
+  ctx.font = `400 ${font}px ${FF}`;
+  msgs.forEach((m, i) => {
+    if (i > 0) y += (msgs[i - 1].side === m.side ? LY.gapSame : LY.gapDiff) * s;
+    const lines = wrapText(ctx, m.text || ' ', LY.maxW - 2 * padX);
+    const tw = Math.max(...lines.map(l => ctx.measureText(l).width));
+    const h = lines.length * lineH + 2 * padY;
+    const w = Math.max(tw + 2 * padX, h);
+    const x = m.side === 'L' ? LY.leftX : LY.rightX - w;
+    const it = { idx: i, m, x, y, w, h, lines, receiptY: null };
+    y += h;
+    if (i === lastR && conv.receipt) { it.receiptY = y + 10 * s; y += 44 * s; }
+    it.bottom = y;
+    items.push(it);
+  });
+  return { items, headerY, s, font, lineH, padX, padY };
+}
+
+/* =====================================================================
+   Bilan : précision, Elo, évaluation
+   ===================================================================== */
+function computeStats() {
+  const res = {};
+  for (const side of ['L', 'R']) {
+    const ms = conv.messages.filter(m => m.side === side && CATS[m.cat]);
+    const counts = Object.fromEntries(CAT_KEYS.map(k => [k, 0]));
+    ms.forEach(m => counts[m.cat]++);
+    const acc = ms.length ? ms.reduce((a, m) => a + CATS[m.cat].score, 0) / ms.length : null;
+    let elo = null;
+    if (acc != null) {
+      elo = 100 + 2700 * Math.pow(acc / 100, 2.2) + 150 * counts.brilliant;
+      elo = Math.round(clamp(elo, 100, 3200) / 10) * 10;
+    }
+    res[side] = { counts, acc, elo };
+  }
+  return res;
+}
+
+// Part de la barre occupée par la personne de droite (bleu) après chaque message.
+function evalFractions() {
+  let ev = 0;
+  return conv.messages.map(m => {
+    const C = CATS[m.cat];
+    if (C) ev += (m.side === 'R' ? 1 : -1) * C.ev;
+    return clamp(1 / (1 + Math.exp(-ev / 2.2)), 0.04, 0.96);
+  });
+}
+
+/* =====================================================================
+   Chronologie de l'animation
+   ===================================================================== */
+function buildTimeline(layout) {
+  const sp = settings.speed;
+  const items = layout.items;
+  const typingH = layout.lineH + 2 * layout.padY;
+  let t = 0.7 / sp;
+  const ev = [];
+  const scrollKeys = [{ t: 0, v: 0 }];
+  const need = bottom => Math.max(0, bottom - LY.contentBottom);
+  items.forEach((it, i) => {
+    const m = it.m;
+    let typingStart = null;
+    if (m.side === 'L' && settings.typing) {
+      typingStart = t;
+      scrollKeys.push({ t, v: need(it.y + typingH) });
+      t += (i > 0 && items[i - 1].m.side === 'L' ? 0.6 : 1.0) / sp;
+    }
+    const appear = t;
+    scrollKeys.push({ t: appear, v: need(it.bottom) });
+    const iconAt = appear + 0.5 / sp;
+    const read = clamp(0.95 + 0.035 * (m.text || '').length, 1.15, 3.2) / sp;
+    t = appear + read;
+    ev.push({ typingStart, appear, iconAt });
+  });
+  // les clés de défilement ne reculent jamais
+  for (let i = 1; i < scrollKeys.length; i++) scrollKeys[i].v = Math.max(scrollKeys[i].v, scrollKeys[i - 1].v);
+  const chatEnd = t + 0.6 / sp;
+  const summaryStart = settings.endScreen ? chatEnd : null;
+  const total = settings.endScreen ? chatEnd + 5.5 : chatEnd + 0.6;
+  return { ev, scrollKeys, chatEnd, summaryStart, total, fracs: evalFractions() };
+}
+
+const easeOut = p => 1 - Math.pow(1 - p, 3);
+const easeInOut = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const easeOutBack = p => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); };
+
+function scrollAt(tl, t) {
+  let prev = 0, cur = tl.scrollKeys[0];
+  for (const k of tl.scrollKeys) { if (k.t <= t) { prev = cur.v; cur = k; } else break; }
+  const p = clamp((t - cur.t) / 0.4, 0, 1);
+  return prev + (cur.v - prev) * easeInOut(p);
+}
+
+/* =====================================================================
+   Rendu d'une image de la vidéo
+   ===================================================================== */
+function bubblePath(ctx, x, y, w, h, r, side, k) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, Math.min(r, h / 2));
+  // Queue de bulle façon iMessage. Les deux côtés sont tracés dans le sens horaire,
+  // comme roundRect, pour que le remplissage fasse bien l'union des formes.
+  const yb = y + h, hook = Math.acos(0.3);
+  if (side === 'L') {
+    ctx.moveTo(x + 13 * k, yb - 20 * k);
+    ctx.lineTo(x + 13 * k, yb - 15 * k);
+    ctx.arc(x - 2 * k, yb - 15 * k, 15 * k, 0, Math.PI / 2);
+    ctx.lineTo(x - 7 * k, yb);
+    ctx.arc(x - 10 * k, yb - 10 * k, 10 * k, hook, 0, true);
+    ctx.lineTo(x, yb - 20 * k);
+  } else {
+    const xr = x + w;
+    ctx.moveTo(xr, yb - 20 * k);
+    ctx.arc(xr + 10 * k, yb - 10 * k, 10 * k, Math.PI, Math.PI - hook, true);
+    ctx.lineTo(xr + 7 * k, yb);
+    ctx.arc(xr + 2 * k, yb - 15 * k, 15 * k, Math.PI / 2, Math.PI);
+    ctx.lineTo(xr - 13 * k, yb - 20 * k);
+  }
+  ctx.closePath();
+}
+
+function drawBubble(ctx, it, L, alpha, scale) {
+  const { x, y, w, h, m } = it;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (scale !== 1) {
+    const ox = m.side === 'L' ? x : x + w, oy = y + h;
+    ctx.translate(ox, oy); ctx.scale(scale, scale); ctx.translate(-ox, -oy);
+  }
+  bubblePath(ctx, x, y, w, h, LY.radius * L.s, m.side, 2.6 * L.s);
+  ctx.fillStyle = m.side === 'L' ? COL.left : COL.right;
+  ctx.fill();
+  ctx.fillStyle = COL.text;
+  ctx.strokeStyle = COL.text;
+  ctx.lineWidth = 0.9 * L.s;
+  ctx.font = `400 ${L.font}px ${FF}`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  it.lines.forEach((ln, j) => {
+    const ty = y + L.padY + L.lineH * (j + 0.5) + 1;
+    ctx.fillText(ln, x + L.padX, ty);
+    ctx.strokeText(ln, x + L.padX, ty);
+  });
+  ctx.restore();
+}
+
+function drawTyping(ctx, x, y, L, t, alpha) {
+  const s = L.s, h = L.lineH + 2 * L.padY, w = 150 * s;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = COL.left;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 3 * s, y + h - 3 * s, 15 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x - 11 * s, y + h + 11 * s, 7 * s, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 3; i++) {
+    const ph = (Math.sin(t * 7 - i * 0.9) + 1) / 2;
+    ctx.fillStyle = COL.typingDot;
+    ctx.globalAlpha = alpha * (0.4 + 0.6 * ph);
+    ctx.beginPath(); ctx.arc(x + w / 2 + (i - 1) * 32 * s, y + h / 2, 10.5 * s, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function initials(name) {
+  // seulement des lettres : « Inès 💕 » donne « I », « Vanessa (Ex) » donne « V »
+  const words = String(name || '').replace(/\(.*?\)/g, '').match(/\p{L}[\p{L}\p{M}'-]*/gu) || [];
+  return (words.slice(0, 2).map(w => [...w][0]).join('') || '?').toUpperCase();
+}
+
+function drawAvatar(ctx, cx, cy, r, img, name, color) {
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+  if (img) {
+    const sc = Math.max(2 * r / img.width, 2 * r / img.height);
+    const iw = img.width * sc, ih = img.height * sc;
+    ctx.drawImage(img, cx - iw / 2, cy - ih / 2, iw, ih);
+  } else {
+    const g = ctx.createLinearGradient(0, cy - r, 0, cy + r);
+    g.addColorStop(0, color ? shade(color, 0.15) : '#a5a5ad');
+    g.addColorStop(1, color || '#7a7a83');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+    ctx.fillStyle = '#fff';
+    ctx.font = `600 ${r * 0.85}px ${FF}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(initials(name), cx, cy + r * 0.04);
+  }
+  ctx.restore();
+}
+
+function drawHeader(ctx) {
+  drawAvatar(ctx, W / 2, LY.avatarCY, LY.avatarR, avatarImg, conv.contactName);
+  const name = conv.contactName || 'Contact';
+  ctx.font = `700 ${LY.pillFont}px ${FF}`;
+  const tw = ctx.measureText(name).width;
+  const chevW = 14, gap = 22, padX = 36;
+  const pw = tw + gap + chevW + padX * 2, ph = LY.pillH;
+  const px = W / 2 - pw / 2, py = LY.pillCY - ph / 2;
+  ctx.beginPath(); ctx.roundRect(px, py, pw, ph, ph / 2);
+  ctx.fillStyle = COL.pillBg; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = COL.pillBorder; ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(name, px + padX, LY.pillCY + 2);
+  const cx = px + padX + tw + gap;
+  ctx.beginPath(); ctx.moveTo(cx, LY.pillCY - 12); ctx.lineTo(cx + chevW - 4, LY.pillCY); ctx.lineTo(cx, LY.pillCY + 12);
+  ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#b8b7bc'; ctx.stroke();
+}
+
+function drawEvalBar(ctx, frac) {
+  const x = 0, y = LY.barTop, w = LY.barW, h = LY.barBottom - LY.barTop;
+  const split = y + h * (1 - frac);
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(x - 6, y, w + 6, h, 6); ctx.clip();
+  ctx.fillStyle = '#2b292d'; ctx.fillRect(x, y, w, split - y);
+  ctx.fillStyle = COL.right; ctx.fillRect(x, split, w, y + h - split);
+  ctx.restore();
+}
+
+function drawCommentCard(ctx, m, alpha) {
+  const C = CATS[m.cat];
+  if (!C || !m.comment) return;
+  const lang = settings.lang;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  const x = 32, y = LY.commentTop, w = LY.rightX - 32;
+  ctx.font = `600 34px ${FF}`;
+  const lines = wrapText(ctx, m.comment, w - 150).slice(0, 2);
+  const h = 70 + lines.length * 42;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 26);
+  ctx.fillStyle = 'rgba(20,20,22,0.92)'; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = C.color; ctx.stroke();
+  drawIcon(ctx, m.cat, x + 62, y + h / 2, 72);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.font = `800 36px ${FF}`; ctx.fillStyle = C.color;
+  ctx.fillText(C[lang], x + 118, y + 52);
+  ctx.font = `500 33px ${FF}`; ctx.fillStyle = '#eee';
+  lines.forEach((ln, j) => ctx.fillText(ln, x + 118, y + 52 + 44 * (j + 1)));
+  ctx.restore();
+}
+
+function fmtAcc(a) { return a == null ? '–' : a.toFixed(1).replace('.', settings.lang === 'fr' ? ',' : '.'); }
+
+function drawSummary(ctx, t, tl) {
+  const p = clamp((t - tl.summaryStart) / 0.45, 0, 1);
+  if (p <= 0) return;
+  const lang = settings.lang;
+  const st = computeStats();
+  const count = clamp((t - tl.summaryStart - 0.6) / 0.9, 0, 1);
+  ctx.save();
+  ctx.fillStyle = `rgba(0,0,0,${0.95 * p})`;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = p;
+  ctx.translate(0, (1 - easeOut(p)) * 60);
+
+  const colL = 560, colI = 660, colR = 770, labelX = 70;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff';
+  ctx.font = `800 58px ${FF}`;
+  ctx.fillText(lang === 'fr' ? 'Bilan de la partie' : 'Game Review', 480, 330);
+
+  // joueurs
+  drawAvatar(ctx, colL, 470, 58, avatarImg, conv.contactName);
+  drawAvatar(ctx, colR, 470, 58, null, conv.meName || 'Moi', COL.right);
+  ctx.font = `600 28px ${FF}`; ctx.fillStyle = '#cfcfd4';
+  const short = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+  ctx.fillText(short(conv.contactName || 'Contact', 11), colL, 558);
+  ctx.fillText(short(conv.meName || 'Moi', 11), colR, 558);
+
+  // précision
+  ctx.textAlign = 'left'; ctx.font = `700 34px ${FF}`; ctx.fillStyle = '#e6e6ea';
+  ctx.fillText(lang === 'fr' ? 'Précision' : 'Accuracy', labelX, 650);
+  const box = (cx, txt, bg, fg) => {
+    ctx.beginPath(); ctx.roundRect(cx - 88, 650 - 46, 176, 92, 16); ctx.fillStyle = bg; ctx.fill();
+    ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.font = `800 50px ${FF}`; ctx.fillText(txt, cx, 652);
+  };
+  box(colL, st.L.acc == null ? '–' : fmtAcc(st.L.acc * count), '#e9e9ec', '#151517');
+  box(colR, st.R.acc == null ? '–' : fmtAcc(st.R.acc * count), COL.right, '#fff');
+
+  // Elo
+  ctx.textAlign = 'left'; ctx.font = `700 34px ${FF}`; ctx.fillStyle = '#e6e6ea';
+  ctx.fillText(lang === 'fr' ? 'Elo estimé' : 'Est. Elo', labelX, 770);
+  ctx.textAlign = 'center'; ctx.font = `800 46px ${FF}`; ctx.fillStyle = '#fff';
+  ctx.fillText(st.L.elo == null ? '–' : String(Math.round(st.L.elo * count)), colL, 772);
+  ctx.fillText(st.R.elo == null ? '–' : String(Math.round(st.R.elo * count)), colR, 772);
+
+  ctx.fillStyle = '#2a2a2e'; ctx.fillRect(labelX, 832, colR + 100 - labelX, 3);
+
+  // détail par catégorie
+  CAT_KEYS.forEach((k, i) => {
+    const y = 890 + i * 63, C = CATS[k];
+    const rp = clamp((t - tl.summaryStart - 0.5 - i * 0.06) / 0.3, 0, 1);
+    ctx.globalAlpha = p * rp;
+    ctx.textAlign = 'left'; ctx.font = `600 33px ${FF}`; ctx.fillStyle = '#d9d9de';
+    ctx.fillText(C[lang], labelX, y);
+    ctx.textAlign = 'center'; ctx.font = `800 38px ${FF}`;
+    const nl = st.L.counts[k], nr = st.R.counts[k];
+    ctx.fillStyle = nl ? C.color : '#4a4a50'; ctx.fillText(String(nl), colL, y + 1);
+    ctx.fillStyle = nr ? C.color : '#4a4a50'; ctx.fillText(String(nr), colR, y + 1);
+    drawIcon(ctx, k, colI, y, 50);
+  });
+  ctx.globalAlpha = p;
+
+  // verdict
+  if (conv.verdict) {
+    const vp = clamp((t - tl.summaryStart - 1.6) / 0.5, 0, 1);
+    ctx.globalAlpha = p * vp;
+    ctx.font = `italic 600 34px ${FF}`; ctx.fillStyle = '#f2f2f5'; ctx.textAlign = 'center';
+    const lines = wrapText(ctx, '« ' + conv.verdict + ' »', 820).slice(0, 3);
+    lines.forEach((ln, j) => ctx.fillText(ln, 480, 1550 + j * 44));
+  }
+  ctx.restore();
+}
+
+function drawFrame(ctx, t, L, tl) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const scroll = scrollAt(tl, t);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, LY.clipTop, W, H - LY.clipTop); ctx.clip();
+  ctx.translate(0, -scroll);
+
+  if (L.headerY != null) {
+    ctx.fillStyle = COL.meta;
+    ctx.font = `600 ${LY.headerFont}px ${FF}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(conv.headerLine, W / 2, L.headerY);
+  }
+
+  let current = -1;
+  L.items.forEach((it, i) => {
+    const e = tl.ev[i];
+    if (e.typingStart != null && t >= e.typingStart && t < e.appear) {
+      drawTyping(ctx, it.x, it.y, L, t, clamp((t - e.typingStart) / 0.15, 0, 1));
+    }
+    if (t >= e.appear) {
+      current = i;
+      const p = clamp((t - e.appear) / 0.32, 0, 1);
+      drawBubble(ctx, it, L, clamp(p * 2.5, 0, 1), 0.72 + 0.28 * easeOutBack(p));
+      if (it.receiptY != null) {
+        const rp = clamp((t - e.appear - 0.45) / 0.3, 0, 1);
+        if (rp > 0) {
+          ctx.save();
+          ctx.globalAlpha = rp;
+          ctx.fillStyle = COL.meta;
+          ctx.font = `600 ${LY.receiptFont * L.s}px ${FF}`;
+          ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+          ctx.fillText(conv.receipt, it.x + it.w - 4, it.receiptY);
+          ctx.restore();
+        }
+      }
+    }
+  });
+  // icônes par-dessus toutes les bulles
+  L.items.forEach((it, i) => {
+    const e = tl.ev[i];
+    if (!CATS[it.m.cat] || t < e.iconAt) return;
+    const p = clamp((t - e.iconAt) / 0.4, 0, 1);
+    const sc = p < 0.6 ? 1.22 * easeOut(p / 0.6) : 1.22 - 0.22 * easeInOut((p - 0.6) / 0.4);
+    const d = LY.iconD * L.s * sc;
+    const cx = it.m.side === 'L' ? it.x + it.w + 4 * L.s : it.x - 4 * L.s;
+    drawIcon(ctx, it.m.cat, cx, it.y + 12 * L.s, d);
+  });
+  ctx.restore();
+
+  // fondu en haut quand ça défile
+  if (scroll > 0) {
+    const g = ctx.createLinearGradient(0, LY.clipTop, 0, LY.clipTop + LY.fadeH);
+    const a = clamp(scroll / 60, 0, 1);
+    g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, LY.clipTop, W, LY.fadeH);
+  }
+
+  drawHeader(ctx);
+
+  if (settings.bar) {
+    // la barre glisse en douceur vers la nouvelle évaluation
+    let shown = 0.5;
+    let lastT = -1, prevFrac = 0.5;
+    L.items.forEach((it, i) => {
+      if (!CATS[it.m.cat]) return;
+      const e = tl.ev[i];
+      if (t >= e.iconAt) { prevFrac = shown; shown = tl.fracs[i]; lastT = e.iconAt; }
+    });
+    if (lastT >= 0) shown = prevFrac + (shown - prevFrac) * easeInOut(clamp((t - lastT) / 0.6, 0, 1));
+    drawEvalBar(ctx, shown);
+  }
+
+  if (settings.comments && current >= 0) {
+    const it = L.items[current], e = tl.ev[current];
+    const end = tl.ev[current + 1]?.typingStart ?? tl.ev[current + 1]?.appear ?? tl.chatEnd;
+    const a = Math.min(clamp((t - e.iconAt) / 0.25, 0, 1), clamp((end - t) / 0.2, 0, 1));
+    if (a > 0) drawCommentCard(ctx, it.m, a);
+  }
+
+  if (tl.summaryStart != null && t >= tl.summaryStart) drawSummary(ctx, t, tl);
+}
+
+/* =====================================================================
+   Aperçu et lecture
+   ===================================================================== */
+const cv = $('#cv');
+const cx2d = cv.getContext('2d');
+let L = null, TL = null;
+let playT = 0, playing = false, lastTs = 0, rafId = 0, followFinal = true;
+
+function rebuild() {
+  L = computeLayout(cx2d);
+  TL = buildTimeline(L);
+  const sc = $('#scrub');
+  sc.max = TL.total.toFixed(2);
+  if (followFinal && !playing) playT = finalT();
+  playT = clamp(playT, 0, TL.total);
+  render();
+}
+const finalT = () => TL.summaryStart != null ? TL.summaryStart - 0.01 : TL.total;
+
+let renderQueued = false;
+function scheduleRebuild() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => { renderQueued = false; rebuild(); });
+}
+
+function fmtTime(s) { s = Math.max(0, s); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`; }
+function render() {
+  drawFrame(cx2d, playT, L, TL);
+  $('#scrub').value = playT;
+  $('#tlabel').textContent = `${fmtTime(playT)} / ${fmtTime(TL.total)}`;
+}
+
+function tick(ts) {
+  if (!playing) return;
+  const dt = lastTs ? (ts - lastTs) / 1000 : 0;
+  lastTs = ts;
+  playT += dt;
+  if (playT >= TL.total) { playT = TL.total; setPlaying(false); }
+  render();
+  if (playing) rafId = requestAnimationFrame(tick);
+}
+function setPlaying(on) {
+  playing = on;
+  $('#play').textContent = on ? '⏸' : '▶';
+  cancelAnimationFrame(rafId);
+  if (on) {
+    followFinal = false;
+    if (playT >= TL.total - 0.02) playT = 0;
+    lastTs = 0;
+    rafId = requestAnimationFrame(tick);
+  }
+}
+
+/* =====================================================================
+   Interface : liste des messages
+   ===================================================================== */
+function autoGrow(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+
+function renderMessages() {
+  const box = $('#msgs');
+  box.innerHTML = '';
+  if (!conv.messages.length) {
+    box.innerHTML = '<div id="empty">Aucun message. Lis tes captures avec l\'IA, colle du texte, ou ajoute des messages à la main.</div>';
+  }
+  conv.messages.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'msg ' + m.side;
+    row.dataset.id = m.id;
+    row.innerHTML = `
+      <button class="side" title="Changer de côté">${m.side === 'L' ? 'G' : 'D'}</button>
+      <textarea rows="1" placeholder="Message…"></textarea>
+      <button class="cat" title="Choisir l'icône">${CATS[m.cat] ? `<img src="${iconURLs[m.cat]}" alt="${CATS[m.cat].fr}">` : '<span style="color:#5c6271">＋</span>'}</button>
+      <div class="acts">
+        <button data-a="up" title="Monter">▲</button>
+        <button data-a="down" title="Descendre">▼</button>
+        <button data-a="ins" title="Insérer un message en dessous">＋</button>
+        <button data-a="del" title="Supprimer">✕</button>
+      </div>
+      <input class="comment" placeholder="Commentaire (rempli par l'IA)…">`;
+    const ta = $('textarea', row);
+    ta.value = m.text;
+    $('.comment', row).value = m.comment || '';
+    box.appendChild(row);
+    autoGrow(ta);
+  });
+}
+
+function msgById(id) { return conv.messages.find(m => m.id === id); }
+function changed(structural) {
+  saveConv();
+  if (structural) renderMessages();
+  followFinal = !playing || followFinal;
+  scheduleRebuild();
+}
+
+$('#msgs').addEventListener('input', e => {
+  const row = e.target.closest('.msg'); if (!row) return;
+  const m = msgById(row.dataset.id);
+  if (e.target.tagName === 'TEXTAREA') { m.text = e.target.value; autoGrow(e.target); }
+  else if (e.target.classList.contains('comment')) m.comment = e.target.value;
+  changed(false);
+});
+$('#msgs').addEventListener('click', e => {
+  const row = e.target.closest('.msg'); if (!row) return;
+  const i = conv.messages.findIndex(m => m.id === row.dataset.id);
+  const m = conv.messages[i];
+  const btn = e.target.closest('button'); if (!btn) return;
+  if (btn.classList.contains('side')) { m.side = m.side === 'L' ? 'R' : 'L'; changed(true); return; }
+  if (btn.classList.contains('cat')) { openCatPop(btn, m); return; }
+  const a = btn.dataset.a;
+  if (a === 'up' && i > 0) [conv.messages[i - 1], conv.messages[i]] = [conv.messages[i], conv.messages[i - 1]];
+  else if (a === 'down' && i < conv.messages.length - 1) [conv.messages[i + 1], conv.messages[i]] = [conv.messages[i], conv.messages[i + 1]];
+  else if (a === 'del') conv.messages.splice(i, 1);
+  else if (a === 'ins') conv.messages.splice(i + 1, 0, { id: uid(), side: m.side === 'L' ? 'R' : 'L', text: '', cat: null, comment: '' });
+  else return;
+  changed(true);
+  if (a === 'ins') $$('#msgs textarea')[i + 1]?.focus();
+});
+
+function addMessage(side) {
+  conv.messages.push({ id: uid(), side, text: '', cat: null, comment: '' });
+  changed(true);
+  const tas = $$('#msgs textarea');
+  tas[tas.length - 1]?.focus();
+}
+$('#addL').onclick = () => addMessage('L');
+$('#addR').onclick = () => addMessage('R');
+
+/* Choix d'icône */
+const catpop = $('#catpop');
+let catTarget = null;
+function openCatPop(btn, m) {
+  catTarget = m;
+  catpop.innerHTML = CAT_KEYS.map(k => `<button data-k="${k}"><img src="${iconURLs[k]}" alt="">${CATS[k].fr}</button>`).join('')
+    + '<button class="none" data-k="">Aucune icône</button>';
+  catpop.classList.add('on');
+  const r = btn.getBoundingClientRect();
+  const ph = catpop.offsetHeight;
+  catpop.style.left = Math.min(r.left, innerWidth - 310) + 'px';
+  catpop.style.top = (r.bottom + ph + 8 > innerHeight ? r.top - ph - 6 : r.bottom + 6) + 'px';
+}
+catpop.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !catTarget) return;
+  catTarget.cat = b.dataset.k || null;
+  catpop.classList.remove('on');
+  changed(true);
+});
+document.addEventListener('mousedown', e => {
+  if (catpop.classList.contains('on') && !catpop.contains(e.target) && !e.target.closest('.cat')) catpop.classList.remove('on');
+});
+
+/* Champs de la conversation */
+function bindConvField(id, key) {
+  const el = $('#' + id);
+  el.value = conv[key] || '';
+  el.addEventListener('input', () => { conv[key] = el.value; changed(false); });
+}
+
+/* Photo du contact */
+function loadImage(src) {
+  return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+}
+async function setAvatarFromDataURL(url) {
+  conv.avatar = url;
+  avatarImg = url ? await loadImage(url) : null;
+  $('#btnAvatarDel').hidden = !url;
+  changed(false);
+}
+$('#btnAvatar').onclick = () => $('#avatarFile').click();
+$('#btnAvatarDel').onclick = () => setAvatarFromDataURL(null);
+$('#avatarFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  const im = await loadImage(URL.createObjectURL(f));
+  // recadrage carré 400 px pour garder le stockage léger
+  const c = document.createElement('canvas'); c.width = c.height = 400;
+  const s = Math.max(400 / im.width, 400 / im.height);
+  c.getContext('2d').drawImage(im, 200 - im.width * s / 2, 200 - im.height * s / 2, im.width * s, im.height * s);
+  setAvatarFromDataURL(c.toDataURL('image/jpeg', 0.88));
+};
+
+$('#btnNew').onclick = () => {
+  if (conv.messages.length && !confirm('Vider la conversation actuelle ?')) return;
+  conv = { contactName: '', meName: conv.meName || 'Moi', headerLine: '', receipt: '', avatar: null, messages: [], verdict: '', caption: '' };
+  avatarImg = null;
+  ['contactName', 'meName', 'headerLine', 'receipt'].forEach(k => { $('#' + k).value = conv[k] || ''; });
+  $('#btnAvatarDel').hidden = true;
+  showResult();
+  changed(true);
+};
+
+/* =====================================================================
+   Captures d'écran
+   ===================================================================== */
+function renderThumbs() {
+  const box = $('#thumbs');
+  box.innerHTML = '';
+  shots.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'thumb';
+    d.innerHTML = `<img src="${s.url}" alt=""><span class="n">${i + 1}</span>
+      <div class="tools"><button data-a="l" title="Avant">◀</button><button data-a="x" title="Retirer">✕</button><button data-a="r" title="Après">▶</button></div>`;
+    d.querySelector('.tools').onclick = e => {
+      const a = e.target.dataset.a;
+      if (a === 'x') { URL.revokeObjectURL(s.url); shots.splice(i, 1); }
+      if (a === 'l' && i > 0) [shots[i - 1], shots[i]] = [shots[i], shots[i - 1]];
+      if (a === 'r' && i < shots.length - 1) [shots[i + 1], shots[i]] = [shots[i], shots[i + 1]];
+      renderThumbs();
+    };
+    box.appendChild(d);
+  });
+  $('#btnRead').disabled = !shots.length;
+  $('#btnRead').textContent = shots.length > 1 ? `🔍 Lire les ${shots.length} captures avec l'IA` : "🔍 Lire la capture avec l'IA";
+}
+async function addFiles(files) {
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    const url = URL.createObjectURL(f);
+    try { shots.push({ id: uid(), name: f.name, url, img: await loadImage(url) }); }
+    catch { toast(`Image illisible : ${f.name}`, true); }
+  }
+  renderThumbs();
+}
+const drop = $('#drop');
+drop.onclick = () => $('#file').click();
+$('#file').onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
+['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => addFiles([...e.dataTransfer.files]));
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); if (!drop.contains(e.target)) addFiles([...e.dataTransfer.files]); });
+document.addEventListener('paste', e => {
+  const files = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/'));
+  if (files.length) { e.preventDefault(); addFiles(files); toast('Capture collée ✔'); }
+});
+
+// Réduit la capture et la convertit en JPEG pour l'envoyer à l'IA.
+function imageToDataURL(img, maxSide = 2048) {
+  const s = Math.min(1, maxSide / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+  const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.9);
+}
+
+/* =====================================================================
+   IA (Groq)
+   ===================================================================== */
+function parseJSON(txt) {
+  txt = String(txt).replace(/<think>[\s\S]*?<\/think>/g, '');
+  try { return JSON.parse(txt); } catch { /* on tente d'extraire l'objet */ }
+  const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
+  if (a >= 0 && b > a) { try { return JSON.parse(txt.slice(a, b + 1)); } catch { /* invalide */ } }
+  throw new Error("Réponse de l'IA illisible (JSON invalide). Réessaie.");
+}
+
+const noReasoning = new Set();  // modèles qui refusent le réglage reasoning_effort
+async function groqChat({ model, messages, temperature = 0.5, maxTokens = 4000, onWait }) {
+  if (!settings.apiKey) { openModal('settings'); throw new Error('Ajoute d\'abord ta clé Groq (gratuite).'); }
+  const body = { model, messages, temperature, max_completion_tokens: maxTokens, response_format: { type: 'json_object' } };
+  // moins de "réflexion" = moins de jetons consommés sur l'offre gratuite
+  if (!noReasoning.has(model)) {
+    if (/gpt-oss/.test(model)) body.reasoning_effort = 'medium';
+    else if (/qwen/.test(model)) body.reasoning_effort = 'none';
+  }
+  for (let attempt = 0; attempt < 6; attempt++) {
+    let res;
+    try {
+      res = await fetch(GROQ_URL + '/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + settings.apiKey.trim(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      throw new Error('Impossible de joindre Groq : vérifie ta connexion internet.');
+    }
+    if (res.status === 429) {
+      const wait = parseFloat(res.headers.get('retry-after')) || 8 * (attempt + 1);
+      onWait?.(Math.ceil(wait));
+      await sleep(wait * 1000 + 300);
+      continue;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = data?.error?.message || res.statusText;
+      if (res.status === 400 && body.reasoning_effort && /reasoning/i.test(msg)) { noReasoning.add(model); delete body.reasoning_effort; continue; }
+      // requête plus grosse que la limite de jetons par minute : on demande une réponse plus courte
+      if ((res.status === 413 || /too large/i.test(msg)) && body.max_completion_tokens > 1500) {
+        body.max_completion_tokens = Math.max(1500, Math.floor(body.max_completion_tokens / 2));
+        continue;
+      }
+      if (res.status === 400 && /json/i.test(msg) && attempt < 2) continue;
+      if (res.status === 401) throw new Error('Clé Groq invalide. Vérifie-la dans les réglages ⚙️.');
+      if (res.status === 404 || /model/i.test(msg) && /not (found|exist)|decommission/i.test(msg))
+        throw new Error(`Modèle « ${model} » indisponible chez Groq. Ouvre les réglages ⚙️ et clique « Tester la clé » pour voir les modèles disponibles.`);
+      throw new Error(`Groq (${res.status}) : ${msg}`);
+    }
+    const choice = data.choices?.[0];
+    const content = choice?.message?.content || '';
+    if (!content.trim() && choice?.finish_reason === 'length') throw new Error("Réponse de l'IA coupée (trop longue). Réessaie, ou découpe la conversation.");
+    return parseJSON(content);
+  }
+  throw new Error('Limite gratuite de Groq atteinte : attends une minute et réessaie.');
+}
+
+const OCR_PROMPT = `Lis cette capture d'écran de conversation (iMessage, SMS, WhatsApp, Instagram, Snapchat, Messenger…) et extrais les messages dans l'ordre, de haut en bas.
+
+Règles :
+- "side" : "right" pour les bulles alignées à DROITE (envoyées par le propriétaire du téléphone, souvent bleues, vertes ou violettes), "left" pour les bulles alignées à GAUCHE (l'autre personne, souvent grises).
+- "text" : le texte exact de la bulle, sans corriger les fautes ni traduire, emojis inclus. Une bulle = un message. Si la bulle est une photo, un sticker ou un vocal, écris "[photo]", "[sticker]" ou "[vocal]".
+- Ignore tout ce qui n'est pas une bulle : barre d'état, heure du téléphone, boutons, interface TikTok/Instagram, réactions (tapbacks), icônes ou badges posés sur les bulles, "Lu", "Read", "Delivered", "Distribué", horodatages.
+- Si une bulle est coupée en haut ou en bas, garde ce qui est lisible.
+- "contact_name" : le nom du contact affiché en haut de la conversation, sinon null.
+- "time_label" : l'horodatage affiché au-dessus des messages (ex : "Today 2:14 AM", "Aujourd'hui 02:14"), sinon null.
+- "receipt" : l'accusé de lecture s'il y en a un (ex : "Read 2:14 AM", "Lu à 02:14"), sinon null.
+
+Réponds UNIQUEMENT avec ce JSON :
+{"contact_name": string|null, "time_label": string|null, "receipt": string|null, "messages": [{"side": "left"|"right", "text": string}]}`;
+
+const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+// Recolle plusieurs captures en enlevant les messages répétés entre deux captures qui se chevauchent.
+function mergeChunks(chunks) {
+  const out = [];
+  for (const chunk of chunks) {
+    let skip = 0;
+    for (let k = Math.min(out.length, chunk.length); k > 0; k--) {
+      const tail = out.slice(out.length - k), head = chunk.slice(0, k);
+      if (tail.every((m, j) => m.side === head[j].side && norm(m.text) === norm(head[j].text))) { skip = k; break; }
+    }
+    out.push(...chunk.slice(skip));
+  }
+  return out;
+}
+
+let busy = false;
+async function withBusy(btn, label, fn) {
+  if (busy) return;
+  busy = true;
+  const old = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spin"></span> ${label}`;
+  try { await fn(); }
+  catch (e) { console.error(e); toast(e.message || String(e), true, 7000); }
+  finally { busy = false; btn.disabled = false; btn.innerHTML = old; if (btn.id === 'btnRead') renderThumbs(); }
+}
+
+$('#btnRead').onclick = () => withBusy($('#btnRead'), 'Lecture…', async () => {
+  if (!shots.length) return;
+  if (!settings.apiKey) { openModal('settings'); throw new Error("Ajoute d'abord ta clé Groq (gratuite)."); }
+  const chunks = [];
+  let meta = {};
+  for (let i = 0; i < shots.length; i++) {
+    $('#btnRead').innerHTML = `<span class="spin"></span> Lecture de la capture ${i + 1}/${shots.length}…`;
+    const data = await groqChat({
+      model: settings.visionModel,
+      temperature: 0.1,
+      maxTokens: 2500,
+      messages: [{ role: 'user', content: [
+        { type: 'text', text: OCR_PROMPT },
+        { type: 'image_url', image_url: { url: imageToDataURL(shots[i].img) } },
+      ] }],
+      onWait: s => toast(`Limite gratuite de Groq : nouvel essai dans ${s} s…`),
+    });
+    const msgs = (data.messages || [])
+      .filter(m => m && typeof m.text === 'string' && m.text.trim())
+      .map(m => ({ side: /right|droite|^r$/i.test(m.side) ? 'R' : 'L', text: m.text.trim() }));
+    chunks.push(msgs);
+    meta = {
+      contact_name: meta.contact_name || data.contact_name,
+      time_label: meta.time_label || data.time_label,
+      receipt: data.receipt || meta.receipt,
+    };
+  }
+  const merged = mergeChunks(chunks);
+  if (!merged.length) throw new Error("L'IA n'a trouvé aucun message sur ces captures.");
+  conv.messages = merged.map(m => ({ id: uid(), ...m, cat: null, comment: '' }));
+  if (meta.contact_name) conv.contactName = meta.contact_name;
+  if (meta.time_label) conv.headerLine = meta.time_label;
+  conv.receipt = meta.receipt || '';
+  conv.verdict = ''; conv.caption = '';
+  ['contactName', 'headerLine', 'receipt'].forEach(k => { $('#' + k).value = conv[k] || ''; });
+  showResult();
+  changed(true);
+  toast(`${merged.length} messages lus ✔ Vérifie-les, puis lance l'analyse.`);
+});
+
+const TONES = {
+  drole: { fr: 'drôle, taquin, style TikTok génération Z, punchlines courtes, emojis avec parcimonie (💀😭🔥)', en: 'funny, teasing, Gen-Z TikTok style, short punchlines, a few emojis (💀😭🔥)' },
+  roast: { fr: 'sans pitié, gros roast, mais jamais haineux ni discriminant', en: 'ruthless roast, but never hateful or discriminatory' },
+  serieux: { fr: 'sérieux et pédagogique, comme un coach en communication et en séduction', en: 'serious and educational, like a communication and dating coach' },
+};
+
+function analysisPrompt() {
+  const lang = settings.lang;
+  const tone = TONES[settings.tone]?.[lang] || TONES.drole[lang];
+  const langName = lang === 'fr' ? 'français' : 'anglais (English)';
+  const sys = `Tu es « Stockfish des conversations » : un moteur qui note chaque message d'une conversation comme un coup aux échecs, façon Game Review de chess.com, pour des vidéos TikTok « Rated chats ».
+
+Chaque message est un coup joué par la personne qui l'envoie. Tu évalues la qualité sociale du coup du point de vue de son auteur : répartie, humour, confiance, cohérence, dignité, charisme, capacité à garder l'avantage, à piéger l'autre ou à retourner la situation.
+
+Catégories (code : sens) :
+- "brilliant" (!!) : coup de génie rare et inattendu, retournement ou sacrifice qui détruit l'adversaire. Au maximum 1 ou 2 par conversation, souvent aucun.
+- "great" (!) : le seul très bon coup dans un moment critique, la réplique qui change la partie.
+- "best" (★) : la réponse idéale dans la situation.
+- "excellent" (👍) : très bonne réponse, presque parfaite.
+- "good" (✓) : correct, sans plus.
+- "book" (📖) : coup de théorie, ouverture classique et attendue (« salut », « ça va ? », « tu me manques » à 2h du matin…).
+- "inaccuracy" (?!) : un peu maladroit, il y avait mieux.
+- "mistake" (?) : vraie erreur qui donne l'avantage à l'autre.
+- "miss" (✕) : occasion manquée : l'autre avait laissé une ouverture énorme et elle n'a pas été exploitée.
+- "blunder" (??) : gaffe catastrophique : mensonge grillé, désespoir, malaise, se ridiculiser, perdre toute dignité.
+
+Sois tranchant comme dans les vidéos virales : les mensonges grillés et les excuses bidon sont des gaffes, les réponses sèches et confiantes sont "best" ou "great", et "brilliant" est réservé aux vrais coups de maître.
+Note TOUS les messages des DEUX personnes.
+Ton des commentaires : ${tone}.
+Langue des commentaires, du verdict et de la légende : ${langName}.
+Réponds UNIQUEMENT en JSON valide.`;
+  const left = conv.contactName || 'Contact', right = conv.meName || 'Moi';
+  const lines = conv.messages.map((m, i) => `${i} [${m.side === 'L' ? 'G' : 'D'}] ${m.text.replace(/\n/g, ' ')}`).join('\n');
+  const user = `Conversation (G = gauche = ${left}, D = droite = ${right}) :
+${lines}
+
+Réponds avec ce JSON exact :
+{"moves": [{"i": 0, "c": "book", "comment": "..."}], "verdict": "une phrase qui résume la partie", "caption": "légende TikTok accrocheuse dans le style « She texted her ex at 2am and tried to lie 💀 »", "hashtags": "#ratedchats ..."}
+Un objet par message, dans l'ordre (i de 0 à ${conv.messages.length - 1}). "comment" : 3 à 12 mots maximum. "c" doit être l'un de : ${CAT_KEYS.join(', ')}.`;
+  return [{ role: 'system', content: sys }, { role: 'user', content: user }];
+}
+
+$('#btnAnalyze').onclick = () => withBusy($('#btnAnalyze'), 'Analyse en cours…', async () => {
+  const msgs = conv.messages.filter(m => m.text.trim());
+  if (!msgs.length) throw new Error('Ajoute d\'abord des messages à analyser.');
+  conv.messages = msgs;
+  const data = await groqChat({
+    model: settings.textModel,
+    temperature: 0.7,
+    maxTokens: 6000,
+    messages: analysisPrompt(),
+    onWait: s => toast(`Limite gratuite de Groq : nouvel essai dans ${s} s…`),
+  });
+  let n = 0;
+  for (const mv of data.moves || []) {
+    const i = Number(mv.i);
+    const c = String(mv.c || '').toLowerCase().trim();
+    if (conv.messages[i] && CATS[c]) { conv.messages[i].cat = c; conv.messages[i].comment = String(mv.comment || ''); n++; }
+  }
+  if (!n) throw new Error("L'IA n'a renvoyé aucune note exploitable. Réessaie.");
+  conv.verdict = String(data.verdict || '');
+  conv.caption = [data.caption, data.hashtags].filter(Boolean).join('\n');
+  showResult();
+  followFinal = false;
+  changed(true);
+  playT = 0;
+  setPlaying(true);
+  toast(`Analyse terminée ✔ ${n}/${conv.messages.length} messages notés.`);
+});
+
+function showResult() {
+  const on = !!(conv.verdict || conv.caption);
+  $('#result').classList.toggle('on', on);
+  $('#verdict').textContent = conv.verdict ? '« ' + conv.verdict + ' »' : '';
+  $('#caption').textContent = conv.caption || '';
+}
+$('#btnCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText(conv.caption || ''); toast('Légende copiée ✔'); }
+  catch { toast('Copie impossible : sélectionne le texte à la main.', true); }
+};
+
+/* =====================================================================
+   Réglages
+   ===================================================================== */
+function openModal(id) { $('#' + id).classList.add('on'); }
+function closeModal(id) { $('#' + id).classList.remove('on'); }
+$$('[data-open]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); openModal(b.dataset.open); }));
+$$('.modal').forEach(m => {
+  m.addEventListener('mousedown', e => { if (e.target === m && m.id !== 'exporting') closeModal(m.id); });
+  $$('[data-close]', m).forEach(b => b.onclick = () => closeModal(m.id));
+});
+$('#btnSettings').onclick = () => openModal('settings');
+
+function refreshKeyBanner() { $('#keyBanner').hidden = !!settings.apiKey; }
+$('#apiKey').value = settings.apiKey;
+$('#visionModel').value = settings.visionModel;
+$('#textModel').value = settings.textModel;
+$('#apiKey').addEventListener('input', e => { settings.apiKey = e.target.value.trim(); saveSettings(); refreshKeyBanner(); });
+$('#visionModel').addEventListener('input', e => { settings.visionModel = e.target.value.trim() || DEFAULT_VISION_MODEL; saveSettings(); });
+$('#textModel').addEventListener('input', e => { settings.textModel = e.target.value.trim() || DEFAULT_TEXT_MODEL; saveSettings(); });
+$('#toggleKey').onclick = () => { const i = $('#apiKey'); i.type = i.type === 'password' ? 'text' : 'password'; };
+$('#btnTestKey').onclick = async () => {
+  const st = $('#keystate');
+  if (!settings.apiKey) { st.className = 'err'; st.textContent = 'Colle d\'abord ta clé.'; return; }
+  st.className = ''; st.innerHTML = '<span class="spin"></span>';
+  try {
+    const res = await fetch(GROQ_URL + '/models', { headers: { Authorization: 'Bearer ' + settings.apiKey } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(res.status === 401 ? 'Clé invalide.' : (data?.error?.message || res.statusText));
+    const ids = (data.data || []).map(m => m.id).sort();
+    $('#modelList').innerHTML = ids.map(id => `<option value="${id}">`).join('');
+    const miss = [settings.visionModel, settings.textModel].filter(m => !ids.includes(m));
+    st.className = miss.length ? 'err' : 'ok';
+    st.textContent = miss.length
+      ? `Clé OK, mais modèle introuvable : ${miss.join(', ')}. Choisis-en un dans la liste (champ ci-dessus).`
+      : `✔ Clé valide · ${ids.length} modèles disponibles.`;
+  } catch (e) { st.className = 'err'; st.textContent = e.message; }
+};
+
+/* Options de la vidéo */
+function bindOpt(id, key, fmt) {
+  const el = $('#' + id);
+  if (el.type === 'checkbox') el.checked = !!settings[key]; else el.value = settings[key];
+  const out = $('#' + id + 'Out');
+  const upd = () => { if (out) out.textContent = fmt(settings[key]); };
+  upd();
+  el.addEventListener('input', () => {
+    settings[key] = el.type === 'checkbox' ? el.checked : (el.type === 'range' ? parseFloat(el.value) : el.value);
+    saveSettings(); upd(); scheduleRebuild();
+  });
+}
+
+/* Import texte */
+$('#btnImport').onclick = () => {
+  const lines = $('#importText').value.split('\n').map(l => l.trim()).filter(Boolean);
+  let side = 'L';
+  const msgs = [];
+  for (const l of lines) {
+    const mm = l.match(/^(g|d|l|r|gauche|droite|moi|me|<|>)\s*[:>\-]\s*(.*)$/i) || l.match(/^(<|>)\s*(.*)$/);
+    let text = l;
+    if (mm) {
+      const p = mm[1].toLowerCase();
+      side = ['d', 'r', 'droite', 'moi', 'me', '>'].includes(p) ? 'R' : 'L';
+      text = mm[2];
+    }
+    if (text.trim()) msgs.push({ id: uid(), side, text: text.trim(), cat: null, comment: '' });
+  }
+  if (!msgs.length) { toast('Aucun message trouvé dans le texte.', true); return; }
+  if ($('#importReplace').checked) { conv.messages = msgs; conv.verdict = ''; conv.caption = ''; showResult(); }
+  else conv.messages.push(...msgs);
+  closeModal('import');
+  changed(true);
+  toast(`${msgs.length} messages importés ✔`);
+};
+
+/* =====================================================================
+   Export
+   ===================================================================== */
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+function fileStem() {
+  const n = (conv.contactName || 'conversation').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+  return 'rated-chat-' + (n || 'conversation');
+}
+
+$('#btnPng').onclick = () => {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  drawFrame(c.getContext('2d'), playT, L, TL);
+  c.toBlob(b => { download(b, fileStem() + '.png'); toast('Image exportée ✔'); }, 'image/png');
+};
+
+let cancelExport = false;
+$('#btnCancelExp').onclick = () => { cancelExport = true; };
+function expProgress(p, info) {
+  $('#expBar').style.width = (p * 100).toFixed(1) + '%';
+  if (info) $('#expInfo').textContent = info;
+}
+
+async function exportWithMediabunny(fps) {
+  const MB = await import(MEDIABUNNY_URL);
+  let codec = null, format = null, ext = '';
+  if (await MB.canEncodeVideo('avc', { width: W, height: H })) { codec = 'avc'; format = new MB.Mp4OutputFormat({ fastStart: 'in-memory' }); ext = 'mp4'; }
+  else if (await MB.canEncodeVideo('vp9', { width: W, height: H })) { codec = 'vp9'; format = new MB.WebMOutputFormat(); ext = 'webm'; }
+  else throw new Error('Aucun encodeur vidéo disponible');
+  const off = document.createElement('canvas'); off.width = W; off.height = H;
+  const octx = off.getContext('2d');
+  const output = new MB.Output({ format, target: new MB.BufferTarget() });
+  const src = new MB.CanvasSource(off, { codec, quality: MB.QUALITY_HIGH });
+  output.addVideoTrack(src, { frameRate: fps });
+  await output.start();
+  const frames = Math.ceil(TL.total * fps);
+  for (let i = 0; i < frames; i++) {
+    if (cancelExport) { await output.cancel(); return null; }
+    drawFrame(octx, i / fps, L, TL);
+    await src.add(i / fps, 1 / fps);
+    if (i % 5 === 0) expProgress(i / frames, `Image ${i} / ${frames} · ${ext.toUpperCase()}`);
+  }
+  expProgress(1, 'Finalisation…');
+  await output.finalize();
+  return { blob: new Blob([output.target.buffer], { type: ext === 'mp4' ? 'video/mp4' : 'video/webm' }), ext };
+}
+
+// Secours : enregistre l'animation en temps réel (navigateurs sans WebCodecs).
+async function exportWithRecorder(fps) {
+  const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+  const type = types.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  if (!type) throw new Error("Ton navigateur ne sait pas exporter de vidéo. Utilise Chrome ou Edge.");
+  const off = document.createElement('canvas'); off.width = W; off.height = H;
+  const octx = off.getContext('2d');
+  drawFrame(octx, 0, L, TL);
+  const stream = off.captureStream(fps);
+  const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 12_000_000 });
+  const parts = [];
+  rec.ondataavailable = e => e.data.size && parts.push(e.data);
+  const done = new Promise(r => { rec.onstop = r; });
+  rec.start(250);
+  const t0 = performance.now();
+  await new Promise(resolve => {
+    const step = () => {
+      const t = (performance.now() - t0) / 1000;
+      if (cancelExport || t > TL.total) return resolve();
+      drawFrame(octx, t, L, TL);
+      expProgress(t / TL.total, `Enregistrement en temps réel… garde cette fenêtre au premier plan.`);
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+  rec.stop();
+  await done;
+  stream.getTracks().forEach(tr => tr.stop());
+  if (cancelExport) return null;
+  const ext = type.includes('mp4') ? 'mp4' : 'webm';
+  return { blob: new Blob(parts, { type: type.split(';')[0] }), ext };
+}
+
+$('#btnVideo').onclick = async () => {
+  if (!conv.messages.length) { toast('Ajoute d\'abord des messages.', true); return; }
+  setPlaying(false);
+  rebuild();
+  cancelExport = false;
+  expProgress(0, 'Préparation…');
+  openModal('exporting');
+  const fps = 30;
+  let out = null;
+  try {
+    try { out = await exportWithMediabunny(fps); }
+    catch (e) {
+      if (cancelExport) throw e;
+      console.warn('Export rapide indisponible, passage en temps réel :', e);
+      out = await exportWithRecorder(fps);
+    }
+    if (out) { download(out.blob, `${fileStem()}.${out.ext}`); toast(`Vidéo exportée ✔ (${out.ext.toUpperCase()}, ${(out.blob.size / 1e6).toFixed(1)} Mo)`); }
+    else toast('Export annulé.');
+  } catch (e) {
+    console.error(e);
+    toast('Export impossible : ' + (e.message || e), true, 7000);
+  } finally {
+    closeModal('exporting');
+    render();
+  }
+};
+
+/* =====================================================================
+   Divers
+   ===================================================================== */
+let toastTimer = 0;
+function toast(msg, err = false, ms = 3500) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.toggle('err', err);
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), ms);
+}
+
+$('#play').onclick = () => setPlaying(!playing);
+$('#restart').onclick = () => { setPlaying(false); followFinal = false; playT = 0; render(); };
+$('#btnFinal').onclick = () => { setPlaying(false); followFinal = true; playT = finalT(); render(); };
+$('#scrub').addEventListener('input', e => { setPlaying(false); followFinal = false; playT = parseFloat(e.target.value); render(); });
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) {
+    // évite que Espace re-clique le dernier bouton utilisé (ex. relancer l'analyse)
+    e.preventDefault();
+    document.activeElement?.blur?.();
+    setPlaying(!playing);
+  }
+  if (e.key === 'Escape') { $$('.modal.on').forEach(m => m.id !== 'exporting' && closeModal(m.id)); catpop.classList.remove('on'); }
+});
+window.addEventListener('resize', () => catpop.classList.remove('on'));
+
+/* =====================================================================
+   Démarrage
+   ===================================================================== */
+(async function init() {
+  buildIconURLs();
+  const lc = document.createElement('canvas'); lc.width = lc.height = 64;
+  drawIcon(lc.getContext('2d'), 'brilliant', 32, 31, 56);
+  $('#logo').src = lc.toDataURL();
+  bindConvField('contactName', 'contactName');
+  bindConvField('meName', 'meName');
+  bindConvField('headerLine', 'headerLine');
+  bindConvField('receipt', 'receipt');
+  bindOpt('speed', 'speed', v => v.toFixed(1) + '×');
+  bindOpt('textScale', 'textScale', v => Math.round(v * 100) + '%');
+  bindOpt('optTyping', 'typing');
+  bindOpt('optBar', 'bar');
+  bindOpt('optEnd', 'endScreen');
+  bindOpt('optComments', 'comments');
+  bindOpt('tone', 'tone');
+  bindOpt('lang', 'lang');
+  if (conv.avatar) { try { avatarImg = await loadImage(conv.avatar); } catch { conv.avatar = null; } }
+  $('#btnAvatarDel').hidden = !conv.avatar;
+  refreshKeyBanner();
+  renderMessages();
+  renderThumbs();
+  showResult();
+  rebuild();
+})();
+</script>
+</body>
+</html>
