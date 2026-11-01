@@ -51,6 +51,9 @@ INTERNAL = re.compile(r"^(eDP|LVDS|DSI)", re.I)
 KEYS = {"up": "Up", "down": "Down", "left": "Left", "right": "Right",
         "ok": "Return", "back": "Escape", "playpause": "space"}
 ACTIONS = set(KEYS) | {"home", "volup", "voldown", "ch1", "ch2", "ch3", "ch4"}
+AUDIO_MODES = ("auto", "tv", "pc", "bluetooth")
+AUDIO_NAMES = {"tv": "la télé (HDMI)", "pc": "les haut-parleurs du PC"}
+MAC = re.compile(r"(?:[0-9A-F]{2}:){5}[0-9A-F]{2}", re.I)
 
 log = logging.getLogger("scaros")
 DRY = False
@@ -135,6 +138,11 @@ class Scaros:
         self.windows = []            # fenêtres de l'appli ouverte
         self.launcher_ids = set()
         self.focus_checked = 0.0
+        self.audio_mode = self.settings.get("audio_mode", "auto")
+        self.audio_target = None
+        self.audio_device = None
+        self.bt_scanning = False
+        self.dry_bt = []             # appareils Bluetooth simulés en --dry-run
 
     # ---------- réglages ----------
     def _load_settings(self):
@@ -182,6 +190,8 @@ class Scaros:
                 "remote": {"url": f"http://{ip}:{self.port}/remote", "phones": self.phone_count(),
                            "qr": qrcode is not None},
                 "wifi": self.wifi(), "ip": ip,
+                "audio": {"mode": self.audio_mode, "target": self.audio_target, "device": self.audio_device},
+                "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning},
             }
 
     def refresh_installed(self):
@@ -371,6 +381,15 @@ class Scaros:
         self.bus.emit("volume", level=self.volume)
 
     def _sinks(self):
+        if DRY:
+            sinks = [{"name": "alsa_output.pc", "desc": "Haut-parleurs", "hdmi": False, "bt": False, "mac": None, "plugged": True}]
+            if self.hdmi:
+                sinks.append({"name": "alsa_output.hdmi", "desc": "HDMI", "hdmi": True, "bt": False, "mac": None, "plugged": True})
+            for d in self.dry_bt:
+                if d["connected"] and d["kind"] == "audio":
+                    sinks.append({"name": "bluez_output." + d["mac"].replace(":", "_") + ".1", "desc": d["name"],
+                                  "hdmi": False, "bt": True, "mac": d["mac"], "plugged": True})
+            return sinks
         code, out = run(["pactl", "-f", "json", "list", "sinks"], timeout=5, quiet=True)
         try:
             data = json.loads(out or "[]")
@@ -380,9 +399,14 @@ class Scaros:
         for s in data:
             ports = s.get("ports") or []
             text = " ".join([s.get("name", ""), s.get("description", ""), s.get("active_port") or ""]).lower()
+            name = s.get("name") or ""
+            mac = re.search(r"(?:[0-9A-F]{2}_){5}[0-9A-F]{2}", name, re.I)
             sinks.append({
-                "name": s.get("name"),
+                "name": name,
+                "desc": s.get("description") or name,
                 "hdmi": "hdmi" in text or "displayport" in text,
+                "bt": name.startswith("bluez_"),
+                "mac": mac.group(0).replace("_", ":").upper() if mac else None,
                 "plugged": any(p.get("availability") == "available" for p in ports),
             })
         return sinks
@@ -401,18 +425,43 @@ class Scaros:
                     run(["pactl", "set-card-profile", card["name"], name], timeout=5)
                     return
 
-    def set_audio(self, target):
-        """Envoie le son sur la télé (HDMI) ou sur les haut-parleurs du PC."""
-        if DRY or not shutil.which("pactl"):
-            return
-        want = target == "tv"
-        pick = [s for s in self._sinks() if s["hdmi"] == want]
+    def apply_audio(self):
+        """Choisit la sortie du son selon le réglage : auto, télé, PC ou appareil Bluetooth.
+
+        En auto, le son va sur le casque ou l'enceinte Bluetooth connecté, sinon sur l'écran utilisé.
+        """
+        bt_sinks = [s for s in self._sinks() if s["bt"]]
+        preferred = self.settings.get("audio_bt")
+        bt = next((s for s in bt_sinks if s["mac"] == preferred), bt_sinks[0] if bt_sinks else None)
+        screen = "tv" if self.output == "tv" else "pc"
+        mode = self.audio_mode
+        if mode == "tv":
+            target = "tv" if self.hdmi else "pc"
+        elif mode == "pc":
+            target = "pc"
+        else:
+            target = "bt" if bt else screen
+        device = bt["desc"] if target == "bt" else AUDIO_NAMES[target]
+        if not DRY and shutil.which("pactl"):
+            self._set_sink(target, bt)
+        changed = (target, device) != (self.audio_target, self.audio_device)
+        self.audio_target, self.audio_device = target, device
+        if changed:
+            log.info("son -> %s (réglage %s)", device, mode)
+        self.bus.emit("audio", mode=mode, target=target, device=device, changed=changed)
+
+    def _set_sink(self, target, bt):
+        if target == "bt":
+            pick = [bt]
+        else:
+            want = target == "tv"
+            pick = [s for s in self._sinks() if not s["bt"] and s["hdmi"] == want]
+            if not pick:
+                self._switch_profile(want)
+                time.sleep(0.5)
+                pick = [s for s in self._sinks() if not s["bt"] and s["hdmi"] == want]
         if not pick:
-            self._switch_profile(want)
-            time.sleep(0.5)
-            pick = [s for s in self._sinks() if s["hdmi"] == want]
-        if not pick:
-            log.warning("aucune sortie son %s trouvée", "HDMI" if want else "PC")
+            log.warning("aucune sortie son %s trouvée", {"tv": "HDMI", "pc": "PC"}.get(target, "Bluetooth"))
             return
         pick.sort(key=lambda s: not s["plugged"])
         name = pick[0]["name"]
@@ -420,7 +469,144 @@ class Scaros:
         code, out = run(["pactl", "list", "short", "sink-inputs"], timeout=5, quiet=True)
         for line in out.splitlines():
             run(["pactl", "move-sink-input", line.split()[0], name], timeout=5, quiet=True)
-        log.info("son -> %s", name)
+
+    def set_audio_mode(self, mode, mac=None):
+        if mode not in AUDIO_MODES or (mac and not MAC.fullmatch(mac)):
+            return False
+        self.audio_mode = mode
+        self.settings["audio_mode"] = mode
+        if mac:
+            self.settings["audio_bt"] = mac.upper()
+        self._save_settings()
+        self.apply_audio()
+        return True
+
+    def _watch_audio(self):
+        """Suit les casques et enceintes Bluetooth qui se connectent ou se déconnectent."""
+        last = None
+        while True:
+            current = sorted(s["name"] for s in self._sinks() if s["bt"])
+            if last is not None and current != last:
+                self.apply_audio()
+                self.bus.emit("bt", devices=self.bt_devices(), scanning=self.bt_scanning)
+            last = current
+            time.sleep(2)
+
+    # ---------- Bluetooth : casques, enceintes, manettes ----------
+    def _bt_info(self, mac):
+        if DRY:
+            return next((dict(d) for d in self.dry_bt if d["mac"] == mac), None)
+        code, out = run(["bluetoothctl", "info", mac], timeout=5, quiet=True)
+        if code != 0 or "Device" not in out:
+            return None
+        info = {"mac": mac.upper(), "name": mac, "paired": False, "connected": False, "kind": "other"}
+        for line in out.splitlines():
+            key, _, value = line.strip().partition(": ")
+            if key in ("Name", "Alias") and value:
+                info["name"] = value
+            elif key == "Paired":
+                info["paired"] = value == "yes"
+            elif key == "Connected":
+                info["connected"] = value == "yes"
+            elif key == "Icon":
+                info["kind"] = "audio" if value.startswith("audio") else "input" if value.startswith("input") else "other"
+        return info
+
+    def bt_devices(self):
+        """Appareils appairés, plus les casques, enceintes et manettes repérés pendant une recherche."""
+        if DRY:
+            devices = [dict(d) for d in self.dry_bt]
+        else:
+            devices = []
+            code, out = run(["bluetoothctl", "devices"], timeout=5, quiet=True)
+            for line in out.splitlines():
+                m = re.match(r"Device (\S+) (.+)", line)
+                info = self._bt_info(m.group(1)) if m else None
+                if not info:
+                    continue
+                unnamed = re.fullmatch(r"(?:[0-9A-F]{2}[-:]){5}[0-9A-F]{2}", info["name"], re.I)
+                if info["paired"] or (info["kind"] in ("audio", "input") and not unnamed):
+                    devices.append(info)
+        devices.sort(key=lambda d: (not d["connected"], not d["paired"], d["name"].lower()))
+        return devices
+
+    def _bt_changed(self):
+        self.bus.emit("bt", devices=self.bt_devices(), scanning=self.bt_scanning)
+
+    def bt_scan(self, seconds=20):
+        if self.bt_scanning or self.pairing:
+            return
+        self.bt_scanning = True
+        self._bt_changed()
+        scan = None
+        try:
+            if DRY:
+                time.sleep(2)
+                for mac, name in (("AA:00:00:00:00:01", "Casque Bluetooth"), ("AA:00:00:00:00:02", "Enceinte Bluetooth")):
+                    if not any(d["mac"] == mac for d in self.dry_bt):
+                        self.dry_bt.append({"mac": mac, "name": name, "paired": False, "connected": False, "kind": "audio"})
+                seconds = 2
+            else:
+                run(["bluetoothctl", "power", "on"], timeout=10, quiet=True)
+                if shutil.which("bluetoothctl"):
+                    scan = subprocess.Popen(["bluetoothctl", "--timeout", str(seconds), "scan", "on"],
+                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            deadline = time.time() + seconds
+            last = None
+            while time.time() < deadline:
+                devices = self.bt_devices()
+                if devices != last:
+                    self.bus.emit("bt", devices=devices, scanning=True)
+                    last = devices
+                time.sleep(2)
+        finally:
+            if scan:
+                scan.terminate()
+            self.bt_scanning = False
+            self._bt_changed()
+
+    def bt_connect(self, mac):
+        info = self._bt_info(mac) or {"name": mac, "paired": False, "kind": "other"}
+        self.bus.emit("btmsg", state="connecting", name=info["name"])
+        if DRY:
+            time.sleep(1.2)
+            for d in self.dry_bt:
+                if d["mac"] == mac:
+                    d.update(paired=True, connected=True)
+            ok = True
+        else:
+            if not info["paired"]:
+                run(["bluetoothctl", "--agent", "NoInputNoOutput", "pair", mac], timeout=30)
+            run(["bluetoothctl", "trust", mac], timeout=10)
+            ok = run(["bluetoothctl", "connect", mac], timeout=30)[0] == 0
+        if ok and info["kind"] == "audio":
+            self.settings["audio_bt"] = mac.upper()
+            self._save_settings()
+        self.bus.emit("btmsg", state="connected" if ok else "failed", name=info["name"])
+        self._bt_changed()
+
+    def bt_disconnect(self, mac):
+        info = self._bt_info(mac) or {"name": mac}
+        if DRY:
+            for d in self.dry_bt:
+                if d["mac"] == mac:
+                    d["connected"] = False
+        else:
+            run(["bluetoothctl", "disconnect", mac], timeout=15)
+        self.bus.emit("btmsg", state="disconnected", name=info["name"])
+        self._bt_changed()
+
+    def bt_remove(self, mac):
+        info = self._bt_info(mac) or {"name": mac}
+        if DRY:
+            self.dry_bt = [d for d in self.dry_bt if d["mac"] != mac]
+        else:
+            run(["bluetoothctl", "remove", mac], timeout=15)
+        if self.settings.get("audio_bt") == mac.upper():
+            self.settings.pop("audio_bt")
+            self._save_settings()
+        self.bus.emit("btmsg", state="removed", name=info["name"])
+        self._bt_changed()
 
     # ---------- écrans ----------
     def hdmi_connected(self):
@@ -468,9 +654,9 @@ class Scaros:
                 run(["xrandr", "--auto"], timeout=15)
         with self.lock:
             self.output = target
-        self.set_audio(target)
         log.info("écran : mode=%s hdmi=%s -> %s", self.mode, self.hdmi, target)
         self.bus.emit("display", mode=self.mode, hdmi=self.hdmi, output=self.output)
+        self.apply_audio()
 
     def set_mode(self, mode):
         if mode not in ("auto", "pc", "tv"):
@@ -574,6 +760,7 @@ class Scaros:
         threading.Thread(target=self.apply_output, daemon=True).start()
         threading.Thread(target=self._watch_hdmi, daemon=True).start()
         threading.Thread(target=self._watch_spotify, daemon=True).start()
+        threading.Thread(target=self._watch_audio, daemon=True).start()
         if evdev is not None:
             threading.Thread(target=Pad(self).run, daemon=True).start()
         else:
@@ -812,6 +999,20 @@ class Handler(BaseHTTPRequestHandler):
             a.type_text(str(body.get("text", "")))
             return self.json({"ok": True})
         if path == "/api/hello":
+            return self.json({"ok": True})
+        if path == "/api/audio":
+            ok = a.set_audio_mode(str(body.get("mode")), body.get("mac") or None)
+            return self.json({"ok": ok}, 200 if ok else 400)
+        if path == "/api/bt/scan":
+            threading.Thread(target=a.bt_scan, daemon=True).start()
+            return self.json({"ok": True})
+        if path in ("/api/bt/connect", "/api/bt/disconnect", "/api/bt/remove"):
+            mac = str(body.get("mac", ""))
+            if not MAC.fullmatch(mac):
+                return self.json({"error": "adresse Bluetooth invalide"}, 400)
+            action = {"/api/bt/connect": a.bt_connect, "/api/bt/disconnect": a.bt_disconnect,
+                      "/api/bt/remove": a.bt_remove}[path]
+            threading.Thread(target=action, args=(mac,), daemon=True).start()
             return self.json({"ok": True})
         if path == "/api/pair":
             threading.Thread(target=a.pair, daemon=True).start()

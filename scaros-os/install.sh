@@ -37,7 +37,7 @@ apt-get update
 apt_install \
   xserver-xorg-core xserver-xorg-input-libinput xinit x11-xserver-utils xdotool openbox unclutter-xfixes \
   chromium fonts-noto-core \
-  pipewire pipewire-pulse wireplumber pulseaudio-utils alsa-ucm-conf \
+  pipewire pipewire-pulse wireplumber pulseaudio-utils alsa-ucm-conf libspa-0.2-bluetooth \
   intel-media-va-driver i965-va-driver vainfo \
   bluez playerctl dbus-user-session polkitd \
   python3 python3-evdev python3-qrcode \

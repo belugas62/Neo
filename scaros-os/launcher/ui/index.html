@@ -349,6 +349,10 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
 .np[data-status="Paused"] .eq i { animation-play-state: paused; transform: scaleY(.3); }
 @keyframes eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
 .g-y { background: #f5c518; }
+.opt-group { margin: 1.6rem 0 .5rem; padding: 0 1.2rem; font-size: .85rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.opt-empty { margin: 0; padding: .6rem 1.2rem; font-size: 1rem; color: var(--muted); }
+.spin { display: inline-block; width: 1.2rem; height: 1.2rem; box-sizing: border-box; border: .16rem solid #ffffff33; border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- portrait (phone held upright) ---------- */
 @media (max-aspect-ratio: 1/1) {
@@ -412,6 +416,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
         <div class="status">
           <span class="pill" id="out"></span>
           <span class="st" id="st-phone" title="Téléphone connecté" data-icon="phone" hidden></span>
+          <span class="st" id="st-audio" data-icon="headphones" hidden></span>
           <span class="st dim" id="st-pad" title="Aucune manette" data-icon="gamepad"></span>
           <span class="st st-wifi" title="Wi-Fi" data-icon="wifi"></span>
           <span class="clock-wrap"><span class="clock" id="clock">--:--</span><span class="date" id="date"></span></span>
@@ -568,7 +573,10 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.4"/>',
     replay: '<path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/>',
     moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
-    alert: '<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.3v.2"/>'
+    alert: '<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.3v.2"/>',
+    bluetooth: '<path d="M7 7l10 10-5 5V2l5 5L7 17"/>',
+    headphones: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.5"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>'
   };
   const icon = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
 
@@ -610,11 +618,16 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       desc: 'Ton téléphone devient une télécommande, sur le même Wi-Fi que Scaros.',
       chips: ['Sans appli à installer', 'Clavier pour les recherches'] },
     { id: 'settings', name: 'Paramètres', glyph: 'sliders', c1: '#b8c0d0', c2: '#2b313d',
-      desc: 'Wi-Fi, manette, son et démarrage.', chips: [] },
+      desc: 'Wi-Fi, manette, son, Bluetooth et démarrage.', chips: [] },
     { id: 'power', name: 'Éteindre', glyph: 'power', c1: '#ff5a47', c2: '#4a120c',
       desc: 'Éteindre, redémarrer ou mettre en veille.', chips: [] }
   ];
   const ALL = [...APPS, ...SYS];
+  const AUDIO_NAMES = { tv: 'la télé (HDMI)', pc: 'les haut-parleurs du PC' };
+  const AUDIO_MODE = { auto: 'Auto', tv: 'Télé', pc: 'PC', bluetooth: 'Bluetooth' };
+  const BT_ICON = { audio: 'headphones', input: 'gamepad', other: 'bluetooth' };
+  const BT_KIND = { audio: 'Casque ou enceinte', input: 'Manette', other: 'Appareil Bluetooth' };
+  const BT_PANELS = ['settings', 'sound', 'bluetooth', 'btdevice'];
   const byId = Object.fromEntries(ALL.map(t => [t.id, t]));
 
   const state = {
@@ -622,8 +635,11 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     focus: 'youtube', panel: null, pItems: [], pIdx: 0, launched: null,
     mode: 'auto', hdmi: false, output: 'pc', volume: 35, booting: false, power: null,
     installed: {}, pad: null, padSupport: false, phones: 0, phoneDemo: false,
-    remoteUrl: 'http://scaros.local:8421/remote', qr: false, wifi: null, ip: null, now: null
+    remoteUrl: 'http://scaros.local:8421/remote', qr: false, wifi: null, ip: null, now: null,
+    audio: { mode: 'auto', target: 'pc', device: 'les haut-parleurs du PC' },
+    bt: { devices: [], scanning: false }, btSel: null, panelStack: []
   };
+  let audioReady = false, displayToastAt = 0;
   const computeOutput = () => state.mode === 'pc' ? 'pc' : (state.hdmi ? 'tv' : 'pc');
   let lastOut = 'pc';
 
@@ -651,6 +667,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       pad: s.pad, padSupport: !!s.padSupport, volume: s.volume ?? state.volume, now: s.now,
       phones: s.remote ? s.remote.phones : 0, remoteUrl: s.remote ? s.remote.url : state.remoteUrl,
       qr: !!(s.remote && s.remote.qr), wifi: s.wifi, ip: s.ip,
+      audio: s.audio && s.audio.target ? s.audio : state.audio, bt: s.bt || state.bt,
       installed: Object.fromEntries(Object.entries(s.apps || {}).map(([k, v]) => [k, v.installed]))
     });
     lastOut = state.output;
@@ -699,6 +716,13 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       state.phones = m.phones;
       renderStatus();
       if (more) toast('phone', 'Téléphone connecté.');
+    } else if (m.type === 'audio') {
+      onAudio(m);
+    } else if (m.type === 'bt') {
+      state.bt = { devices: m.devices || [], scanning: !!m.scanning };
+      rerenderBt();
+    } else if (m.type === 'btmsg') {
+      btToast(m.state, m.name);
     } else if (m.type === 'pair') {
       const msg = {
         scanning: ['gamepad', 'Recherche de la manette… Maintiens son bouton d’appairage 3 secondes.', 30000],
@@ -747,6 +771,9 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     sp.classList.toggle('dim', !state.pad);
     sp.title = state.pad ? 'Manette connectée' : 'Aucune manette';
     $('#st-phone').hidden = !(state.live ? state.phones > 0 : state.phoneDemo);
+    const sa = $('#st-audio');
+    sa.hidden = state.audio.target !== 'bt';
+    sa.title = `Son sur ${state.audio.device}`;
     $('#ver').textContent = state.live ? `Scaros OS ${state.version}${state.dry ? ' · test' : ''}` : 'Scaros OS 0.1 · maquette';
   }
   function renderTiles() {
@@ -759,7 +786,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   function updateHints() {
     const h = (g, t) => `<span class="hint">${g}${t}</span>`;
     $('#hints').innerHTML = state.panel
-      ? h(G.a, 'Choisir') + h(G.b, 'Fermer')
+      ? h(G.a, 'Choisir') + h(G.b, state.panelStack.length ? 'Retour' : 'Fermer')
       : h(G.a, 'Ouvrir') + h(G.home, 'Accueil') + h(G.num, 'Chaîne directe');
   }
   function renderAll() {
@@ -832,12 +859,12 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
 
   const PANELS = {
     display: () => ({
-      title: 'Écran', lead: 'Choisis où s’affiche Scaros. Le son suit toujours l’image.',
+      title: 'Écran', lead: 'Choisis où s’affiche Scaros. Le son suit l’image, sauf si tu choisis une autre sortie dans Paramètres › Son.',
       body: `<div class="status-card"><span class="sdot ${state.hdmi ? 'on' : ''}"></span><div><div class="sc-title">Télé (HDMI) : ${state.hdmi ? 'branchée' : 'non branchée'}</div><div class="sc-sub">Affichage actuel : ${state.output === 'tv' ? 'la télé' : 'l’écran du PC'}</div></div></div>
         <div class="opts" role="radiogroup" aria-label="Où afficher Scaros">
           ${radio('mode:auto', 'Auto', 'Passe sur la télé dès que le HDMI est branché, revient sur le PC quand tu le débranches.', state.mode === 'auto')}
           ${radio('mode:pc', 'Écran du PC', 'Reste sur l’écran du portable, même si la télé est branchée.', state.mode === 'pc')}
-          ${radio('mode:tv', 'Télé (HDMI)', state.hdmi ? 'Tout passe sur la télé, l’écran du PC s’éteint.' : 'Branche le câble HDMI pour la choisir.', state.mode === 'tv', !state.hdmi)}
+          ${radio('mode:tv', 'Télé (HDMI)', state.hdmi ? 'L’image passe sur la télé, l’écran du PC s’éteint.' : 'Branche le câble HDMI pour la choisir.', state.mode === 'tv', !state.hdmi)}
         </div>
         ${state.live && !state.dry ? '' : `<div class="sep"></div>
         <div class="opts"><button type="button" class="opt" data-act="hdmi"><span class="tag">Démo</span><span class="opt-main"><span class="opt-title">${state.hdmi ? 'Débrancher' : 'Brancher'} le câble HDMI</span><span class="opt-desc">Simule la télé pour voir la bascule. Raccourci clavier : <kbd>H</kbd></span></span></button></div>`}`
@@ -865,11 +892,56 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       body: `<div class="opts">
           ${row('info:wifi', 'wifi', 'Wi-Fi', state.live ? 'Réseau utilisé par Scaros' : 'Choisir un réseau et entrer le mot de passe', state.live ? esc(state.wifi || 'Non connecté') : '')}
           ${row('pair', 'gamepad', 'Manette', state.pad ? esc(state.pad) : 'Appuie ici, puis maintiens le bouton d’appairage de la manette', state.pad ? 'Connectée' : 'Appairer')}
-          ${row('info:sound', 'speaker', 'Son', 'Volume et sortie audio', 'Suit l’écran')}
+          ${row('panel:sound', 'speaker', 'Son', `Sort sur ${esc(state.audio.device)}`, AUDIO_MODE[state.audio.mode] || 'Auto')}
+          ${row('panel:bluetooth', 'bluetooth', 'Bluetooth', 'Casques, enceintes et manettes', btSummary())}
           ${row('replay', 'replay', 'Animation de démarrage', 'Le logo Scaros à l’allumage', 'Rejouer')}
           ${row('info:about', 'info', 'À propos', state.live && state.ip ? `Adresse sur le réseau : ${esc(state.ip)}` : 'Version et infos sur le PC', `Scaros OS ${esc(state.version)}`)}
         </div>`
     }),
+    sound: () => {
+      const btDev = state.bt.devices.find(d => d.connected && d.kind === 'audio');
+      return {
+        title: 'Son', lead: 'Choisis où sort le son.',
+        body: `<div class="status-card"><span class="sdot on"></span><div><div class="sc-title">Le son sort sur ${esc(state.audio.device)}</div><div class="sc-sub">Réglage : ${AUDIO_MODE[state.audio.mode] || 'Auto'}</div></div></div>
+          <div class="opts" role="radiogroup" aria-label="Sortie du son">
+            ${radio('audio:auto', 'Auto', 'Sur le casque ou l’enceinte Bluetooth dès qu’il est connecté, sinon sur l’écran utilisé.', state.audio.mode === 'auto')}
+            ${radio('audio:tv', 'Télé (HDMI)', state.hdmi ? 'Par la télé, même si l’image est sur le PC.' : 'Branche le câble HDMI pour la choisir.', state.audio.mode === 'tv', !state.hdmi)}
+            ${radio('audio:pc', 'Haut-parleurs du PC', 'Même quand l’image est sur la télé.', state.audio.mode === 'pc')}
+            ${radio('audio:bluetooth', 'Appareil Bluetooth', btDev ? esc(btDev.name) : 'Aucun casque ni enceinte connecté.', state.audio.mode === 'bluetooth', !btDev)}
+          </div>
+          <div class="sep"></div>
+          <div class="opts">${row('panel:bluetooth', 'bluetooth', 'Connecter un casque ou une enceinte', 'Appareils Bluetooth')}</div>`
+      };
+    },
+    bluetooth: () => {
+      const mine = state.bt.devices.filter(d => d.paired), found = state.bt.devices.filter(d => !d.paired);
+      const devRow = d => row(d.paired ? `btdev:${d.mac}` : `btconnect:${d.mac}`, BT_ICON[d.kind] || 'bluetooth', esc(d.name),
+        BT_KIND[d.kind] || 'Appareil Bluetooth', d.paired ? (d.connected ? 'Connecté' : 'Non connecté') : 'Appairer');
+      return {
+        title: 'Bluetooth', lead: 'Casques, enceintes et manettes.',
+        body: `<div class="opts">
+            ${row('btscan', 'search', state.bt.scanning ? 'Recherche en cours…' : 'Rechercher des appareils',
+              state.bt.scanning ? 'Les appareils trouvés apparaissent ci-dessous.' : 'Mets d’abord ton casque ou ton enceinte en mode appairage.',
+              state.bt.scanning ? '<span class="spin"></span>' : '')}
+          </div>
+          <p class="opt-group">Mes appareils</p>
+          <div class="opts">${mine.length ? mine.map(devRow).join('') : '<p class="opt-empty">Aucun appareil appairé pour l’instant.</p>'}</div>
+          ${found.length || state.bt.scanning ? `<p class="opt-group">Appareils trouvés</p>
+          <div class="opts">${found.length ? found.map(devRow).join('') : '<p class="opt-empty">Recherche…</p>'}</div>` : ''}`
+      };
+    },
+    btdevice: () => {
+      const d = state.bt.devices.find(x => x.mac === state.btSel) || { mac: state.btSel, name: 'Appareil Bluetooth', kind: 'other', connected: false };
+      return {
+        title: esc(d.name), lead: `${BT_KIND[d.kind] || 'Appareil Bluetooth'} · ${d.connected ? 'connecté' : 'non connecté'}`,
+        body: `<div class="opts">
+            ${d.connected ? row(`btdisconnect:${d.mac}`, 'close', 'Déconnecter', '') : row(`btconnect:${d.mac}`, 'bluetooth', 'Connecter', 'Allume l’appareil avant.')}
+            ${d.kind === 'audio' && d.connected ? row(`audiouse:${d.mac}`, 'headphones', 'Utiliser pour le son', 'Le son passe sur cet appareil.') : ''}
+            ${row(`btremove:${d.mac}`, 'alert', 'Oublier cet appareil', 'Il faudra l’appairer à nouveau pour le réutiliser.')}
+            ${row('back', 'back', 'Retour', '')}
+          </div>`
+      };
+    },
     power: () => ({
       title: 'Éteindre', lead: 'Que veux-tu faire ?',
       body: `<div class="opts">
@@ -897,6 +969,13 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'nearest' }); }
   }
   function openPanel(id) {
+    if (state.panel) {
+      state.panelStack.push({ id: state.panel, act: currentAct() });
+      state.panel = id;
+      renderPanel();
+      updateHints();
+      return;
+    }
     state.panel = id;
     sheet.hidden = false; scrim.hidden = false;
     renderPanel();
@@ -904,22 +983,46 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     sheet.classList.add('on'); scrim.classList.add('on');
     updateHints();
   }
+  function backPanel() {
+    const prev = state.panelStack.pop();
+    if (!prev) return closePanel();
+    state.panel = prev.id;
+    renderPanel(prev.act);
+    updateHints();
+  }
   function closePanel() {
     if (!state.panel) return;
     state.panel = null;
+    state.panelStack = [];
     sheet.classList.remove('on'); scrim.classList.remove('on');
     setTimeout(() => { if (!state.panel) { sheet.hidden = true; scrim.hidden = true; } }, 420);
     setFocus(state.focus);
     updateHints();
   }
   function activate(act) {
-    const [k, v] = act.split(':');
+    const i = act.indexOf(':');
+    const k = i < 0 ? act : act.slice(0, i), v = i < 0 ? '' : act.slice(i + 1);
+    const fail = () => toast('alert', 'Scaros ne répond pas.');
     if (k === 'mode') {
       if (state.live) api('/api/display', { mode: v }).catch(() => toast('alert', 'Le changement d’écran a échoué.'));
       else { state.mode = v; applyOutput(); renderPanel(act); }
     }
     else if (k === 'hdmi') { toggleHdmi(); if (!state.live) renderPanel('hdmi'); }
-    else if (k === 'close') closePanel();
+    else if (k === 'close' || k === 'back') backPanel();
+    else if (k === 'panel') openPanel(v);
+    else if (k === 'audio' || k === 'audiouse') {
+      const mode = k === 'audio' ? v : 'bluetooth', mac = k === 'audiouse' ? v : undefined;
+      if (state.live) api('/api/audio', { mode, mac }).catch(fail);
+      else { state.audio.mode = mode; demoAudio(); }
+    }
+    else if (k === 'btscan') { if (state.live) api('/api/bt/scan', {}).catch(fail); else demoScan(); }
+    else if (k === 'btdev') { state.btSel = v; openPanel('btdevice'); }
+    else if (k === 'btconnect' || k === 'btdisconnect' || k === 'btremove') {
+      const action = k.slice(2);
+      if (state.live) api('/api/bt/' + action, { mac: v }).catch(fail);
+      else demoBt(action, v);
+      if (action === 'remove') backPanel();
+    }
     else if (k === 'phone') { closePanel(); showPhone(!state.phoneDemo); }
     else if (k === 'replay') { closePanel(); boot(); }
     else if (k === 'pair') {
@@ -942,11 +1045,74 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       lastOut = o;
       if (!silent) {
         const bl = $('#blink'); bl.classList.remove('run'); void bl.offsetWidth; bl.classList.add('run');
-        toast(o === 'tv' ? 'tv' : 'laptop', o === 'tv' ? 'Image et son passent sur la télé.' : 'Retour sur l’écran du PC.');
+        toast(o === 'tv' ? 'tv' : 'laptop', o === 'tv' ? 'L’image passe sur la télé.' : 'Retour sur l’écran du PC.');
+        displayToastAt = Date.now();
       }
     }
     renderStatus();
     if (state.focus === 'display') renderHero();
+    if (!state.live) demoAudio();
+  }
+
+  // ---------- sound output & Bluetooth ----------
+  function onAudio(m) {
+    state.audio = { mode: m.mode, target: m.target, device: m.device };
+    renderStatus();
+    if (BT_PANELS.includes(state.panel)) renderPanel(currentAct());
+    if (!m.changed || !audioReady) return;
+    const screenTarget = state.output === 'tv' ? 'tv' : 'pc';
+    let text = `Le son passe sur ${m.device}.`;
+    if (Date.now() - displayToastAt < 2000) {
+      text = m.target === screenTarget
+        ? (state.output === 'tv' ? 'Image et son passent sur la télé.' : 'Retour sur l’écran du PC.')
+        : `Image sur ${state.output === 'tv' ? 'la télé' : 'l’écran du PC'}, son sur ${m.device}.`;
+    }
+    toast(m.target === 'bt' ? 'headphones' : m.target === 'tv' ? 'tv' : 'speaker', text);
+  }
+  function demoAudio() {
+    const bt = state.bt.devices.find(d => d.connected && d.kind === 'audio');
+    const screenTarget = state.output === 'tv' ? 'tv' : 'pc', mode = state.audio.mode;
+    const target = mode === 'tv' ? (state.hdmi ? 'tv' : 'pc') : mode === 'pc' ? 'pc' : (bt ? 'bt' : screenTarget);
+    const device = target === 'bt' ? bt.name : AUDIO_NAMES[target];
+    onAudio({ mode, target, device, changed: target !== state.audio.target || device !== state.audio.device });
+  }
+  function btSummary() {
+    const n = state.bt.devices.filter(d => d.connected).length;
+    return n ? `${n} connecté${n > 1 ? 's' : ''}` : 'Aucun connecté';
+  }
+  function rerenderBt() { if (BT_PANELS.includes(state.panel)) renderPanel(currentAct()); }
+  function btToast(st, name) {
+    const msg = {
+      connecting: ['bluetooth', `Connexion à ${name}…`, 15000],
+      connected: ['bluetooth', `${name} est connecté.`],
+      failed: ['alert', `Impossible de joindre ${name}. Vérifie qu’il est allumé et en mode appairage.`, 5200],
+      disconnected: ['bluetooth', `${name} est déconnecté.`],
+      removed: ['bluetooth', `${name} est oublié.`]
+    }[st];
+    if (msg) toast(...msg);
+  }
+  function demoScan() {
+    if (state.bt.scanning) return;
+    state.bt.scanning = true; rerenderBt();
+    setTimeout(() => {
+      [['AA:00:00:00:00:01', 'Casque Bluetooth (exemple)'], ['AA:00:00:00:00:02', 'Enceinte Bluetooth (exemple)']].forEach(([mac, name]) => {
+        if (!state.bt.devices.some(d => d.mac === mac)) state.bt.devices.push({ mac, name, kind: 'audio', paired: false, connected: false });
+      });
+      rerenderBt();
+    }, 1800);
+    setTimeout(() => { state.bt.scanning = false; rerenderBt(); }, 5000);
+  }
+  function demoBt(action, mac) {
+    const d = state.bt.devices.find(x => x.mac === mac);
+    if (!d) return;
+    if (action === 'connect') {
+      btToast('connecting', d.name);
+      setTimeout(() => { d.paired = true; d.connected = true; btToast('connected', d.name); rerenderBt(); demoAudio(); }, 1200);
+    } else if (action === 'disconnect') {
+      d.connected = false; btToast('disconnected', d.name); rerenderBt(); demoAudio();
+    } else if (action === 'remove') {
+      state.bt.devices = state.bt.devices.filter(x => x !== d); btToast('removed', d.name); rerenderBt(); demoAudio();
+    }
   }
   function toggleHdmi() {
     if (state.live) { if (state.dry) api('/api/dev/hdmi', {}).catch(() => {}); return; }
@@ -1145,7 +1311,8 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       if (a === 'up') setPIdx(Math.max(0, state.pIdx - 1));
       else if (a === 'down') setPIdx(Math.min(state.pItems.length - 1, state.pIdx + 1));
       else if (a === 'ok') { const el = state.pItems[state.pIdx]; if (el) activate(el.dataset.act); }
-      else if (a === 'back' || a === 'home') closePanel();
+      else if (a === 'back') backPanel();
+      else if (a === 'home') closePanel();
       else if (a.startsWith('ch')) { closePanel(); channel(a); }
       return;
     }
@@ -1270,6 +1437,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   setFocus('youtube', false);
   boot();
   connect().then(live => {
+    audioReady = true;
     if (!live) return;
     renderAll();
     listen();

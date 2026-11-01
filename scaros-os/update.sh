@@ -15,10 +15,28 @@ tar -xzf "$tmp/scaros.tar.gz" -C "$tmp"
 src="$tmp/Neo-scaros-os/scaros-os"
 [ -f "$src/launcher/scaros.py" ] || { echo "Archive inattendue : rien n'a été modifié."; exit 1; }
 
+# paquets ajoutés depuis l'installation (son Bluetooth)
+NEW_PACKAGES=(libspa-0.2-bluetooth)
+missing=()
+for pkg in "${NEW_PACKAGES[@]}"; do
+  dpkg -s "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
+done
+if [ "${#missing[@]}" -gt 0 ]; then
+  echo "Installation de : ${missing[*]}…"
+  apt-get update -qq
+  apt-get install -y --no-install-recommends "${missing[@]}"
+  need_reboot=1
+fi
+
 rm -rf /opt/scaros/launcher /opt/scaros/system
 cp -r "$src/launcher" "$src/system" /opt/scaros/
 chmod 755 /opt/scaros/system/session.sh /opt/scaros/launcher/scaros.py
 install -m 755 "$src/update.sh" /usr/local/bin/scaros-update
 
-echo "Scaros est à jour. L'écran redémarre…"
-systemctl restart getty@tty1
+if [ -n "${need_reboot:-}" ]; then
+  echo "Scaros est à jour. Le PC redémarre pour activer les nouveautés…"
+  systemctl reboot
+else
+  echo "Scaros est à jour. L'écran redémarre…"
+  systemctl restart getty@tty1
+fi

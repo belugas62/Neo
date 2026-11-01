@@ -114,6 +114,11 @@ reboot
 Au clavier : flèches, Entrée, Échap ; la **touche Windows** ramène au menu ;
 **1 à 4** ouvrent directement YouTube, Jellyfin, Plex et Spotify ; **+ / −** pour le volume.
 
+**Casque ou enceinte Bluetooth :** **Paramètres > Bluetooth > Rechercher des appareils**, mets
+l'appareil en mode appairage, puis choisis-le dans la liste. Le son passe dessus tout seul.
+Dans **Paramètres > Son**, tu choisis où sort le son : **Auto** (l'appareil Bluetooth s'il est
+connecté, sinon l'écran utilisé), **Télé**, **Haut-parleurs du PC** ou **Appareil Bluetooth**.
+
 **Télé :** branche le câble HDMI, l'image et le son passent sur la télé. Tu peux fermer
 l'écran du portable, il ne se met pas en veille. Le choix Auto / Écran du PC / Télé est
 dans la tuile **Écran**.
