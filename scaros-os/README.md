@@ -128,7 +128,8 @@ dans la tuile **Écran**.
 - **Changer de Wi-Fi :** sur la console de secours, `su -` puis `nmtui`.
 - **Vérifier le décodage vidéo :** `vainfo` doit lister VP9 et HEVC.
 - **Mettre à jour les applis :** `su -` puis `flatpak update`.
-- **Mettre à jour Scaros :** retélécharge l'archive (étape 4) et relance `install.sh`.
+- **Mettre à jour Scaros :** `su -` puis `scaros-update` (récupère la dernière version du menu et relance l'écran).
+  Pour tout réinstaller (paquets, applis), retélécharge l'archive (étape 4) et relance `install.sh`.
 
 ## Ce qui reste à vérifier sur le vrai portable
 

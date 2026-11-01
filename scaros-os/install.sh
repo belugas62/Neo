@@ -121,6 +121,7 @@ mkdir -p "$DEST"
 rm -rf "$DEST/launcher" "$DEST/system"
 cp -r "$HERE/launcher" "$HERE/system" "$DEST/"
 chmod 755 "$DEST/system/session.sh" "$DEST/launcher/scaros.py"
+install -m 755 "$HERE/update.sh" /usr/local/bin/scaros-update
 mkdir -p /etc/chromium/policies/managed
 cat > /etc/chromium/policies/managed/scaros.json <<'EOF'
 {

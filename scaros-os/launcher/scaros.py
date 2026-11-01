@@ -132,6 +132,9 @@ class Scaros:
         self.installed = {}
         self.phones = {}             # ip -> dernière visite
         self.pairing = False
+        self.windows = []            # fenêtres de l'appli ouverte
+        self.launcher_ids = set()
+        self.focus_checked = 0.0
 
     # ---------- réglages ----------
     def _load_settings(self):
@@ -209,6 +212,7 @@ class Scaros:
             return False
         self.close_app(focus=False)
         cmd = ["sleep", "6"] if DRY else conf["cmd"]
+        before = set(self._visible_windows())
         try:
             STATE_DIR.mkdir(parents=True, exist_ok=True)
             out = open(STATE_DIR / f"{app_id}.log", "ab")
@@ -224,6 +228,7 @@ class Scaros:
         log.info("lancé : %s (pid %s)", app_id, p.pid)
         self.bus.emit("app", id=app_id, state="running")
         threading.Thread(target=self._watch, args=(app_id, p, time.time()), daemon=True).start()
+        threading.Thread(target=self._track_windows, args=(app_id, p, before), daemon=True).start()
         return True
 
     def _watch(self, app_id, p, started):
@@ -245,6 +250,7 @@ class Scaros:
         if not cur:
             return
         app_id, p = cur
+        self.windows = []
         flatpak_id = self.apps[app_id].get("flatpak")
         if flatpak_id:
             run(["flatpak", "kill", flatpak_id], quiet=True)
@@ -264,6 +270,42 @@ class Scaros:
         if focus:
             self.focus_launcher()
 
+    def _visible_windows(self):
+        return run(["xdotool", "search", "--onlyvisible", "--name", "."], timeout=3, quiet=True)[1].split()
+
+    def _track_windows(self, app_id, p, before):
+        """Repère les fenêtres de l'appli et lui donne le focus dès qu'elles s'affichent.
+
+        Sans ça, Openbox peut laisser le focus au menu : les touches de la manette
+        partiraient alors vers le menu caché derrière l'appli.
+        """
+        deadline = time.time() + 90
+        while time.time() < deadline and p.poll() is None:
+            with self.lock:
+                if self.current is None or self.current[1] is not p:
+                    return
+            new = [w for w in self._visible_windows() if w not in before]
+            if new and new != self.windows:
+                self.windows = new
+                run(["xdotool", "windowactivate", new[-1]], timeout=3, quiet=True)
+                log.info("%s : fenêtre %s activée", app_id, new[-1])
+            time.sleep(0.7)
+
+    def ensure_app_focus(self):
+        """Avant d'envoyer une touche : si le menu a repris le focus, le rend à l'appli."""
+        if DRY or self.current is None or not self.windows:
+            return
+        now = time.monotonic()
+        if now - self.focus_checked < 1.5:
+            return
+        self.focus_checked = now
+        if not self.launcher_ids:
+            self.launcher_ids = set(run(["xdotool", "search", "--class", LAUNCHER_CLASS], timeout=3, quiet=True)[1].split())
+        active = run(["xdotool", "getactivewindow"], timeout=3, quiet=True)[1].strip()
+        if not active or active in self.launcher_ids:
+            log.info("focus rendu à l'appli (était sur %s)", active or "aucune fenêtre")
+            run(["xdotool", "windowactivate", self.windows[-1]], timeout=3, quiet=True)
+
     def focus_launcher(self):
         run(["xdotool", "search", "--class", LAUNCHER_CLASS, "windowactivate"], timeout=3, quiet=True)
 
@@ -282,7 +324,13 @@ class Scaros:
         elif action == "playpause" and self.current is None and self.now:
             run(["playerctl", "-p", "spotifyd", "play-pause"], timeout=3)
         elif action in KEYS:
-            run(["xdotool", "key", "--clearmodifiers", KEYS[action]], timeout=3)
+            key = KEYS[action]
+            cur = self.current
+            if cur:
+                # une appli peut demander une autre touche, ex. "keys": {"back": "BackSpace"} dans apps.json
+                key = self.apps[cur[0]].get("keys", {}).get(action, key)
+                self.ensure_app_focus()
+            run(["xdotool", "key", "--clearmodifiers", key], timeout=3)
 
     def type_text(self, text):
         text = text.replace("\n", " ").strip()[:200]
