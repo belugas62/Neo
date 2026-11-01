@@ -41,7 +41,7 @@ apt_install \
   intel-media-va-driver i965-va-driver vainfo \
   bluez playerctl dbus-user-session polkitd \
   python3 python3-evdev python3-qrcode \
-  curl ca-certificates wget flatpak plymouth avahi-daemon zram-tools wireless-tools
+  curl ca-certificates wget flatpak plymouth avahi-daemon zram-tools wireless-tools iw openssh-server
 
 # micrologiciels (son Intel SOF, Wi-Fi) : présents si la section non-free-firmware est activée
 for fw in firmware-sof-signed firmware-misc-nonfree firmware-iwlwifi firmware-realtek; do
@@ -76,6 +76,12 @@ if grep -qE '^[[:space:]]*wpa-ssid' "$IFACES" 2>/dev/null; then
   fi
 fi
 systemctl enable NetworkManager >/dev/null 2>&1 || true
+# sans économie d'énergie Wi-Fi, le portable reste joignable (téléphone, SSH)
+mkdir -p /etc/NetworkManager/conf.d
+printf '[connection]\nwifi.powersave = 2\n' > /etc/NetworkManager/conf.d/scaros-wifi.conf
+for dev in /sys/class/net/wl*; do
+  [ -e "$dev" ] && iw dev "$(basename "$dev")" set power_save off 2>/dev/null || true
+done
 
 # ---------------------------------------------------------------------------
 step "3/10 Applis YouTube, Jellyfin et Plex (Flathub)"
