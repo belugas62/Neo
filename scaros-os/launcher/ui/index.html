@@ -4,9 +4,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Scaros OS</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Unbounded:wght@300;500;600&display=swap">
+<!-- fonts:local -->
+<style>
+@font-face { font-family: "Figtree"; src: url("fonts/figtree.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Unbounded"; src: url("fonts/unbounded.woff2") format("woff2"); font-weight: 300 600; font-display: swap; }
+</style>
+<!-- /fonts:local -->
 <style>
 /* Layout: 10-foot TV launcher — status bar, hero for the focused channel, two rails of tiles.
    The room glows in the colour of the focused app (ambilight); the chrome stays quiet. */
@@ -325,6 +328,28 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
 @keyframes press { 50% { background: #ffffff38; transform: scale(.94); } }
 .phone-addr { margin: 0; text-align: center; font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
+/* ---------- live additions ---------- */
+.badge { position: absolute; right: 1.1rem; bottom: 1.1rem; z-index: 2; padding: .2rem .6rem; font-size: .8rem; font-weight: 700; letter-spacing: .06em; color: var(--ink); background: var(--text-2); border-radius: .35rem; }
+.tile.sys .badge { display: none; }
+.qr-card img { display: block; width: 13rem; height: 13rem; border-radius: .9rem; background: #fff; }
+.launch-inner, .np { transition: opacity .3s ease; }
+.launch.np-on .launch-inner, .launch:not(.np-on) .np { display: none; }
+.np { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 3.4rem; max-width: 76rem; padding: 0 max(16px, env(safe-area-inset-right, 0px)); text-align: left; }
+.np-art { display: block; width: 24rem; height: 24rem; object-fit: cover; border-radius: 1.2rem; background: #0000002e; box-shadow: 0 2.4rem 4.8rem -1.6rem #000000b8; }
+.np-state { display: flex; align-items: center; gap: .7rem; margin: 0; font-size: .95rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #ffffffc4; }
+.np-title { margin: .9rem 0 .7rem; font-family: var(--font-display); font-weight: 500; font-size: 3.4rem; line-height: 1.05; text-wrap: balance; }
+.np-artist { margin: 0; font-size: 1.6rem; font-weight: 600; color: #ffffffe0; }
+.np-album { margin: .35rem 0 0; font-size: 1.15rem; color: #ffffffa8; }
+.np-hint { margin: 1.8rem 0 0; display: flex; flex-wrap: wrap; gap: 1.4rem; font-size: 1rem; color: #ffffffb0; }
+.np-hint span { display: flex; align-items: center; gap: .5rem; }
+.eq { display: inline-flex; align-items: flex-end; gap: .18rem; height: 1rem; }
+.eq i { width: .22rem; height: 100%; background: currentColor; border-radius: 2px; transform-origin: bottom; animation: eq 1s ease-in-out infinite; }
+.eq i:nth-child(2) { animation-delay: -.35s; }
+.eq i:nth-child(3) { animation-delay: -.7s; }
+.np[data-status="Paused"] .eq i { animation-play-state: paused; transform: scaleY(.3); }
+@keyframes eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+.g-y { background: #f5c518; }
+
 /* ---------- portrait (phone held upright) ---------- */
 @media (max-aspect-ratio: 1/1) {
   html { font-size: clamp(11px, 3.1vw, 20px); }
@@ -352,6 +377,10 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   .remote-grid { grid-template-columns: 1fr; justify-items: center; }
   .word { font-size: 2.8rem; }
   .sleep-clock { font-size: 6rem; }
+  .np { grid-template-columns: 1fr; justify-items: center; gap: 1.6rem; text-align: center; }
+  .np-art { width: 14rem; height: 14rem; }
+  .np-title { font-size: 2.2rem; }
+  .np-hint { justify-content: center; }
   .phone { top: auto; bottom: 0; left: 0; right: 0; width: auto; transform: none; border-radius: 1.6rem 1.6rem 0 0; padding-bottom: max(1.4rem, env(safe-area-inset-bottom, 0px)); animation: none; }
   .dpad { width: 10rem; height: 10rem; }
 }
@@ -411,7 +440,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       </main>
 
       <footer class="hints">
-        <span class="ver">Scaros OS 0.1 · maquette</span>
+        <span class="ver" id="ver">Scaros OS 0.1 · maquette</span>
         <span class="hint-list" id="hints"></span>
       </footer>
     </div>
@@ -430,6 +459,17 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       <p class="launch-note" id="l-note"></p>
       <p class="launch-fine" id="l-fine"></p>
       <button type="button" class="l-back" id="l-back"><span class="bg g-b">B</span> Retour au menu</button>
+    </div>
+    <div class="np" id="np">
+      <img class="np-art" id="np-art" alt="" hidden>
+      <div>
+        <p class="np-state"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="np-state-text"></span></p>
+        <h2 class="np-title" id="np-title"></h2>
+        <p class="np-artist" id="np-artist"></p>
+        <p class="np-album" id="np-album"></p>
+        <p class="np-hint"><span><span class="bg g-y">Y</span> Lecture / pause</span><span><span class="bg g-home" data-icon="phone"></span> Ou depuis l’appli Spotify</span></p>
+        <button type="button" class="l-back" id="np-back"><span class="bg g-b">B</span> Retour au menu</button>
+      </div>
     </div>
   </div>
 
@@ -497,8 +537,11 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
 <script>
+// Scaros OS — menu TV.
+// Servi par scaros.py, il pilote le vrai PC (mode « live »).
+// Ouvert seul (fichier ou aperçu), il tourne en maquette : rien n'est lancé pour de vrai.
 (() => {
   const $ = (s, r = document) => r.querySelector(s);
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -507,10 +550,6 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
 
   // ---------- icons ----------
   const I = {
-    play: '<path d="M8 5.5v13l11-6.5z" fill="currentColor"/>',
-    film: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h18M3 14.5h18M8 5v4.5M16 5v4.5M8 14.5V19M16 14.5V19"/>',
-    chevron: '<path d="M8.5 4l8 8-8 8" stroke-width="3"/>',
-    bars: '<path d="M5 18v-6M9.5 18V6.5M14 18V9.5M18.5 18v-4" stroke-width="2.6"/>',
     display: '<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8.5 20h7M12 16.5V20"/>',
     laptop: '<rect x="5" y="5" width="14" height="10" rx="1.5"/><path d="M3 19h18"/>',
     tv: '<rect x="3" y="7" width="18" height="12" rx="2.5"/><path d="M9 3.5l3 3.5 3-3.5"/>',
@@ -528,10 +567,12 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     send: '<path d="M4 12l16-7-6 16-3-7z"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.4"/>',
     replay: '<path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/>',
-    moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'
+    moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    alert: '<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.3v.2"/>'
   };
   const icon = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
-  // app logos (in the installed version they come from each app's own icon file)
+
+  // app logos (drawn for the menu; the apps themselves keep their own icons)
   let uid = 0;
   const LOGOS = {
     youtube: () => '<svg class="ic logo" viewBox="0 0 28 20" style="aspect-ratio:28/20" aria-hidden="true"><rect width="28" height="20" rx="5.6" fill="#ff0033"/><path d="M11.2 5.6v8.8l7.6-4.4z" fill="#fff"/></svg>',
@@ -550,16 +591,16 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
 
   // ---------- content ----------
   const APPS = [
-    { id: 'youtube', ch: 1, name: 'YouTube', glyph: 'play', c1: '#ff3040', c2: '#8a0f1a',
+    { id: 'youtube', ch: 1, name: 'YouTube', c1: '#ff3040', c2: '#8a0f1a',
       desc: "L'interface TV officielle, pilotée à la manette. Les pubs sont bloquées.",
       chips: ['Interface TV', 'Sans pub', 'Recherche depuis le téléphone'] },
-    { id: 'jellyfin', ch: 2, name: 'Jellyfin', glyph: 'film', c1: '#a45cff', c2: '#12a0d8',
+    { id: 'jellyfin', ch: 2, name: 'Jellyfin', c1: '#a45cff', c2: '#12a0d8',
       desc: 'Tes films et séries, lus depuis ton serveur Jellyfin.',
       chips: ['Mode TV', 'Reprise de lecture', 'Sous-titres'] },
-    { id: 'plex', ch: 3, name: 'Plex', glyph: 'chevron', c1: '#f2a516', c2: '#7a4a00',
+    { id: 'plex', ch: 3, name: 'Plex', c1: '#f2a516', c2: '#7a4a00',
       desc: 'Ta médiathèque Plex en plein écran, avec Plex HTPC.',
       chips: ['Plex HTPC', 'Manette', 'Plein écran'] },
-    { id: 'spotify', ch: 4, name: 'Spotify', glyph: 'bars', c1: '#1fd760', c2: '#0d5c33',
+    { id: 'spotify', ch: 4, name: 'Spotify', c1: '#1fd760', c2: '#0d5c33',
       desc: 'Lance la musique depuis ton téléphone : Scaros apparaît comme une enceinte et la pochette s’affiche en grand.',
       chips: ['Spotify Connect', 'Premium requis'] }
   ];
@@ -576,14 +617,19 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   const ALL = [...APPS, ...SYS];
   const byId = Object.fromEntries(ALL.map(t => [t.id, t]));
 
-  const state = { focus: 'youtube', panel: null, pItems: [], pIdx: 0, launched: null,
-    mode: 'auto', hdmi: false, volume: 35, booting: false, power: null, phone: false, pad: null };
-  const output = () => state.mode === 'pc' ? 'pc' : (state.hdmi ? 'tv' : 'pc');
+  const state = {
+    live: false, dry: false, version: '0.1', lost: false,
+    focus: 'youtube', panel: null, pItems: [], pIdx: 0, launched: null,
+    mode: 'auto', hdmi: false, output: 'pc', volume: 35, booting: false, power: null,
+    installed: {}, pad: null, padSupport: false, phones: 0, phoneDemo: false,
+    remoteUrl: 'http://scaros.local:8421/remote', qr: false, wifi: null, ip: null, now: null
+  };
+  const computeOutput = () => state.mode === 'pc' ? 'pc' : (state.hdmi ? 'tv' : 'pc');
   let lastOut = 'pc';
 
   const tileHTML = t => `<button type="button" class="tile ${t.ch ? 'app' : 'sys'}" id="t-${t.id}" data-id="${t.id}" style="--c1:${t.c1};--c2:${t.c2}" tabindex="-1">`
     + (t.ch ? `<span class="ch">${pad2(t.ch)}</span><span class="wm">${logo(t.id)}</span>` : '')
-    + `<span class="glyph">${mark(t)}</span><span class="name">${t.name}</span></button>`;
+    + `<span class="glyph">${mark(t)}</span><span class="name">${t.name}</span><span class="badge" hidden>À installer</span></button>`;
   $('#apps').innerHTML = APPS.map(tileHTML).join('');
   $('#sys').innerHTML = SYS.map(tileHTML).join('');
   $('#amb').innerHTML = ALL.map(t => `<div class="amb" data-id="${t.id}" style="--c1:${t.c1};--c2:${t.c2}"></div>`).join('');
@@ -594,10 +640,93 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
         B = $('#boot'), screen = $('#screen'), crt = $('#crt'), OFF = $('#off'),
         T = $('#toast'), V = $('#vol'), P = $('#phone');
 
+  // ---------- backend ----------
+  function api(path, body) {
+    const opts = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+    return fetch(path, { cache: 'no-store', ...opts }).then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))));
+  }
+  function applyState(s) {
+    Object.assign(state, {
+      live: true, dry: !!s.dry, version: s.version, mode: s.mode, hdmi: s.hdmi, output: s.output,
+      pad: s.pad, padSupport: !!s.padSupport, volume: s.volume ?? state.volume, now: s.now,
+      phones: s.remote ? s.remote.phones : 0, remoteUrl: s.remote ? s.remote.url : state.remoteUrl,
+      qr: !!(s.remote && s.remote.qr), wifi: s.wifi, ip: s.ip,
+      installed: Object.fromEntries(Object.entries(s.apps || {}).map(([k, v]) => [k, v.installed]))
+    });
+    lastOut = state.output;
+  }
+  async function connect() {
+    if (location.protocol === 'file:') return false;
+    try {
+      const s = await api('/api/state');
+      if (!s || !s.version || !s.apps) return false;
+      applyState(s);
+      return true;
+    } catch (e) { return false; }
+  }
+  function listen() {
+    const es = new EventSource('/api/events');
+    es.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (err) { return; } onEvent(m); };
+    es.onerror = () => { state.lost = true; };
+    es.onopen = () => {
+      if (!state.lost) return;
+      state.lost = false;
+      api('/api/state').then(s => { applyState(s); renderAll(); }).catch(() => {});
+    };
+  }
+  function onEvent(m) {
+    if (m.type === 'app') onApp(m);
+    else if (m.type === 'home') goHome();
+    else if (m.type === 'display') {
+      Object.assign(state, { mode: m.mode, hdmi: m.hdmi, output: m.output });
+      applyOutput();
+      if (state.panel === 'display') renderPanel(currentAct());
+    } else if (m.type === 'pad') {
+      const was = state.pad;
+      state.pad = m.name;
+      renderStatus();
+      if (m.name && !was) toast('gamepad', /xbox/i.test(m.name) ? 'Manette Xbox connectée.' : 'Manette connectée.');
+      else if (!m.name && was) toast('gamepad', 'Manette déconnectée.');
+      if (state.panel === 'settings') renderPanel(currentAct());
+    } else if (m.type === 'volume') {
+      if (m.level != null) showVol(m.level);
+    } else if (m.type === 'nowplaying') {
+      state.now = m.now;
+      renderNow();
+      if (m.started && !state.launched && !state.panel && !state.power && !state.booting) openOverlay('spotify');
+    } else if (m.type === 'remote') {
+      const more = m.phones > state.phones;
+      state.phones = m.phones;
+      renderStatus();
+      if (more) toast('phone', 'Téléphone connecté.');
+    } else if (m.type === 'pair') {
+      const msg = {
+        scanning: ['gamepad', 'Recherche de la manette… Maintiens son bouton d’appairage 3 secondes.', 30000],
+        notfound: ['alert', 'Aucune manette trouvée. Réessaie depuis Paramètres.'],
+        failed: ['alert', 'L’appairage a échoué. Réessaie depuis Paramètres.'],
+        done: ['gamepad', `Manette appairée${m.name ? ' : ' + m.name : ''}.`]
+      }[m.state];
+      if (msg) toast(...msg);
+    }
+  }
+  function onApp(m) {
+    const t = byId[m.id];
+    if (!t) return;
+    if (m.state === 'running') { if (state.launched !== m.id) openOverlay(m.id); }
+    else if (m.state === 'closed') { if (state.launched === m.id) closeLaunch(false); }
+    else {
+      if (state.launched === m.id) closeLaunch(false);
+      if (m.state === 'missing') { state.installed[m.id] = false; renderTiles(); }
+      toast('alert', m.state === 'missing'
+        ? `${t.name} n’est pas installé. Relance install.sh pour l’ajouter.`
+        : `${t.name} n’a pas pu démarrer.`, 5200);
+    }
+  }
+
   // ---------- hero & status ----------
   function heroData(t) {
     if (t.id !== 'display') return t;
-    const o = output();
+    const o = state.output;
     return { ...t,
       desc: `Affichage actuel : ${o === 'tv' ? 'la télé, en HDMI' : 'l’écran du PC'}. ${state.mode === 'auto' ? 'Bascule automatique activée.' : 'Choix manuel.'}`,
       chips: [state.hdmi ? 'Télé branchée' : 'Télé non branchée', 'Le son suit l’écran'] };
@@ -612,15 +741,19 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     hero.classList.remove('in'); void hero.offsetWidth; hero.classList.add('in');
   }
   function renderStatus() {
-    const o = output();
+    const o = state.output;
     $('#out').innerHTML = icon(o === 'tv' ? 'tv' : 'laptop') + `<span>${o === 'tv' ? 'Télé · HDMI' : 'Écran du PC'}</span>`;
     const sp = $('#st-pad');
     sp.classList.toggle('dim', !state.pad);
     sp.title = state.pad ? 'Manette connectée' : 'Aucune manette';
-    $('#st-phone').hidden = !state.phone;
+    $('#st-phone').hidden = !(state.live ? state.phones > 0 : state.phoneDemo);
+    $('#ver').textContent = state.live ? `Scaros OS ${state.version}${state.dry ? ' · test' : ''}` : 'Scaros OS 0.1 · maquette';
+  }
+  function renderTiles() {
+    tiles.forEach(el => { el.querySelector('.badge').hidden = !(state.live && state.installed[el.dataset.id] === false); });
   }
   const G = {
-    a: '<span class="bg g-a">A</span>', b: '<span class="bg g-b">B</span>',
+    a: '<span class="bg g-a">A</span>', b: '<span class="bg g-b">B</span>', y: '<span class="bg g-y">Y</span>',
     home: `<span class="bg g-home">${icon('home')}</span>`, num: '<span class="bg g-num">1–4</span>'
   };
   function updateHints() {
@@ -628,6 +761,10 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     $('#hints').innerHTML = state.panel
       ? h(G.a, 'Choisir') + h(G.b, 'Fermer')
       : h(G.a, 'Ouvrir') + h(G.home, 'Accueil') + h(G.num, 'Chaîne directe');
+  }
+  function renderAll() {
+    renderStatus(); renderTiles(); renderNow(); updateHints(); renderHero();
+    if (state.panel) renderPanel(currentAct());
   }
 
   // ---------- focus & spatial navigation ----------
@@ -670,53 +807,67 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     `<button type="button" class="opt" role="radio" aria-checked="${checked}" data-act="${act}"${disabled ? ' disabled' : ''}><span class="radio"></span><span class="opt-main"><span class="opt-title">${title}</span><span class="opt-desc">${desc}</span></span></button>`;
   const row = (act, ic, title, desc, val = '') =>
     `<button type="button" class="opt" data-act="${act}">${icon(ic)}<span class="opt-main"><span class="opt-title">${title}</span>${desc ? `<span class="opt-desc">${desc}</span>` : ''}</span>${val ? `<span class="opt-val">${val}</span>` : ''}</button>`;
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  const REMOTE_URL = 'http://scaros.local:8080';
+  let qrLib = null;
+  function loadQrLib() {
+    if (qrLib) return qrLib;
+    qrLib = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    return qrLib;
+  }
   function qrSVG(text) {
     if (typeof qrcode !== 'function') return '';
     try {
       const q = qrcode(0, 'M'); q.addData(text); q.make();
       const n = q.getModuleCount(); let d = '';
       for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
-      return `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" shape-rendering="crispEdges" role="img" aria-label="QR code vers ${text}"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#ffffff"/><path d="${d}" fill="#06080c"/></svg>`;
+      return `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" shape-rendering="crispEdges" role="img" aria-label="QR code vers ${esc(text)}"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#ffffff"/><path d="${d}" fill="#06080c"/></svg>`;
     } catch (e) { return ''; }
   }
 
   const PANELS = {
     display: () => ({
       title: 'Écran', lead: 'Choisis où s’affiche Scaros. Le son suit toujours l’image.',
-      body: `<div class="status-card"><span class="sdot ${state.hdmi ? 'on' : ''}"></span><div><div class="sc-title">Télé (HDMI) : ${state.hdmi ? 'branchée' : 'non branchée'}</div><div class="sc-sub">Affichage actuel : ${output() === 'tv' ? 'la télé' : 'l’écran du PC'}</div></div></div>
+      body: `<div class="status-card"><span class="sdot ${state.hdmi ? 'on' : ''}"></span><div><div class="sc-title">Télé (HDMI) : ${state.hdmi ? 'branchée' : 'non branchée'}</div><div class="sc-sub">Affichage actuel : ${state.output === 'tv' ? 'la télé' : 'l’écran du PC'}</div></div></div>
         <div class="opts" role="radiogroup" aria-label="Où afficher Scaros">
           ${radio('mode:auto', 'Auto', 'Passe sur la télé dès que le HDMI est branché, revient sur le PC quand tu le débranches.', state.mode === 'auto')}
           ${radio('mode:pc', 'Écran du PC', 'Reste sur l’écran du portable, même si la télé est branchée.', state.mode === 'pc')}
           ${radio('mode:tv', 'Télé (HDMI)', state.hdmi ? 'Tout passe sur la télé, l’écran du PC s’éteint.' : 'Branche le câble HDMI pour la choisir.', state.mode === 'tv', !state.hdmi)}
         </div>
-        <div class="sep"></div>
-        <div class="opts"><button type="button" class="opt" data-act="hdmi"><span class="tag">Démo</span><span class="opt-main"><span class="opt-title">${state.hdmi ? 'Débrancher' : 'Brancher'} le câble HDMI</span><span class="opt-desc">Simule la télé pour voir la bascule. Raccourci clavier : <kbd>H</kbd></span></span></button></div>`
+        ${state.live && !state.dry ? '' : `<div class="sep"></div>
+        <div class="opts"><button type="button" class="opt" data-act="hdmi"><span class="tag">Démo</span><span class="opt-main"><span class="opt-title">${state.hdmi ? 'Débrancher' : 'Brancher'} le câble HDMI</span><span class="opt-desc">Simule la télé pour voir la bascule. Raccourci clavier : <kbd>H</kbd></span></span></button></div>`}`
     }),
     remote: () => {
-      const qr = qrSVG(REMOTE_URL);
+      const url = state.remoteUrl, short = url.replace(/^https?:\/\//, '').replace(/\/remote$/, '');
+      let qr = '';
+      if (state.live && state.qr) qr = '<img src="/api/qr.svg" alt="QR code de la télécommande">';
+      else if (!state.live) { qr = qrSVG(url); if (!qr) loadQrLib().then(() => { if (state.panel === 'remote') renderPanel(currentAct()); }).catch(() => {}); }
       return {
         wide: true, title: 'Télécommande', lead: 'Ton téléphone devient une télécommande, avec un clavier pour taper tes recherches.',
         body: `<div class="remote-grid">
-            ${qr ? `<div class="qr-card">${qr}<p class="qr-addr">scaros.local:8080</p></div>` : `<div class="qr-card"><p class="qr-addr">scaros.local:8080</p></div>`}
-            <ol class="steps"><li>Connecte ton téléphone au même Wi-Fi que Scaros.</li><li>Scanne le QR code avec l’appareil photo.</li><li>La télécommande s’ouvre dans le navigateur. Rien à installer.</li></ol>
+            <div class="qr-card">${qr}<p class="qr-addr">${esc(short)}</p></div>
+            <ol class="steps"><li>Connecte ton téléphone au même Wi-Fi que Scaros.</li><li>Scanne le QR code avec l’appareil photo${qr ? '' : `, ou tape l’adresse ${esc(short)}`}.</li><li>La télécommande s’ouvre dans le navigateur. Rien à installer.</li></ol>
           </div>
           <div class="opts">
-            ${row('phone', 'phone', state.phone ? 'Masquer la télécommande de démo' : 'Essayer la télécommande ici', 'Affiche à côté du menu la page que verra ton téléphone.')}
+            ${state.live ? '' : row('phone', 'phone', state.phoneDemo ? 'Masquer la télécommande de démo' : 'Essayer la télécommande ici', 'Affiche à côté du menu la page que verra ton téléphone.')}
             ${row('close', 'back', 'Fermer', '')}
           </div>
-          <p class="fine">Maquette : le QR code pointe vers une adresse d’exemple. Dans la version installée, il pointe vers ton PC.</p>`
+          ${state.live ? '' : '<p class="fine">Maquette : le QR code pointe vers une adresse d’exemple. Sur le PC, il pointe vers ta machine.</p>'}`
       };
     },
     settings: () => ({
       title: 'Paramètres', lead: 'Les réglages de base, tous faisables à la manette.',
       body: `<div class="opts">
-          ${row('info', 'wifi', 'Wi-Fi', 'Choisir un réseau et entrer le mot de passe')}
-          ${row('info', 'gamepad', 'Manette', 'Appairage Bluetooth', state.pad ? 'Connectée' : 'Non détectée')}
-          ${row('info', 'speaker', 'Son', 'Volume et sortie audio', 'Suit l’écran')}
+          ${row('info:wifi', 'wifi', 'Wi-Fi', state.live ? 'Réseau utilisé par Scaros' : 'Choisir un réseau et entrer le mot de passe', state.live ? esc(state.wifi || 'Non connecté') : '')}
+          ${row('pair', 'gamepad', 'Manette', state.pad ? esc(state.pad) : 'Appuie ici, puis maintiens le bouton d’appairage de la manette', state.pad ? 'Connectée' : 'Appairer')}
+          ${row('info:sound', 'speaker', 'Son', 'Volume et sortie audio', 'Suit l’écran')}
           ${row('replay', 'replay', 'Animation de démarrage', 'Le logo Scaros à l’allumage', 'Rejouer')}
-          ${row('info', 'info', 'À propos', 'Version et infos sur le PC', 'Scaros OS 0.1')}
+          ${row('info:about', 'info', 'À propos', state.live && state.ip ? `Adresse sur le réseau : ${esc(state.ip)}` : 'Version et infos sur le PC', `Scaros OS ${esc(state.version)}`)}
         </div>`
     }),
     power: () => ({
@@ -730,6 +881,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     })
   };
 
+  const currentAct = () => state.pItems[state.pIdx] && state.pItems[state.pIdx].dataset.act;
   function renderPanel(keepAct) {
     const p = PANELS[state.panel]();
     sheet.classList.toggle('wide', !!p.wide);
@@ -762,18 +914,30 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   }
   function activate(act) {
     const [k, v] = act.split(':');
-    if (k === 'mode') { state.mode = v; applyOutput(); renderPanel(act); }
-    else if (k === 'hdmi') { setHdmi(!state.hdmi); renderPanel('hdmi'); }
+    if (k === 'mode') {
+      if (state.live) api('/api/display', { mode: v }).catch(() => toast('alert', 'Le changement d’écran a échoué.'));
+      else { state.mode = v; applyOutput(); renderPanel(act); }
+    }
+    else if (k === 'hdmi') { toggleHdmi(); if (!state.live) renderPanel('hdmi'); }
     else if (k === 'close') closePanel();
-    else if (k === 'phone') { closePanel(); showPhone(!state.phone); }
+    else if (k === 'phone') { closePanel(); showPhone(!state.phoneDemo); }
     else if (k === 'replay') { closePanel(); boot(); }
-    else if (k === 'info') toast('sliders', 'Ce réglage arrive avec la version installée.');
+    else if (k === 'pair') {
+      if (state.live) api('/api/pair', {}).catch(() => toast('alert', 'Scaros ne répond pas.'));
+      else toast('gamepad', 'Sur le PC, Scaros cherche la manette pendant 30 secondes.');
+    }
+    else if (k === 'info') {
+      toast('info', v === 'wifi' && state.live
+        ? 'Pour changer de Wi-Fi, branche un clavier, appuie sur Ctrl+Alt+F2 et lance « nmtui ».'
+        : state.live ? 'Rien à régler ici pour l’instant.' : 'Ce réglage arrive avec la version installée.');
+    }
     else if (k === 'power') { closePanel(); v === 'sleep' ? sleep() : powerOff(v === 'restart'); }
   }
 
   // ---------- display output ----------
   function applyOutput(silent) {
-    const o = output();
+    if (!state.live) state.output = computeOutput();
+    const o = state.output;
     if (o !== lastOut) {
       lastOut = o;
       if (!silent) {
@@ -782,51 +946,86 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       }
     }
     renderStatus();
-    if (state.focus === 'display' && !state.panel) renderHero();
+    if (state.focus === 'display') renderHero();
   }
-  function setHdmi(on) {
-    state.hdmi = on;
-    if (!on && state.mode === 'tv') state.mode = 'auto';
+  function toggleHdmi() {
+    if (state.live) { if (state.dry) api('/api/dev/hdmi', {}).catch(() => {}); return; }
+    state.hdmi = !state.hdmi;
+    if (!state.hdmi && state.mode === 'tv') state.mode = 'auto';
     const before = lastOut;
     applyOutput();
-    if (lastOut === before) toast('tv', on ? 'Télé branchée. Scaros reste sur l’écran du PC, comme tu l’as choisi.' : 'Télé débranchée.');
+    if (lastOut === before) toast('tv', state.hdmi ? 'Télé branchée. Scaros reste sur l’écran du PC, comme tu l’as choisi.' : 'Télé débranchée.');
   }
 
-  // ---------- launching an app ----------
+  // ---------- opening an app ----------
   let launchTimer;
   function launch(id) {
     const t = byId[id];
     if (!t.ch) { openPanel(id); return; }
-    const r = $('#t-' + id).getBoundingClientRect();
+    openOverlay(id, $('#t-' + id));
+    if (state.live) api('/api/launch', { id }).catch(() => { closeLaunch(false); toast('alert', 'Scaros ne répond pas.'); });
+  }
+  function openOverlay(id, fromEl) {
+    const t = byId[id];
+    if (state.panel) closePanel();
+    const r = (fromEl || $('#t-' + id)).getBoundingClientRect();
     L.style.setProperty('--x', `${r.left + r.width / 2}px`);
     L.style.setProperty('--y', `${r.top + r.height / 2}px`);
     L.style.setProperty('--c1', t.c1); L.style.setProperty('--c2', t.c2);
-    $('#l-glyph').innerHTML = logo(t.id);
+    $('#l-glyph').innerHTML = logo(id);
     $('#l-eyebrow').innerHTML = `Chaîne <span class="num">${pad2(t.ch)}</span>`;
     $('#l-title').textContent = t.name;
     $('#l-status').textContent = `Ouverture de ${t.name}…`;
     L.classList.remove('ready');
+    L.dataset.app = id;
     state.launched = id;
+    renderNow();
     L.hidden = false; void L.offsetWidth; L.classList.add('on');
     clearTimeout(launchTimer);
-    launchTimer = setTimeout(() => {
-      if (id === 'spotify') {
-        $('#l-status').textContent = 'Prêt pour Spotify Connect';
-        $('#l-note').textContent = 'Sur ton téléphone, ouvre Spotify, touche l’icône des appareils et choisis « Scaros ». La pochette s’affichera ici en grand.';
-      } else {
-        $('#l-status').textContent = `${t.name} est ouvert`;
-        $('#l-note').textContent = `Dans la version installée, ${t.name} s’affiche ici en plein écran, en interface TV.`;
-      }
-      $('#l-fine').textContent = 'Maquette : aucune appli n’est vraiment lancée.';
+    if (id === 'spotify') {
+      $('#l-status').textContent = 'Prêt pour Spotify Connect';
+      $('#l-note').textContent = 'Sur ton téléphone, ouvre Spotify, touche l’icône des appareils et choisis « Scaros ». La pochette s’affichera ici en grand.';
+      $('#l-fine').textContent = state.live ? '' : 'Maquette : aucune musique ne joue.';
       L.classList.add('ready');
       $('#l-back').focus({ preventScroll: true });
-    }, reduce ? 0 : 1400);
+    } else if (!state.live) {
+      launchTimer = setTimeout(() => {
+        $('#l-status').textContent = `${t.name} est ouvert`;
+        $('#l-note').textContent = `Sur le PC, ${t.name} s’affiche ici en plein écran, en interface TV.`;
+        $('#l-fine').textContent = 'Maquette : aucune appli n’est vraiment lancée.';
+        L.classList.add('ready');
+        $('#l-back').focus({ preventScroll: true });
+      }, reduce ? 0 : 1400);
+    }
   }
-  function closeLaunch() {
+  function closeLaunch(notify = true) {
     clearTimeout(launchTimer);
+    const was = state.launched;
     state.launched = null;
+    if (state.live && notify && was && was !== 'spotify') api('/api/close', {}).catch(() => {});
     L.classList.remove('on');
     setTimeout(() => { if (!state.launched) L.hidden = true; }, 650);
+    setFocus(state.focus);
+  }
+  function renderNow() {
+    const n = state.now;
+    const show = state.launched === 'spotify' && !!n;
+    L.classList.toggle('np-on', show);
+    if (!n) return;
+    const np = $('#np');
+    np.dataset.status = n.status;
+    const art = $('#np-art');
+    if (n.art && art.getAttribute('src') !== n.art) art.src = n.art;
+    art.hidden = !n.art;
+    $('#np-state-text').textContent = n.status === 'Playing' ? 'Lecture en cours' : 'En pause';
+    $('#np-title').textContent = n.title || 'Titre inconnu';
+    $('#np-artist').textContent = n.artist || '';
+    $('#np-album').textContent = n.album || '';
+  }
+  function goHome() {
+    if (state.power === 'sleep') { wake(); return; }
+    if (state.panel) closePanel();
+    if (state.launched) closeLaunch(false);
     setFocus(state.focus);
   }
   function channel(a) {
@@ -856,28 +1055,31 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       const touch = matchMedia('(pointer: coarse)').matches;
       setTimeout(() => {
         if (state.pad) return;
-        toast(touch ? 'phone' : 'gamepad', touch
+        if (state.live) toast('gamepad', 'Allume ta manette Xbox. Le clavier marche aussi : flèches, Entrée, Échap.', 6000);
+        else toast(touch ? 'phone' : 'gamepad', touch
           ? 'Touche une tuile pour l’ouvrir. Sur le PC, tout se fait à la manette.'
           : 'Flèches et Entrée pour naviguer, Échap pour revenir. La manette Xbox marche aussi.', 5600);
       }, 900);
     }
   }
-  function showOff(kind) {
+  function showOff(kind, msg) {
     OFF.dataset.kind = kind;
-    $('#off-msg').textContent = kind === 'off' ? 'Scaros est éteint. Appuie sur une touche pour rallumer.' : 'Veille. Appuie sur une touche pour revenir.';
+    $('#off-msg').textContent = msg;
     OFF.classList.toggle('fade', kind === 'sleep');
     OFF.hidden = false;
   }
   function powerOff(restart) {
     state.power = 'busy';
     crt.classList.add('crt-off');
+    if (state.live) api('/api/power', { action: restart ? 'restart' : 'off' }).catch(() => {});
     setTimeout(() => {
-      if (restart) { state.power = null; boot(); }
-      else { state.power = 'off'; showOff('off'); }
+      if (state.live) showOff('off', restart ? 'Redémarrage…' : 'Extinction…');
+      else if (restart) { state.power = null; boot(); }
+      else { state.power = 'off'; showOff('off', 'Scaros est éteint. Appuie sur une touche pour rallumer.'); }
       crt.classList.remove('crt-off');
     }, reduce ? 30 : 820);
   }
-  function sleep() { state.power = 'sleep'; showOff('sleep'); }
+  function sleep() { state.power = 'sleep'; showOff('sleep', 'Veille. Appuie sur une touche pour revenir.'); }
   function wake() {
     const was = state.power;
     state.power = null; OFF.hidden = true;
@@ -893,18 +1095,22 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => T.classList.remove('on'), ms);
   }
-  function vol(d) {
-    state.volume = Math.max(0, Math.min(100, state.volume + d));
-    V.style.setProperty('--v', state.volume / 100);
-    $('#vol-num').textContent = state.volume;
+  function showVol(level) {
+    state.volume = level;
+    V.style.setProperty('--v', level / 100);
+    $('#vol-num').textContent = level;
     V.classList.add('on');
     clearTimeout(volTimer);
     volTimer = setTimeout(() => V.classList.remove('on'), 1500);
   }
+  function vol(d) {
+    if (state.live) { api('/api/input', { action: d > 0 ? 'volup' : 'voldown' }).catch(() => {}); return; }
+    showVol(Math.max(0, Math.min(100, state.volume + d)));
+  }
 
-  // ---------- phone remote demo ----------
+  // ---------- phone remote demo (maquette only) ----------
   function showPhone(on) {
-    state.phone = on; P.hidden = !on; renderStatus();
+    state.phoneDemo = on; P.hidden = !on; renderStatus();
     if (on) toast('phone', 'Téléphone connecté. Essaie les flèches de la télécommande.');
   }
   P.addEventListener('click', e => {
@@ -927,7 +1133,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   function act(a) {
     if (state.booting) { endBoot(); return; }
     if (state.power === 'busy') return;
-    if (state.power) { wake(); return; }
+    if (state.power) { if (!(state.live && state.power === 'off')) wake(); return; }
     if (a === 'volup') return vol(5);
     if (a === 'voldown') return vol(-5);
     if (state.launched) {
@@ -949,7 +1155,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     else if (a.startsWith('ch')) channel(a);
   }
 
-  // keyboard
+  // keyboard (on the PC, the controller and the phone arrive here as keys too)
   const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok',
     Escape: 'back', Backspace: 'back', Home: 'home', '+': 'volup', '=': 'volup', '-': 'voldown',
     '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4' };
@@ -957,13 +1163,13 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if ((e.key === 'h' || e.key === 'H') && !state.booting && !state.power) {
-      setHdmi(!state.hdmi);
-      if (state.panel === 'display') renderPanel(state.pItems[state.pIdx]?.dataset.act);
+      toggleHdmi();
+      if (state.panel === 'display' && !state.live) renderPanel(currentAct());
       return;
     }
     const a = KEYS[e.key];
-    if (!a) { if (state.booting) endBoot(); else if (state.power && state.power !== 'busy') wake(); return; }
-    // Enter on a plain button (phone, "retour") keeps its native click
+    if (!a) { if (state.booting) endBoot(); else if (state.power && state.power !== 'busy') act('ok'); return; }
+    // Enter on a plain button (phone mock, "retour") keeps its native click
     if (a === 'ok' && e.target.closest && e.target.closest('.pbtn, .l-back, .phone-x, .dpad button')) return;
     e.preventDefault();
     act(a);
@@ -998,13 +1204,15 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     if (i >= 0 && i !== state.pIdx) setPIdx(i);
   });
   scrim.addEventListener('click', closePanel);
-  $('#l-back').addEventListener('click', closeLaunch);
+  $('#l-back').addEventListener('click', () => closeLaunch());
+  $('#np-back').addEventListener('click', () => closeLaunch());
   B.addEventListener('click', endBoot);
-  OFF.addEventListener('click', () => { if (state.power && state.power !== 'busy') wake(); });
+  OFF.addEventListener('click', () => act('ok'));
 
-  // controller (Xbox over Bluetooth shows up as a standard gamepad)
+  // controller through the browser: used by the maquette, and on the PC only if scaros.py can't read it
   const held = {};
   let polling = false;
+  const browserPad = () => !(state.live && state.padSupport);
   function pads() { try { return navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; } catch (e) { return []; } }
   function repeat(k, on, now) {
     const h = held[k] || (held[k] = { on: false, next: 0 });
@@ -1018,7 +1226,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     h.on = on;
   }
   function padLoop() {
-    const gp = pads()[0];
+    const gp = browserPad() ? pads()[0] : null;
     if (gp) {
       const now = performance.now(), b = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
       const x = gp.axes[0] || 0, y = gp.axes[1] || 0;
@@ -1032,11 +1240,13 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     if (polling) requestAnimationFrame(padLoop);
   }
   addEventListener('gamepadconnected', e => {
+    if (!browserPad()) return;
     state.pad = e.gamepad.id; renderStatus();
     toast('gamepad', /xbox|xinput|045e/i.test(e.gamepad.id) ? 'Manette Xbox connectée.' : 'Manette connectée.');
     if (!polling) { polling = true; padLoop(); }
   });
   addEventListener('gamepaddisconnected', () => {
+    if (!browserPad()) return;
     const left = pads();
     state.pad = left.length ? left[0].id : null;
     if (!left.length) polling = false;
@@ -1059,5 +1269,11 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   updateHints();
   setFocus('youtube', false);
   boot();
+  connect().then(live => {
+    if (!live) return;
+    renderAll();
+    listen();
+  });
 })();
 </script>
+</html>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Openbox pour Scaros OS : toutes les fenêtres en plein écran, sans bordure. -->
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <focus>
+    <focusNew>yes</focusNew>
+    <followMouse>no</followMouse>
+    <focusLast>yes</focusLast>
+  </focus>
+  <placement>
+    <policy>Smart</policy>
+    <center>yes</center>
+  </placement>
+  <theme>
+    <titleLayout></titleLayout>
+    <keepBorder>no</keepBorder>
+    <animateIconify>no</animateIconify>
+  </theme>
+  <desktops>
+    <number>1</number>
+  </desktops>
+  <keyboard>
+    <!-- touche Windows : retour au menu (comme le bouton Xbox) -->
+    <keybind key="Super_L">
+      <action name="Execute">
+        <command>curl -fs -X POST -H "Content-Type: application/json" -d '{"action":"home"}' http://127.0.0.1:8421/api/input</command>
+      </action>
+    </keybind>
+  </keyboard>
+  <mouse>
+    <context name="Client">
+      <mousebind button="Left" action="Press">
+        <action name="Focus"/>
+        <action name="Raise"/>
+      </mousebind>
+    </context>
+  </mouse>
+  <applications>
+    <application class="*">
+      <decor>no</decor>
+      <maximized>yes</maximized>
+      <fullscreen>yes</fullscreen>
+      <focus>yes</focus>
+    </application>
+  </applications>
+</openbox_config>

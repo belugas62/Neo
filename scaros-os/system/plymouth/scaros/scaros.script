@@ -1,0 +1,37 @@
+# Scaros OS : le logo apparaît en fondu, un point lumineux balaie la ligne dessous.
+Window.SetBackgroundTopColor(0.024, 0.031, 0.047);
+Window.SetBackgroundBottomColor(0.024, 0.031, 0.047);
+
+w = Window.GetWidth();
+h = Window.GetHeight();
+
+logo.raw = Image("logo.png");
+logo.width = w * 0.24;
+logo.image = logo.raw.Scale(logo.width, logo.width * logo.raw.GetHeight() / logo.raw.GetWidth());
+logo.sprite = Sprite(logo.image);
+logo.x = Window.GetX() + (w - logo.image.GetWidth()) / 2;
+logo.y = Window.GetY() + (h - logo.image.GetHeight()) / 2;
+logo.sprite.SetPosition(logo.x, logo.y, 1);
+logo.sprite.SetOpacity(0);
+
+dot.raw = Image("dot.png");
+dot.image = dot.raw.Scale(logo.width * 0.12, logo.width * 0.12 * dot.raw.GetHeight() / dot.raw.GetWidth());
+dot.sprite = Sprite(dot.image);
+track.width = logo.width * 0.6;
+track.x = Window.GetX() + (w - track.width) / 2;
+dot.sprite.SetY(logo.y + logo.image.GetHeight() + h * 0.07);
+dot.sprite.SetZ(2);
+dot.sprite.SetOpacity(0);
+
+t = 0;
+fun refresh_callback ()
+{
+  t++;
+  fade = t / 45;
+  if (fade > 1) fade = 1;
+  logo.sprite.SetOpacity(fade);
+  p = (Math.Sin(t / 22) + 1) / 2;
+  dot.sprite.SetX(track.x + p * (track.width - dot.image.GetWidth()));
+  dot.sprite.SetOpacity(fade * 0.85);
+}
+Plymouth.SetRefreshFunction(refresh_callback);

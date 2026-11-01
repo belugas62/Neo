@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#06080c">
+<title>Télécommande Scaros</title>
+<style>
+@font-face { font-family: "Figtree"; src: url("/fonts/figtree.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Unbounded"; src: url("/fonts/unbounded.woff2") format("woff2"); font-weight: 300 600; font-display: swap; }
+/* Layout: one thumb-reachable column — status, text box, d-pad, actions, channels. */
+:root {
+  --ink: #06080c;
+  --ink-raised: #10141c;
+  --key: #171c26;
+  --line: #dfe6ff1f;
+  --text: #eef1f6;
+  --text-2: #c9cfdb;
+  --muted: #8a92a4;
+  --ok: #6cc04a;
+  --led: #ff3b30;
+  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--ink); }
+body {
+  margin: 0; min-height: 100vh; background: radial-gradient(120% 60% at 50% 0%, #141b2b 0%, var(--ink) 60%); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.4; -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+.ic { display: block; width: 22px; height: 22px; }
+main {
+  display: flex; flex-direction: column; gap: 18px; max-width: 420px; margin: 0 auto;
+  padding: max(18px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+header { display: flex; align-items: center; gap: 10px; }
+.mark { width: 30px; height: auto; }
+.word { font-family: var(--font-display); font-weight: 500; font-size: 14px; letter-spacing: .3em; }
+.conn { margin-left: auto; display: flex; align-items: center; gap: 7px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: var(--text-2); border: 1px solid var(--line); border-radius: 99px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.online .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.now { margin: -6px 0 0; font-size: 14px; color: var(--muted); }
+.now b { color: var(--text); font-weight: 600; }
+
+.type { display: flex; gap: 8px; }
+.type input {
+  flex: 1; min-width: 0; padding: 13px 14px; font: inherit; color: var(--text); user-select: text; -webkit-user-select: text;
+  background: var(--key); border: 1px solid var(--line); border-radius: 14px;
+}
+.type input:focus { outline: 2px solid #ffffff70; outline-offset: 1px; }
+.type button { flex: none; display: grid; place-items: center; width: 50px; border: 0; border-radius: 14px; background: var(--text); color: var(--ink); cursor: pointer; }
+
+.dpad {
+  position: relative; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  width: min(78vw, 290px); aspect-ratio: 1; margin: 6px auto;
+  border-radius: 50%; background: radial-gradient(circle at 50% 40%, #1d2330, #121620); border: 1px solid var(--line);
+  box-shadow: inset 0 2px 0 #ffffff0d, 0 18px 40px -18px #000;
+}
+.dpad button { display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-2); cursor: pointer; }
+.dpad .ic { width: 30px; height: 30px; }
+.dpad [data-a="up"] { grid-area: 1 / 2; }
+.dpad [data-a="left"] { grid-area: 2 / 1; }
+.dpad [data-a="right"] { grid-area: 2 / 3; }
+.dpad [data-a="down"] { grid-area: 3 / 2; }
+.dpad [data-a="ok"] { grid-area: 2 / 2; margin: 8px; background: #262d3b; border: 1px solid var(--line); font-weight: 700; font-size: 18px; color: var(--text); }
+.down { background: #ffffff26 !important; transform: scale(.95); }
+.dpad button, .key { transition: transform .08s ease, background .08s ease; }
+
+.row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.key {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 68px; padding: 10px 6px; border: 1px solid var(--line); border-radius: 16px;
+  background: var(--key); font-size: 13px; font-weight: 600; color: var(--text-2); cursor: pointer;
+}
+.key .ic { color: var(--text); }
+.volrow { display: grid; grid-template-columns: 68px 1fr 68px; gap: 10px; align-items: center; }
+.volrow .key { min-height: 56px; font-size: 26px; font-weight: 500; color: var(--text); }
+.level { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.track { width: 100%; height: 6px; overflow: hidden; border-radius: 9px; background: #ffffff1a; }
+.track i { display: block; height: 100%; width: var(--v, 0%); background: var(--text); transition: width .2s ease; }
+
+h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+.channels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.chan {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
+  border: 1px solid var(--line); border-radius: 16px; background: var(--key); cursor: pointer;
+}
+.chan .logo { height: 26px; width: auto; }
+.chan span { display: flex; flex-direction: column; min-width: 0; }
+.chan b { font-size: 15px; }
+.chan small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chan[aria-disabled="true"] { opacity: .45; }
+
+.toast {
+  position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom, 0px)); width: max-content; max-width: calc(100% - 32px);
+  padding: 11px 18px; border-radius: 99px; background: var(--ink-raised); border: 1px solid var(--line);
+  font-size: 14px; font-weight: 600; transform: translate(-50%, 20px); opacity: 0; transition: .25s ease; pointer-events: none;
+}
+.toast.on { transform: translate(-50%, 0); opacity: 1; }
+.tip { margin: 4px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+</style>
+
+<main>
+  <header>
+    <svg class="mark" viewBox="0 0 48 44" fill="none" aria-hidden="true">
+      <rect x="2" y="2" width="44" height="31" rx="9" stroke="currentColor" stroke-width="3"/>
+      <path d="M12 17.5h24" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>
+      <circle cx="24" cy="40" r="2.4" fill="var(--led)"/>
+    </svg>
+    <span class="word">SCAROS</span>
+    <span class="conn" id="conn"><span class="dot"></span><span id="conn-text">Connexion…</span></span>
+  </header>
+  <p class="now" id="now">À l’écran : <b id="now-app">le menu</b></p>
+
+  <form class="type" id="type">
+    <input id="text" type="text" enterkeyhint="send" autocomplete="off" placeholder="Taper une recherche…" aria-label="Texte à envoyer à l’écran">
+    <button type="submit" aria-label="Envoyer" data-icon="send"></button>
+  </form>
+
+  <div class="dpad" role="group" aria-label="Flèches">
+    <button type="button" data-a="up" data-repeat aria-label="Haut" data-icon="up"></button>
+    <button type="button" data-a="left" data-repeat aria-label="Gauche" data-icon="left"></button>
+    <button type="button" data-a="ok" aria-label="Valider">OK</button>
+    <button type="button" data-a="right" data-repeat aria-label="Droite" data-icon="right"></button>
+    <button type="button" data-a="down" data-repeat aria-label="Bas" data-icon="down"></button>
+  </div>
+
+  <div class="row">
+    <button type="button" class="key" data-a="back" data-icon="back">Retour</button>
+    <button type="button" class="key" data-a="home" data-icon="home">Accueil</button>
+    <button type="button" class="key" data-a="playpause" data-icon="playpause">Lecture</button>
+  </div>
+
+  <div class="volrow">
+    <button type="button" class="key" data-a="voldown" data-repeat aria-label="Baisser le volume">−</button>
+    <div class="level"><span>Volume <b id="vol-num"></b></span><div class="track"><i id="vol-bar"></i></div></div>
+    <button type="button" class="key" data-a="volup" data-repeat aria-label="Monter le volume">+</button>
+  </div>
+
+  <h2>Chaînes</h2>
+  <div class="channels" id="channels"></div>
+
+  <p class="tip">Pour taper une recherche, ouvre d’abord le champ de recherche de l’appli, puis écris ici.</p>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const I = {
+    up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
+    left: '<path d="M15 6l-6 6 6 6"/>', right: '<path d="M9 6l6 6-6 6"/>',
+    back: '<path d="M10 6l-6 6 6 6M4 12h16"/>', home: '<path d="M4 11l8-7 8 7M6.5 9.5V20h11V9.5"/>',
+    playpause: '<path d="M5 5.5v13l8-6.5z"/><path d="M16 6v12M20 6v12"/>',
+    send: '<path d="M4 12l16-7-6 16-3-7z"/>'
+  };
+  const icon = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+  document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon) + el.innerHTML; });
+
+  const LOGOS = {
+    youtube: '<svg class="logo" viewBox="0 0 28 20" style="aspect-ratio:28/20" aria-hidden="true"><rect width="28" height="20" rx="5.6" fill="#ff0033"/><path d="M11.2 5.6v8.8l7.6-4.4z" fill="#fff"/></svg>',
+    jellyfin: '<svg class="logo" viewBox="20 18 483 483" style="aspect-ratio:1" aria-hidden="true"><defs><linearGradient id="jf" x1="110.25" y1="213.3" x2="496.14" y2="436.09" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aa5cc3"/><stop offset="1" stop-color="#00a4dc"/></linearGradient></defs><path fill="url(#jf)" d="M261.42 201.62c-20.44 0-86.24 119.29-76.2 139.43s142.48 19.92 152.4 0S281.86 201.63 261.42 201.62z"/><path fill="url(#jf)" d="M261.42 23.3C199.83 23.3 1.57 382.73 31.8 443.43s429.34 60 459.24 0S323 23.3 261.42 23.3zM411.9 390.76c-19.59 39.33-281.08 39.77-300.9 0S221.1 115.48 261.45 115.48 431.49 351.42 411.9 390.76z"/></svg>',
+    plex: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1f1f1f"/><path d="M6.6 3.8h5.4l6 8.2-6 8.2H6.6l6-8.2z" fill="#ebaf00"/></svg>',
+    spotify: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1ed760"/><g fill="none" stroke="#000" stroke-linecap="round"><path d="M5.6 9.2c4-1.3 9.1-1 12.9 1.3" stroke-width="2"/><path d="M6.4 12.7c3.4-1 7.3-.7 10.3 1.1" stroke-width="1.7"/><path d="M7.1 16c2.8-.8 5.7-.6 8 .8" stroke-width="1.45"/></g></svg>'
+  };
+
+  let apps = { youtube: { name: 'YouTube' }, jellyfin: { name: 'Jellyfin' }, plex: { name: 'Plex' }, spotify: { name: 'Spotify' } };
+  let current = null, now = null;
+
+  let toastTimer;
+  function toast(text) {
+    const t = $('#toast');
+    t.textContent = text; t.classList.add('on');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2400);
+  }
+  function setOnline(on) {
+    $('#conn').classList.toggle('online', on);
+    $('#conn-text').textContent = on ? 'Connecté' : 'Hors ligne';
+  }
+  function post(path, body) {
+    return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+      .then(r => { if (!r.ok) throw new Error(r.status); setOnline(true); return r.json(); })
+      .catch(e => { setOnline(false); toast('Scaros ne répond pas. Vérifie que ton téléphone est sur le même Wi-Fi.'); throw e; });
+  }
+  function send(action) {
+    if (navigator.vibrate) navigator.vibrate(12);
+    post('/api/input', { action }).catch(() => {});
+  }
+
+  function renderChannels() {
+    $('#channels').innerHTML = Object.entries(apps).map(([id, a], i) =>
+      `<button type="button" class="chan" data-a="ch${i + 1}" aria-disabled="${a.installed === false}">${LOGOS[id] || ''}<span><b>${a.name}</b><small>Chaîne ${String(i + 1).padStart(2, '0')}</small></span></button>`).join('');
+  }
+  function renderNow() {
+    const playing = now && now.status === 'Playing' && !current;
+    $('#now-app').textContent = current ? (apps[current] || {}).name || current : playing ? `${now.title} · ${now.artist}` : 'le menu';
+  }
+  function renderVol(level) {
+    if (level == null) return;
+    $('#vol-num').textContent = level;
+    $('#vol-bar').style.setProperty('--v', level + '%');
+  }
+
+  // buttons: instant on touch, repeat while held for arrows and volume
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest('[data-a]');
+    if (!b || b.closest('form')) return;
+    e.preventDefault();
+    const a = b.dataset.a;
+    b.classList.add('down');
+    send(a);
+    let t2;
+    const t1 = b.hasAttribute('data-repeat') ? setTimeout(() => { t2 = setInterval(() => send(a), 140); }, 420) : null;
+    const stop = () => {
+      clearTimeout(t1); clearInterval(t2); b.classList.remove('down');
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.removeEventListener(ev, stop));
+    };
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, stop));
+  });
+  document.addEventListener('keydown', e => {
+    const b = e.target.closest && e.target.closest('[data-a]');
+    if (b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); send(b.dataset.a); }
+  });
+
+  $('#type').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = $('#text'), text = input.value.trim();
+    if (!text) return;
+    post('/api/text', { text }).then(() => { input.value = ''; toast('Envoyé à l’écran'); }).catch(() => {});
+  });
+
+  fetch('/api/state', { cache: 'no-store' }).then(r => r.json()).then(s => {
+    apps = s.apps; current = s.app; now = s.now;
+    renderChannels(); renderNow(); renderVol(s.volume); setOnline(true);
+  }).catch(() => { renderChannels(); setOnline(false); });
+
+  const es = new EventSource('/api/events');
+  es.onopen = () => setOnline(true);
+  es.onerror = () => setOnline(false);
+  es.onmessage = e => {
+    let m; try { m = JSON.parse(e.data); } catch (err) { return; }
+    if (m.type === 'app') { current = m.state === 'running' && m.id !== 'spotify' ? m.id : (current === m.id ? null : current); renderNow(); }
+    else if (m.type === 'home') { current = null; renderNow(); }
+    else if (m.type === 'volume') renderVol(m.level);
+    else if (m.type === 'nowplaying') { now = m.now; renderNow(); }
+  };
+  renderChannels();
+  setInterval(() => post('/api/hello').catch(() => {}), 60000);
+})();
+</script>
+</html>
