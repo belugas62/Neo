@@ -1055,8 +1055,9 @@ class Scaros:
         finally:
             self.apps_updating = False
 
-    # ---------- réglages de l'interface (taille du texte, veille auto) ----------
-    PREFS = {"textScale": ("normal", "large", "xlarge"), "autoSleep": (0, 15, 30, 60)}
+    # ---------- réglages de l'interface (apparence, taille du texte, veille auto) ----------
+    PREFS = {"textScale": ("normal", "large", "xlarge"), "autoSleep": (0, 15, 30, 60),
+             "theme": ("dark", "light", "auto")}
 
     def set_pref(self, key, value):
         if key not in self.PREFS or value not in self.PREFS[key]:

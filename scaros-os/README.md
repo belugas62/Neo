@@ -140,6 +140,9 @@ Pour des AirPods, ouvre le boîtier près du PC ; s'ils sont pris par ton télé
 Dans **Réglages > Son**, tu choisis où sort le son : **Auto** (l'appareil Bluetooth s'il est
 connecté, sinon l'écran utilisé), **Télé**, **Haut-parleurs du PC** ou **Appareil Bluetooth**.
 
+**Apparence :** dans **Réglages > Affichage et veille**, choisis **Sombre**, **Clair**, ou **Automatique**
+(clair de 7 h à 19 h, sombre le soir). La taille du texte et la veille automatique se règlent au même endroit.
+
 **Télé :** branche le câble HDMI, l'image et le son passent sur la télé. Tu peux fermer
 l'écran du portable, il ne se met pas en veille. Le choix Auto / Écran du PC / Télé est
 dans **Réglages > Écran**. L'image est envoyée en **1080p**, même sur une télé 4K : ce petit PC
