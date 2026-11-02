@@ -172,6 +172,11 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
 - **Changer de Wi-Fi :** **Réglages > Wi-Fi**, choisis le réseau et tape le mot de passe avec le clavier à l'écran
   (ou un vrai clavier, ou la télécommande du téléphone). En secours : console, `su -` puis `nmtui`.
 - **Vérifier le décodage vidéo :** `vainfo` doit lister VP9 et HEVC.
+- **La télécommande du téléphone ne s'ouvre pas :** ouvre **≡ > Télécommande** sur la télé et scanne le QR code :
+  il donne toujours l'adresse actuelle du PC. L'écran indique aussi le Wi-Fi de Scaros : le téléphone doit être sur le
+  même (pas le réseau invité). Si le QR code marche mais pas l'icône de l'écran d'accueil, c'est que l'adresse du PC a
+  changé : supprime l'icône et ajoute-la de nouveau depuis la page ouverte par le QR code. Pour qu'elle ne change
+  plus, réserve l'adresse du PC dans les réglages de la box (« bail DHCP statique »).
 - **Scaros n'apparaît pas dans la recopie de l'écran de l'iPhone :** regarde **Réglages > AirPlay**, qui dit ce qui
   coince. « Prêt » veut dire que Scaros est bien annoncé sur le Wi-Fi : c'est alors la box qui empêche l'iPhone de le
   voir (réseau invité ou option « isolation » des appareils Wi-Fi). Test simple : si `scaros.local:8421/remote` ne

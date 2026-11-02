@@ -428,12 +428,23 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .qr-big { display: grid; place-items: center; width: min(40rem, 72vh); aspect-ratio: 1; box-sizing: border-box; padding: 1.6rem; border-radius: 2.4rem; background: #fff; box-shadow: 0 3rem 6rem -2rem #000000d0; }
 .qr-big svg, .qr-big img { display: block; width: 100%; height: 100%; }
 .qr-big .qr-wait { margin: 0; padding: 2rem; text-align: center; font-size: calc(1.6rem * var(--fs)); font-weight: 600; color: var(--focus-fg); }
-.qr-side { min-width: 0; }
+.qr-side { min-width: 0; max-height: calc(100vh - 5rem); overflow-y: auto; scrollbar-width: none; padding: .6rem 1rem; margin: -.6rem -1rem; }
+.qr-side::-webkit-scrollbar { display: none; }
 .qr-title { margin: .6rem 0 0; font-size: calc(3.6rem * var(--fs)); font-weight: 700; letter-spacing: -.03em; line-height: 1.08; text-wrap: balance; }
 .qr-url { margin: 1.6rem 0 2rem; font-size: calc(2.6rem * var(--fs)); font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .qr-url small { display: block; margin-bottom: .2rem; font-size: calc(1.3rem * var(--fs)); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .qr-status { display: flex; align-items: center; gap: 1rem; margin: 2.2rem 0 1.6rem; font-size: calc(1.75rem * var(--fs)); font-weight: 600; }
 .qr-side .opts { max-width: 34rem; }
+.pane.qrs .qr-title { font-size: calc(3.1rem * var(--fs)); }
+.pane.qrs .qr-url { margin: 1.2rem 0 1.4rem; }
+.pane.qrs .steps { gap: .7rem; }
+.pane.qrs .steps li { font-size: calc(1.55rem * var(--fs)); }
+.pane.qrs .steps li::before { width: 2.5rem; height: 2.5rem; }
+.pane.qrs .qr-status { margin: 1.3rem 0 1rem; }
+.qr-net { display: flex; align-items: center; gap: .8rem; margin: -.4rem 0 1.4rem; font-size: calc(1.55rem * var(--fs)); color: var(--text-2); }
+.qr-net .ic { width: 2rem; height: 2rem; flex: none; }
+.qr-net b { color: var(--text); }
+.qr-help { margin: -.4rem 0 1.2rem; max-width: 46rem; font-size: calc(1.4rem * var(--fs)); color: var(--muted); }
 
 /* clavier à l'écran (mots de passe Wi-Fi) */
 .pw-field { display: flex; align-items: center; gap: 1rem; min-height: 5rem; margin-bottom: 1.4rem; padding: 0 1.6rem; border-radius: 1.1rem; background: var(--field); border: .15rem solid var(--line); font-size: calc(2rem * var(--fs)); font-weight: 600; letter-spacing: .04em; overflow: hidden; }
@@ -925,7 +936,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     mode: 'auto', hdmi: false, output: 'pc', volume: 35, muted: false, booting: false, power: null,
     res: '1366×768', tvRes: '1080', shown: false,
     installed: {}, pad: null, padSupport: false, phones: 0, phoneDemo: false,
-    remoteUrl: 'http://scaros.local:8421/remote', qr: false, wifi: null, ip: null, info: null,
+    remoteUrl: 'http://scaros.local:8421/remote', qr: false, localName: 'scaros.local', wifi: null, ip: null, info: null,
     audio: { mode: 'auto', target: 'pc', device: 'les haut-parleurs du PC' },
     bt: { devices: [], scanning: false }, btSel: null,
     wifiList: [
@@ -969,7 +980,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       res: s.res || null, tvRes: s.tvRes || '1080',
       pad: s.pad, padSupport: !!s.padSupport, volume: s.volume ?? state.volume, muted: !!s.muted,
       phones: s.remote ? s.remote.phones : 0, remoteUrl: s.remote ? s.remote.url : state.remoteUrl,
-      qr: !!(s.remote && s.remote.qr), wifi: s.wifi, ip: s.ip, info: s.info || null,
+      qr: !!(s.remote && s.remote.qr), localName: (s.remote && s.remote.name) || null, wifi: s.wifi, ip: s.ip, info: s.info || null,
       audio: s.audio && s.audio.target ? s.audio : state.audio, bt: s.bt || state.bt,
       wifiList: s.wifiList || [], prefs: { ...state.prefs, ...(s.prefs || {}) },
       weather: s.weather || null, place: s.place || null, airplay: s.airplay || state.airplay, update: s.update || state.update,
@@ -1443,8 +1454,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
               <p class="kicker">Télécommande</p>
               <h2 class="qr-title">Scanne avec ton téléphone pour piloter Scaros</h2>
               <p class="qr-url"><small>Ou tape cette adresse</small>${esc(short)}</p>
-              <ol class="steps"><li>Téléphone sur le même Wi-Fi que Scaros.</li><li>Appareil photo, puis touche le lien.</li><li>Pour la garder : Partager › Sur l’écran d’accueil.</li></ol>
+              <p class="qr-net">${icon('wifi')}<span>Wi-Fi de Scaros : <b>${esc(wifiCurrent() || 'aucun')}</b>${state.localName ? ` · ${esc(state.localName)}` : ''}</span></p>
+              <ol class="steps"><li>Téléphone sur ce même Wi-Fi (pas l’invité).</li><li>Appareil photo, puis touche le lien.</li><li>Pour la garder : Partager › Sur l’écran d’accueil.</li></ol>
               <p class="qr-status"><span class="sdot ${phones ? 'on' : ''}"></span>${phones ? `${phones > 1 ? phones + ' téléphones connectés' : 'Téléphone connecté'}` : 'En attente d’un téléphone…'}</p>
+              <p class="qr-help">L’icône de l’iPhone ne s’ouvre plus ? Rescanne ce code : l’adresse a pu changer.</p>
               <div class="opts">
                 ${row('back', 'back', 'Retour', '')}
                 ${state.live ? '' : row('phone', 'phone', state.phoneDemo ? 'Masquer la télécommande de démo' : 'Essayer la télécommande ici', '')}

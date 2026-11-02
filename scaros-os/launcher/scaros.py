@@ -394,6 +394,15 @@ class Scaros:
             time.sleep(5)
             self._phones_changed()
 
+    def local_name(self, ip):
+        """Le nom que les téléphones peuvent taper (scaros.local) tel qu'Avahi le publie vraiment."""
+        if DRY:
+            return "scaros.local"
+        if not shutil.which("avahi-resolve-address"):
+            return None
+        out = run(["avahi-resolve-address", ip], timeout=4, quiet=True)[1].split()
+        return out[1] if len(out) > 1 and out[1].endswith(".local") else None
+
     def state(self, lite=False):
         ip = lan_ip()
         with self.lock:
@@ -416,7 +425,7 @@ class Scaros:
         nets = self.wifi_networks()
         s.update({
             "remote": {"url": f"http://{ip}:{self.port}/remote", "phones": self.phone_count(),
-                       "qr": qrcode is not None},
+                       "qr": qrcode is not None, "name": self.cached("lname", 60, lambda: self.local_name(ip))},
             "wifi": self.wifi(nets), "wifiList": nets, "ip": ip, "info": system_info(),
             "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning, "audio": bt_audio_available()},
             "weather": self.weather, "place": self.settings.get("weather_place"),
@@ -2012,6 +2021,17 @@ class Pad:
                 self.next_fire.pop(d, None)
 
 
+class DualStackServer(ThreadingHTTPServer):
+    """Écoute en IPv4 et en IPv6 : l'iPhone peut trouver « scaros.local » en IPv6 (box récentes)."""
+
+    address_family = socket.AF_INET6
+    daemon_threads = True
+
+    def server_bind(self):
+        self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        super().server_bind()
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "Scaros/" + VERSION
     TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",
@@ -2042,6 +2062,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def is_local(self):
         return self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+
+    def address_string(self):
+        return self.client_address[0].removeprefix("::ffff:")
 
     def do_GET(self):
         url = urlparse(self.path)
@@ -2091,7 +2114,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        ip = self.client_address[0]
+        ip = self.address_string()
         q = self.app.bus.subscribe(ip)
         phone = not self.is_local()
         if phone:
@@ -2128,7 +2151,7 @@ class Handler(BaseHTTPRequestHandler):
             body = {}
         a = self.app
         if not self.is_local():
-            a.hello(self.client_address[0])
+            a.hello(self.address_string())
 
         # touches, textes et lancements passent par une seule file : ils s'exécutent dans l'ordre
         if path == "/api/launch":
@@ -2277,7 +2300,10 @@ def main():
         sys.exit(0 if app.pair() else 1)
 
     app.start()
-    server = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
+    try:
+        server = DualStackServer(("::", args.port), Handler)
+    except OSError:  # IPv6 désactivé sur ce PC : IPv4 seulement
+        server = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
     server.daemon_threads = True
     server.app = app
     signal.signal(signal.SIGTERM, lambda *_: threading.Thread(target=server.shutdown).start())
