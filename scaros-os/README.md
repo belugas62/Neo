@@ -85,7 +85,8 @@ reboot
 - **Manette Xbox** : si tu ne l'as pas appairée pendant l'installation, va dans
   **Réglages > Manette**, puis maintiens le petit bouton d'appairage (sur le dessus,
   à côté du port USB) jusqu'à ce que le logo Xbox clignote vite.
-- **Télécommande téléphone** : **Réglages > Télécommande**, scanne le QR code (même Wi-Fi).
+- **Télécommande téléphone** : bouton **≡** de la manette puis **Télécommande** (ou touche **Q**) :
+  un grand QR code s'affiche, scanne-le avec ton téléphone (même Wi-Fi).
 - **YouTube** : à la première ouverture, branche un clavier et appuie sur **Ctrl+O**
   pour ouvrir les réglages de l'appli :
   - active **Hardware Decoding** (la puce Intel décode la vidéo, le processeur respire) ;

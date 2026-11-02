@@ -40,7 +40,7 @@ html, body { height: 100%; }
 html { font-size: var(--u); background: #000; }
 body {
   margin: 0; background: var(--ink); color: var(--text);
-  font-family: var(--font); font-size: 1.35rem; line-height: 1.4;
+  font-family: var(--font); font-size: 1.65rem; line-height: 1.4;
   overflow: hidden; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
 }
 [hidden] { display: none !important; }
@@ -78,24 +78,24 @@ button { font: inherit; color: inherit; }
   padding-right: max(16px, env(safe-area-inset-right, 0px), 6rem);
 }
 .brand { display: flex; align-items: center; gap: .9rem; opacity: .9; }
-.brand .mark { width: 2.5rem; height: 2.5rem; }
-.brand-word { font-family: var(--font-brand); font-weight: 500; font-size: 1.55rem; letter-spacing: -.01em; }
+.brand .mark { width: 3rem; height: 3rem; }
+.brand-word { font-family: var(--font-brand); font-weight: 500; font-size: 1.8rem; letter-spacing: -.01em; }
 .status-right { display: flex; align-items: center; gap: 1.6rem; color: var(--text-2); }
 .st { display: grid; place-items: center; transition: opacity .3s; }
-.st .ic { width: 1.6rem; height: 1.6rem; }
+.st .ic { width: 1.9rem; height: 1.9rem; }
 .st.dim { opacity: .35; }
-.clock { font-size: 1.9rem; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.clock { font-size: 2.4rem; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 
 .shelf-info {
-  position: absolute; z-index: 2; top: 18.6rem; max-width: 52rem;
+  position: absolute; z-index: 2; top: 15.6rem; max-width: 56rem;
   left: max(16px, env(safe-area-inset-left, 0px), 6rem);
 }
 .shelf-info.in { animation: infoIn .5s var(--ease); }
 @keyframes infoIn { from { opacity: 0; transform: translateY(.6rem); } }
-.kicker { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); }
-.shelf-desc { margin: .7rem 0 0; font-size: 2.3rem; font-weight: 600; line-height: 1.25; letter-spacing: -.015em; text-wrap: balance; }
+.kicker { margin: 0; font-size: 1.4rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); }
+.shelf-desc { margin: .8rem 0 0; font-size: 2.9rem; font-weight: 600; line-height: 1.25; letter-spacing: -.015em; text-wrap: balance; }
 .chips { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1.2rem 0 0; padding: 0; list-style: none; }
-.chips li { padding: .4rem 1rem; font-size: 1.12rem; font-weight: 600; color: var(--text-2); background: var(--glass); border: 1px solid var(--line); border-radius: 99px; }
+.chips li { padding: .45rem 1.1rem; font-size: 1.35rem; font-weight: 600; color: var(--text-2); background: var(--glass); border: 1px solid var(--line); border-radius: 99px; }
 .chips li.warn { color: var(--focus-fg); background: var(--text-2); border-color: transparent; }
 
 .dock {
@@ -133,23 +133,23 @@ button { font: inherit; color: inherit; }
 .icon.bump .icon-art { animation: bump .32s ease; }
 @keyframes bump { 40% { transform: translateY(-.7rem) scale(1.12) translateX(var(--bx, 0)); } }
 .icon-name {
-  position: absolute; left: 50%; top: calc(100% + 1.6rem); transform: translateX(-50%);
-  white-space: nowrap; font-size: 1.5rem; font-weight: 600; opacity: 0; transition: opacity .25s ease;
+  position: absolute; left: 50%; top: calc(100% + 1.4rem); transform: translateX(-50%);
+  white-space: nowrap; font-size: 1.9rem; font-weight: 600; opacity: 0; transition: opacity .25s ease;
 }
 .icon.is-focus .icon-name { opacity: 1; }
 .badge { position: absolute; right: .7rem; top: .7rem; z-index: 1; padding: .2rem .55rem; font-size: .95rem; font-weight: 700; color: var(--focus-fg); background: var(--text-2); border-radius: .35rem; }
 
 .foot {
   position: absolute; bottom: 2rem; left: 0; right: 0; z-index: 2;
-  display: flex; align-items: center; justify-content: space-between; font-size: 1.15rem; color: var(--muted);
+  display: flex; align-items: center; justify-content: space-between; font-size: 1.4rem; color: var(--muted);
   padding-left: max(16px, env(safe-area-inset-left, 0px), 6rem);
   padding-right: max(16px, env(safe-area-inset-right, 0px), 6rem);
 }
-.ver { font-size: 1rem; }
+.ver { font-size: 1.2rem; }
 .hint-list { display: flex; gap: 1.8rem; }
 .hint { display: flex; align-items: center; gap: .55rem; }
-.bg { display: inline-grid; place-items: center; min-width: 1.9rem; height: 1.9rem; padding: 0 .1rem; box-sizing: border-box; border-radius: 99px; font-size: 1rem; font-weight: 700; color: var(--ink); }
-.bg .ic { width: 1.2rem; height: 1.2rem; }
+.bg { display: inline-grid; place-items: center; min-width: 2.3rem; height: 2.3rem; padding: 0 .1rem; box-sizing: border-box; border-radius: 99px; font-size: 1.2rem; font-weight: 700; color: var(--ink); }
+.bg .ic { width: 1.45rem; height: 1.45rem; }
 .g-a { background: var(--pad-a); }
 .g-b { background: var(--pad-b); }
 .g-menu { background: var(--text); }
@@ -174,14 +174,14 @@ button { font: inherit; color: inherit; }
 }
 .pane.on { opacity: 1; transform: none; }
 .pane.side {
-  inset: 1.6rem max(1.6rem, env(safe-area-inset-right, 0px)) 1.6rem auto; width: 40rem; border-radius: 2rem;
+  inset: 1.6rem max(1.6rem, env(safe-area-inset-right, 0px)) 1.6rem auto; width: 46rem; overflow-y: auto; border-radius: 2rem;
   padding: 2.4rem 2rem; background: #12161ef2; border: 1px solid var(--line); box-shadow: 0 2rem 5rem -1rem #000;
   transform: translateX(110%);
 }
 .pane.side.on { transform: none; }
-.crumbs { margin: 0; font-size: 1.2rem; font-weight: 600; color: var(--muted); }
+.crumbs { margin: 0; font-size: 1.45rem; font-weight: 600; color: var(--muted); }
 .crumbs b { color: var(--text-2); font-weight: 600; }
-.pane-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 36% minmax(0, 1fr); gap: 4rem; margin-top: 1.6rem; }
+.pane-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 30% minmax(0, 1fr); gap: 4rem; margin-top: 1.4rem; }
 .pane-art { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.8rem; }
 .art-tile {
   display: grid; place-items: center; width: 17rem; height: 17rem; border-radius: 3.8rem;
@@ -191,39 +191,41 @@ button { font: inherit; color: inherit; }
 .art-tile .ic { width: 8rem; height: 8rem; stroke-width: 1.6; }
 .art-tile > svg:not(.ic) { width: 60%; height: 60%; }
 .art-tile svg.mark { width: 100%; height: 100%; }
-.art-caption { margin: 0; max-width: 26rem; text-align: center; font-size: 1.3rem; color: var(--muted); }
-.pane-main { min-height: 0; overflow-y: auto; padding: 1rem 1.2rem 2rem; margin: -1rem -1.2rem 0; scrollbar-width: none; }
+.art-caption { margin: 0; max-width: 26rem; text-align: center; font-size: 1.55rem; color: var(--muted); }
+.pane-main { min-height: 0; overflow-y: auto; padding: 1rem 1.2rem 3rem; margin: -1rem -1.2rem 0; scrollbar-width: none; scroll-padding-bottom: 4rem; }
+/* fondu en bas tant qu'il reste des réglages plus bas */
+.pane-main.more { -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent); mask-image: linear-gradient(180deg, #000 82%, transparent); }
 .pane-main::-webkit-scrollbar { display: none; }
-.pane-title { margin: 0; font-size: 3.5rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
-.pane-lead { margin: .7rem 0 1.8rem; max-width: 46rem; font-size: 1.45rem; color: var(--text-2); }
+.pane-title { margin: 0; font-size: 4.2rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+.pane-lead { margin: .7rem 0 1.8rem; max-width: 52rem; font-size: 1.75rem; color: var(--text-2); }
 .opts { display: flex; flex-direction: column; gap: .55rem; }
 .opt {
-  display: flex; align-items: center; gap: 1.3rem; width: 100%; min-height: 4.9rem; box-sizing: border-box;
-  padding: .8rem 1.5rem; margin: 0; border: 0; border-radius: 1rem; background: var(--glass);
+  display: flex; align-items: center; gap: 1.5rem; width: 100%; min-height: 5.8rem; box-sizing: border-box;
+  padding: .9rem 1.7rem; margin: 0; border: 0; border-radius: 1.1rem; background: var(--glass);
   text-align: left; cursor: pointer; transition: background .2s ease, color .2s ease, transform .25s var(--spring), box-shadow .25s ease;
 }
 .opt:focus { outline: none; }
-.opt > .ic { width: 1.9rem; height: 1.9rem; color: var(--text-2); }
+.opt > .ic { width: 2.3rem; height: 2.3rem; color: var(--text-2); }
 .opt.is-focus { background: var(--focus-bg); color: var(--focus-fg); transform: scale(1.025); box-shadow: 0 1.2rem 2.4rem -1rem #000000b0; }
 .opt.is-focus > .ic, .opt.is-focus .opt-desc, .opt.is-focus .opt-val { color: var(--focus-muted); }
 .opt[disabled] { cursor: default; opacity: .4; }
 .opt-main { display: flex; flex-direction: column; gap: .15rem; flex: 1; min-width: 0; }
-.opt-title { font-size: 1.55rem; font-weight: 600; }
-.opt-desc { font-size: 1.2rem; color: var(--muted); }
-.opt-val { flex: none; font-size: 1.35rem; color: var(--text-2); white-space: nowrap; }
-.chev { flex: none; width: 1.5rem; height: 1.5rem; color: var(--muted); }
+.opt-title { font-size: 1.95rem; font-weight: 600; }
+.opt-desc { font-size: 1.45rem; color: var(--muted); }
+.opt-val { flex: none; font-size: 1.65rem; color: var(--text-2); white-space: nowrap; }
+.chev { flex: none; width: 1.8rem; height: 1.8rem; color: var(--muted); }
 .opt.is-focus .chev { color: var(--focus-muted); }
-.check { flex: none; width: 1.9rem; height: 1.9rem; color: var(--text); opacity: 0; }
+.check { flex: none; width: 2.3rem; height: 2.3rem; color: var(--text); opacity: 0; }
 .opt[aria-checked="true"] .check { opacity: 1; }
 .opt.is-focus .check { color: var(--focus-fg); }
-.opt-group { margin: 2rem 0 .6rem; padding: 0 .4rem; font-size: 1.05rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.opt-group { margin: 2rem 0 .6rem; padding: 0 .4rem; font-size: 1.3rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .opt-group:first-child { margin-top: 0; }
-.opt-empty, .note { margin: 0; padding: .4rem .4rem; font-size: 1.3rem; color: var(--muted); }
+.opt-empty, .note { margin: 0; padding: .4rem .4rem; font-size: 1.6rem; color: var(--muted); }
 .card { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 1.6rem; padding: 1.3rem 1.5rem; border-radius: 1.1rem; background: var(--glass); border: 1px solid var(--line); }
-.sdot { flex: none; width: .8rem; height: .8rem; border-radius: 50%; background: var(--muted); }
+.sdot { flex: none; width: 1rem; height: 1rem; border-radius: 50%; background: var(--muted); }
 .sdot.on { background: var(--pad-a); box-shadow: 0 0 .8rem var(--pad-a); }
-.card-title { font-weight: 600; font-size: 1.45rem; }
-.card-sub { font-size: 1.2rem; color: var(--muted); }
+.card-title { font-weight: 600; font-size: 1.8rem; }
+.card-sub { font-size: 1.45rem; color: var(--muted); }
 .facts { display: grid; grid-template-columns: auto 1fr; gap: .9rem 2.4rem; margin: 0 0 2rem; padding: 1.5rem; border-radius: 1.1rem; background: var(--glass); }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
@@ -234,20 +236,33 @@ button { font: inherit; color: inherit; }
 .qr-card svg, .qr-card img { display: block; width: 13rem; height: 13rem; border-radius: 1rem; background: #fff; }
 .qr-addr { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-2); }
 .steps { display: flex; flex-direction: column; gap: 1.1rem; margin: 0; padding: 0; list-style: none; counter-reset: s; }
-.steps li { display: flex; gap: 1rem; font-size: 1.35rem; color: var(--text-2); counter-increment: s; }
-.steps li::before { content: counter(s); flex: none; display: grid; place-items: center; width: 2.2rem; height: 2.2rem; font-weight: 700; font-size: 1.1rem; color: var(--text); border: 1px solid var(--line); border-radius: 50%; }
+.steps li { display: flex; align-items: center; gap: 1.2rem; font-size: 1.75rem; color: var(--text-2); counter-increment: s; }
+.steps li::before { content: counter(s); flex: none; display: grid; place-items: center; width: 2.8rem; height: 2.8rem; font-weight: 700; font-size: 1.4rem; color: var(--text); border: 1px solid var(--line); border-radius: 50%; }
 kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border: 1px solid var(--line); border-radius: .35rem; }
+
+/* écran télécommande : le QR code en grand */
+.pane.qrs { justify-content: center; }
+.qr-screen { flex: 1; min-height: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 5.5rem; }
+.qr-big { display: grid; place-items: center; width: min(40rem, 72vh); aspect-ratio: 1; box-sizing: border-box; padding: 1.6rem; border-radius: 2.4rem; background: #fff; box-shadow: 0 3rem 6rem -2rem #000000d0; }
+.qr-big svg, .qr-big img { display: block; width: 100%; height: 100%; }
+.qr-big .qr-wait { margin: 0; padding: 2rem; text-align: center; font-size: 1.6rem; font-weight: 600; color: var(--focus-fg); }
+.qr-side { min-width: 0; }
+.qr-title { margin: .6rem 0 0; font-size: 3.6rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.08; text-wrap: balance; }
+.qr-url { margin: 1.6rem 0 2rem; font-size: 2.6rem; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.qr-url small { display: block; margin-bottom: .2rem; font-size: 1.3rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.qr-status { display: flex; align-items: center; gap: 1rem; margin: 2.2rem 0 1.6rem; font-size: 1.75rem; font-weight: 600; }
+.qr-side .opts { max-width: 34rem; }
 
 /* control center */
 .cc-head { margin-bottom: 1.6rem; }
-.cc-time { margin: 0; font-size: 4.2rem; font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
-.cc-date { margin: .4rem 0 0; font-size: 1.4rem; color: var(--text-2); }
-.quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; margin-bottom: 1.4rem; }
-.opt.q { flex-direction: column; justify-content: center; gap: .7rem; min-height: 7.4rem; padding: 1rem .6rem; text-align: center; }
-.opt.q > .ic { width: 2.3rem; height: 2.3rem; }
-.opt.q .opt-title { font-size: 1.3rem; }
+.cc-time { margin: 0; font-size: 5rem; font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.cc-date { margin: .4rem 0 0; font-size: 1.7rem; color: var(--text-2); }
+.quick { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; margin-bottom: 1.2rem; }
+.opt.q { flex-direction: column; justify-content: center; gap: .6rem; min-height: 7rem; padding: .9rem .6rem; text-align: center; }
+.opt.q > .ic { width: 2.6rem; height: 2.6rem; }
+.opt.q .opt-title { font-size: 1.6rem; }
 .pane.side .opts { gap: .45rem; }
-.pane.side .opt { min-height: 4.5rem; }
+.pane.side .opt { min-height: 5.2rem; }
 
 /* ---------- ouverture d'une appli ---------- */
 .launch {
@@ -261,15 +276,15 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .launch-logo { width: 22rem; height: 13rem; display: grid; place-items: center; transform: scale(.55); transition: transform .6s var(--ease); }
 .launch.on .launch-logo { transform: none; }
 .launch-logo svg { width: 100%; height: 100%; }
-.launch-status { margin: .6rem 0 0; font-size: 1.6rem; font-weight: 600; opacity: .85; }
+.launch-status { margin: .6rem 0 0; font-size: 2rem; font-weight: 600; opacity: .85; }
 .launch-bar { position: relative; width: 16rem; height: .25rem; overflow: hidden; border-radius: 9px; background: color-mix(in oklab, currentColor 22%, transparent); }
 .launch-bar i { position: absolute; top: 0; bottom: 0; width: 40%; background: currentColor; border-radius: 9px; animation: indet 1.1s ease-in-out infinite; }
 @keyframes indet { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
-.launch-note { margin: 0; font-size: 1.45rem; line-height: 1.5; opacity: .9; text-wrap: pretty; }
-.launch-fine { margin: 0; font-size: 1.2rem; opacity: .65; }
+.launch-note { margin: 0; font-size: 1.8rem; line-height: 1.5; opacity: .9; text-wrap: pretty; }
+.launch-fine { margin: 0; font-size: 1.45rem; opacity: .65; }
 .launch.ready .launch-bar { display: none; }
 .launch:not(.ready) .launch-note, .launch:not(.ready) .launch-fine { display: none; }
-.l-back { display: inline-flex; align-items: center; gap: .7rem; margin-top: 1rem; padding: .8rem 1.5rem .8rem .9rem; font-size: 1.35rem; border: 1px solid color-mix(in oklab, currentColor 30%, transparent); border-radius: 99px; background: color-mix(in oklab, currentColor 8%, transparent); font-weight: 600; cursor: pointer; }
+.l-back { display: inline-flex; align-items: center; gap: .7rem; margin-top: 1rem; padding: .9rem 1.7rem .9rem 1rem; font-size: 1.65rem; border: 1px solid color-mix(in oklab, currentColor 30%, transparent); border-radius: 99px; background: color-mix(in oklab, currentColor 8%, transparent); font-weight: 600; cursor: pointer; }
 .l-back:focus-visible { outline: .18rem solid currentColor; outline-offset: .2rem; }
 
 /* ---------- démarrage ---------- */
@@ -298,8 +313,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 @keyframes aurora { from { transform: translate3d(-4%, -3%, 0) rotate(0deg); } to { transform: translate3d(4%, 3%, 0) rotate(12deg); } }
 .saver { position: relative; }
 .saver-time { margin: 0; font-family: var(--font-brand); font-weight: 300; font-size: 10rem; line-height: 1; color: #ffffffd8; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.saver-date { margin: 1rem 0 0; font-size: 2rem; font-weight: 600; color: #ffffffa8; text-transform: capitalize; }
-.off-msg { margin: 2.4rem 0 0; font-size: 1.35rem; color: var(--muted); }
+.saver-date { margin: 1rem 0 0; font-size: 2.5rem; font-weight: 600; color: #ffffffa8; text-transform: capitalize; }
+.off-msg { margin: 2.4rem 0 0; font-size: 1.65rem; color: var(--muted); }
 .off-led { position: absolute; right: max(3rem, calc(env(safe-area-inset-right, 0px) + 16px)); bottom: max(2.4rem, calc(env(safe-area-inset-bottom, 0px) + 16px)); width: .7rem; height: .7rem; border-radius: 50%; background: var(--led); box-shadow: 0 0 .9rem var(--led); }
 .blink { position: fixed; inset: 0; z-index: 40; background: #000; opacity: 0; pointer-events: none; }
 .blink.run { animation: blinkk .7s ease; }
@@ -308,15 +323,16 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 /* ---------- notifications & volume ---------- */
 .toast {
   position: fixed; z-index: 60; top: max(5.4rem, calc(env(safe-area-inset-top, 0px) + 16px)); right: max(16px, env(safe-area-inset-right, 0px), 6rem);
-  display: flex; align-items: center; gap: 1rem; box-sizing: border-box; max-width: min(40rem, calc(100% - 32px));
+  display: flex; align-items: center; gap: 1.1rem; box-sizing: border-box; max-width: min(48rem, calc(100% - 32px));
   padding: 1rem 1.4rem; border-radius: 1.2rem; background: #161b24f2; border: 1px solid var(--line); box-shadow: 0 1.4rem 3rem -1rem #000;
-  font-size: 1.3rem; font-weight: 500; opacity: 0; transform: translateY(-.8rem); transition: opacity .3s ease, transform .35s var(--ease); pointer-events: none;
+  font-size: 1.6rem; font-weight: 500; opacity: 0; transform: translateY(-.8rem); transition: opacity .3s ease, transform .35s var(--ease); pointer-events: none;
 }
 .toast.on { opacity: 1; transform: none; }
 /* panneau ouvert : la notification passe en bas à gauche pour ne rien cacher */
-.tv.pane-open .toast { top: auto; right: auto; bottom: max(2.4rem, calc(env(safe-area-inset-bottom, 0px) + 16px)); left: max(16px, env(safe-area-inset-left, 0px), 6rem); }
-.toast-ic { flex: none; display: grid; place-items: center; width: 2.8rem; height: 2.8rem; border-radius: .8rem; background: var(--glass-2); }
-.toast-ic .ic { width: 1.5rem; height: 1.5rem; }
+.tv.qr-open .toast { top: auto; bottom: max(2.4rem, calc(env(safe-area-inset-bottom, 0px) + 16px)); max-width: min(34rem, calc(100% - 32px)); }
+.tv.pane-open:not(.qr-open) .toast { top: auto; right: auto; bottom: max(2.4rem, calc(env(safe-area-inset-bottom, 0px) + 16px)); left: max(16px, env(safe-area-inset-left, 0px), 6rem); max-width: min(26rem, calc(100% - 32px)); }
+.toast-ic { flex: none; display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: .8rem; background: var(--glass-2); }
+.toast-ic .ic { width: 1.8rem; height: 1.8rem; }
 .vol {
   position: fixed; top: 50%; right: max(3rem, calc(env(safe-area-inset-right, 0px) + 16px)); z-index: 55;
   display: flex; flex-direction: column; align-items: center; gap: .8rem; padding: 1.2rem .8rem;
@@ -326,7 +342,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .vol.on { opacity: 1; transform: translate(0, -50%); }
 .vol-track { position: relative; width: .5rem; height: 12rem; overflow: hidden; border-radius: 9px; background: #ffffff1f; }
 .vol-track i { position: absolute; inset: 0; background: var(--text); transform-origin: bottom; transform: scaleY(var(--v, .35)); transition: transform .15s ease; }
-.vol-num { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.vol-num { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ---------- télécommande de démo (maquette) ---------- */
 .phone {
@@ -384,6 +400,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .pane-title { font-size: 2.2rem; }
   .pane.side { inset: auto 0 0 0; width: auto; max-height: 88%; border-radius: 1.6rem 1.6rem 0 0; transform: translateY(105%); overflow-y: auto; }
   .remote-grid { grid-template-columns: 1fr; justify-items: center; }
+  .qr-screen { grid-template-columns: 1fr; justify-items: center; gap: 2rem; }
+  .qr-big { width: min(80vw, 22rem); }
+  .qr-title { font-size: 2.2rem; }
+  .qr-url { font-size: 1.8rem; }
   .boot-word { font-size: 3rem; }
   .boot .mark { width: 6rem; height: 6rem; }
   .saver-time { font-size: 6rem; }
@@ -542,7 +562,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/><circle cx="12" cy="12" r="6.6"/>',
     chevron: '<path d="M9 5l7 7-7 7"/>',
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
-    plus: '<path d="M12 5v14M5 12h14"/>'
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    qr: '<rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h2.5v2.5H14zM18.5 18.5H21V21h-2.5zM14 19.5V21M19.5 14H21"/>'
   };
   const icon = (n, cls = 'ic') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
 
@@ -920,17 +941,26 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     }),
     remote: () => {
       const url = state.remoteUrl, short = url.replace(/^https?:\/\//, '').replace(/\/remote$/, '');
+      const phones = state.live ? state.phones : (state.phoneDemo ? 1 : 0);
       let qr = '';
       if (state.live && state.qr) qr = '<img src="/api/qr.svg" alt="QR code de la télécommande">';
-      else if (!state.live) { qr = qrSVG(url); if (!qr) loadQrLib().then(() => { if (state.panel === 'remote') renderPanel(currentAct()); }).catch(() => {}); }
+      else { qr = qrSVG(url); if (!qr) loadQrLib().then(() => { if (state.panel === 'remote') renderPanel(currentAct()); }).catch(() => {}); }
       return {
-        title: 'Télécommande', icon: 'phone', pa: '#2fc3d9', pb: '#0e5967', caption: 'Ton téléphone devient une télécommande, avec un clavier pour tes recherches.',
-        body: `<div class="remote-grid">
-            <div class="qr-card">${qr}<p class="qr-addr">${esc(short)}</p></div>
-            <ol class="steps"><li>Connecte ton téléphone au même Wi-Fi que Scaros.</li><li>Scanne le QR code avec l’appareil photo${qr ? '' : `, ou tape l’adresse ${esc(short)}`}.</li><li>La télécommande s’ouvre dans le navigateur. Rien à installer.</li></ol>
-          </div>
-          ${state.live ? '' : `<div class="opts">${row('phone', 'phone', state.phoneDemo ? 'Masquer la télécommande de démo' : 'Essayer la télécommande ici', 'Affiche à côté du menu la page que verra ton téléphone.')}</div>
-          <p class="note" style="margin-top:1rem">Maquette : le QR code pointe vers une adresse d’exemple. Sur le PC, il pointe vers ta machine.</p>`}`
+        qrscreen: true,
+        body: `<div class="qr-screen">
+            <div class="qr-big">${qr || '<p class="qr-wait">Tape l’adresse à droite dans le navigateur du téléphone.</p>'}</div>
+            <div class="qr-side">
+              <p class="kicker">Télécommande</p>
+              <h2 class="qr-title">Scanne avec ton téléphone pour piloter Scaros</h2>
+              <p class="qr-url"><small>Ou tape cette adresse</small>${esc(short)}</p>
+              <ol class="steps"><li>Même Wi-Fi que Scaros.</li><li>Appareil photo, puis touche le lien.</li><li>Rien à installer.</li></ol>
+              <p class="qr-status"><span class="sdot ${phones ? 'on' : ''}"></span>${phones ? `${phones > 1 ? phones + ' téléphones connectés' : 'Téléphone connecté'}` : 'En attente d’un téléphone…'}</p>
+              <div class="opts">
+                ${row('back', 'back', 'Retour', '')}
+                ${state.live ? '' : row('phone', 'phone', state.phoneDemo ? 'Masquer la télécommande de démo' : 'Essayer la télécommande ici', '')}
+              </div>
+            </div>
+          </div>`
       };
     },
     network: () => ({
@@ -969,6 +999,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         side: true,
         body: `<div class="cc-head"><p class="cc-time">${fT.format(d)}</p><p class="cc-date">${fD.format(d)}</p></div>
           <div class="quick">
+            ${quick('panel:remote', 'qr', 'Télécommande')}
             ${quick('power:sleep', 'moon', 'Veille')}
             ${quick('power:restart', 'replay', 'Redémarrer')}
             ${quick('power:off', 'power', 'Éteindre')}
@@ -977,7 +1008,6 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
             ${row('panel:sound', 'speaker', 'Son', '', esc(shortAudio()))}
             ${row('panel:display', state.output === 'tv' ? 'tv' : 'laptop', 'Écran', '', outputLabel())}
             ${row('panel:bluetooth', 'bluetooth', 'Bluetooth', '', btSummary())}
-            ${row('panel:remote', 'phone', 'Télécommande', '')}
             ${row('panel:settings', 'gear', 'Tous les réglages', '')}
           </div>`
       };
@@ -990,7 +1020,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   function renderPanel(keepAct) {
     const p = PAGES[state.panel]();
     pane.classList.toggle('side', !!p.side);
-    if (p.side) {
+    pane.classList.toggle('qrs', !!p.qrscreen);
+    $('#tv').classList.toggle('qr-open', !!p.qrscreen);
+    if (p.side || p.qrscreen) {
       pane.style.removeProperty('--pa');
       pane.innerHTML = p.body;
     } else {
@@ -1004,9 +1036,13 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         </div>`;
     }
     state.pItems = [...pane.querySelectorAll('[data-act]:not([disabled])')];
+    const pm = pane.querySelector('.pane-main');
+    if (pm) pm.addEventListener('scroll', () => markMore(pm), { passive: true });
     const i = keepAct ? state.pItems.findIndex(el => el.dataset.act === keepAct) : 0;
     setPIdx(Math.max(0, i));
+    if (pm) markMore(pm);
   }
+  function markMore(pm) { pm.classList.toggle('more', pm.scrollTop + pm.clientHeight < pm.scrollHeight - 6); }
   function rerenderPane() { if (state.panel) renderPanel(currentAct()); }
   function setPIdx(i) {
     state.pIdx = i;
@@ -1041,7 +1077,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (!state.panel) return;
     state.panel = null;
     state.panelStack = [];
-    $('#tv').classList.remove('pane-open');
+    $('#tv').classList.remove('pane-open', 'qr-open');
     pane.classList.remove('on'); scrim.classList.remove('on');
     setTimeout(() => { if (!state.panel) { pane.hidden = true; scrim.hidden = true; } }, 450);
     setFocus(state.focus);
@@ -1326,6 +1362,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (a === 'volup') return vol(5);
     if (a === 'voldown') return vol(-5);
     if (a === 'menu') return toggleControl();
+    if (a === 'qr') { if (state.panel !== 'remote') { closePanel(); if (state.launched) closeLaunch(); openPanel('remote'); } return; }
     if (state.launched) {
       if (a === 'back' || a === 'home') closeLaunch();
       else if (a.startsWith('ch')) channel(a);
@@ -1349,7 +1386,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   // clavier (sur le PC, la manette et le téléphone arrivent aussi ici sous forme de touches)
   const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok',
     Escape: 'back', Backspace: 'back', Home: 'home', '+': 'volup', '=': 'volup', '-': 'voldown',
-    m: 'menu', M: 'menu', ContextMenu: 'menu', F1: 'menu',
+    m: 'menu', M: 'menu', ContextMenu: 'menu', F1: 'menu', q: 'qr', Q: 'qr',
     '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4' };
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
