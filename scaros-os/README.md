@@ -207,7 +207,8 @@ scaros-os/
 │   └── ui/
 │       ├── index.html      le menu (marche aussi seul, en maquette)
 │       ├── remote.html     la télécommande téléphone (http://<adresse du PC>:8421/remote)
-│       └── fonts/          polices Figtree et Unbounded (licence OFL)
+│       ├── icons/          icônes de la télécommande (kit du logo Scaros)
+│       └── fonts/          police Figtree (licence OFL)
 └── system/
     ├── session.sh          session graphique : Openbox, serveur, menu plein écran
     ├── openbox/rc.xml      toutes les fenêtres en plein écran

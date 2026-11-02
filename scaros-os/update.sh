@@ -126,11 +126,12 @@ python3 -I -c 'import sys, tarfile; print(tarfile.open(sys.argv[1]).pax_headers.
 mkdir -p /usr/local/share/fonts/scaros
 cp "$src"/launcher/ui/fonts/*.woff2 /usr/local/share/fonts/scaros/ 2>/dev/null && fc-cache -f >/dev/null 2>&1 || true
 
-# écran de démarrage (logo) : mis à jour s'il a changé
+# écran de démarrage (logo, animation) : remplacé s'il a changé
 theme=/usr/share/plymouth/themes/scaros
-if [ -d "$theme" ] && ! cmp -s "$src/system/plymouth/scaros/logo.png" "$theme/logo.png"; then
+if [ -d "$theme" ] && ! diff -rq "$src/system/plymouth/scaros" "$theme" >/dev/null 2>&1; then
   echo "Nouvel écran de démarrage…"
-  cp -r "$src/system/plymouth/scaros/." "$theme/"
+  rm -rf "$theme"
+  cp -r "$src/system/plymouth/scaros" "$theme"
   update-initramfs -u >/dev/null 2>&1 || true
 fi
 

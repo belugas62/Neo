@@ -7,7 +7,6 @@
 <!-- fonts:local -->
 <style>
 @font-face { font-family: "Figtree"; src: url("fonts/figtree.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
-@font-face { font-family: "Unbounded"; src: url("fonts/unbounded.woff2") format("woff2"); font-weight: 300 600; font-display: swap; }
 </style>
 <!-- /fonts:local -->
 <style>
@@ -32,11 +31,10 @@
   --scrim: .62;
   --field: #00000055;
   --shade: #05070bcc;          /* voile à gauche du grand visuel, sous le texte */
-  --led: #ff3b30;
+  --led: #ff5a1f;              /* ambre du logo */
   --pad-a: #6cc04a;
   --pad-b: #e5484d;
   --font: "Figtree", "Segoe UI", system-ui, sans-serif;
-  --font-brand: "Unbounded", "Figtree", system-ui, sans-serif;
   --u: min(1vw, 1.7778vh);
   --fs: 1;
   --ease: cubic-bezier(.2, .8, .2, 1);
@@ -146,8 +144,7 @@ button { font: inherit; color: inherit; }
   padding-right: max(16px, env(safe-area-inset-right, 0px), 5rem);
 }
 .brand { display: flex; align-items: center; gap: .9rem; margin-top: .5rem; opacity: .92; }
-.brand .mark { width: 3rem; height: 3rem; }
-.brand-word { font-family: var(--font-brand); font-weight: 500; font-size: calc(1.8rem * var(--fs)); letter-spacing: -.01em; }
+.brand-logo { display: block; height: 3.2rem; width: auto; overflow: visible; }
 .status-right { display: flex; flex-direction: column; align-items: flex-end; gap: .7rem; }
 /* la pastille en haut à droite : heure, météo, appareils connectés */
 .capsule { display: flex; align-items: center; gap: 1.3rem; padding: .75rem 1.6rem; border-radius: 99px;
@@ -239,11 +236,10 @@ html[data-look="light"] .dock-glass { background: #ffffff47; border-color: #ffff
 .stage[data-bg="decor"] .g-menu { color: #0b0d12; }
 .g-num { background: transparent; color: var(--text); border: 1px solid var(--line); padding: 0 .5rem; border-radius: .4rem; font-variant-numeric: tabular-nums; }
 
-.stage.enter .decor, .stage.enter .shelf { animation: fadeIn .9s ease both; }
-.stage.enter .status { animation: rise .8s var(--ease) .1s both; }
-.stage.enter .shelf-info { animation: rise .8s var(--ease) .18s both; }
-.stage.enter .dock { animation: rise .8s var(--ease) .26s both; }
-.stage.enter .foot { animation: fadeIn .8s ease .4s both; }
+.stage.enter { animation: homeIn 1.2s cubic-bezier(.16, 1, .3, 1) both; }
+.stage.enter .dock { animation: rise 1s cubic-bezier(.16, 1, .3, 1) .25s both; }
+.stage.enter .foot { animation: fadeIn .8s ease .6s both; }
+@keyframes homeIn { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
 @keyframes rise { from { opacity: 0; transform: translateY(1.6rem); } to { opacity: 1; transform: none; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -376,7 +372,7 @@ html[data-look="light"] .dock-glass { background: #ffffff47; border-color: #ffff
 }
 .art-tile .ic { width: 8rem; height: 8rem; stroke-width: 1.6; }
 .art-tile > svg:not(.ic) { width: 60%; height: 60%; }
-.art-tile svg.mark { width: 100%; height: 100%; }
+.art-tile svg.mark { width: 78%; height: 78%; color: var(--text); }
 .art-caption { margin: 0; max-width: 26rem; text-align: center; font-size: calc(1.55rem * var(--fs)); color: var(--muted); }
 .pane-main { min-height: 0; overflow-y: auto; padding: 1rem 1.2rem 3rem; margin: -1rem -1.2rem 0; scrollbar-width: none; scroll-padding: 2rem 0 calc(18% + 1rem); }
 /* fondu en bas tant qu'il reste des réglages plus bas */
@@ -505,21 +501,27 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .l-back { display: inline-flex; align-items: center; gap: .7rem; margin-top: 1rem; padding: .9rem 1.7rem .9rem 1rem; font-size: calc(1.65rem * var(--fs)); border: 1px solid color-mix(in oklab, currentColor 30%, transparent); border-radius: 99px; background: color-mix(in oklab, currentColor 8%, transparent); font-weight: 600; cursor: pointer; }
 .l-back:focus-visible { outline: .18rem solid currentColor; outline-offset: .2rem; }
 
-/* ---------- démarrage ---------- */
-.boot { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: #000; transition: opacity .7s ease; }
+/* ---------- démarrage ----------
+   Comme sur la maquette du kit : symbole au centre sur fond noir, « scaros » en gris dessous.
+   Le symbole apparaît doucement, ses deux fentes s'allument en ambre l'une après l'autre,
+   le mot arrive, puis tout s'efface et l'accueil s'ouvre en zoom, comme sur l'Apple TV. */
+.boot { position: fixed; inset: 0; z-index: 50; background: #000; transition: opacity .9s ease; }
 .boot.out { opacity: 0; pointer-events: none; }
-.boot-logo { display: flex; align-items: center; }
-.boot .mark { width: 9rem; height: 9rem; opacity: 0; transform: scale(.86); }
-.boot-word { overflow: hidden; max-width: 0; opacity: 0; white-space: nowrap; font-family: var(--font-brand); font-weight: 500; font-size: calc(5rem * var(--fs)); letter-spacing: -.01em; line-height: 1; }
-.boot-word span { display: inline-block; padding-left: 2.2rem; }
-.boot.run .mark { animation: markIn 1s var(--ease) .25s forwards; }
-.boot.run .mark .sweep { animation: sweep 1.2s ease .7s forwards; }
-.boot.run .mark .led { opacity: 0; animation: ledOn .5s steps(2) 1.25s forwards; }
-.boot.run .boot-word { animation: wordIn .9s var(--ease) 1.25s forwards; }
-@keyframes markIn { to { opacity: 1; transform: none; } }
-@keyframes sweep { from { transform: translateX(-70px); } to { transform: translateX(70px); } }
-@keyframes ledOn { to { opacity: 1; } }
-@keyframes wordIn { to { max-width: 34rem; opacity: 1; } }
+.boot-logo { position: absolute; inset: 0; transition: transform 1.1s cubic-bezier(.4, 0, .2, 1); }
+.boot.out .boot-logo { transform: scale(1.07); }
+.boot-sym { position: absolute; left: 50%; top: 36.1vh; width: 20.3vh; height: 20.3vh; margin-left: -10.15vh; color: #fff; opacity: 0; transform: scale(.9); }
+.boot-sym svg, .boot-word svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.boot-word { position: absolute; left: 50%; top: 62.3vh; width: 17.6vh; height: 3.23vh; margin-left: -8.8vh; color: #8a8a96; opacity: 0; }
+.boot .sym-slot { transform: scaleX(0); transform-box: fill-box; }
+.boot .sym-slot-a { transform-origin: 100% 50%; }   /* fente du haut : s'ouvre côté droit */
+.boot .sym-slot-b { transform-origin: 0% 50%; }     /* fente du bas : s'ouvre côté gauche */
+.boot.run .boot-sym { animation: symIn 1.1s cubic-bezier(.16, 1, .3, 1) .3s forwards; }
+.boot.run .sym-slot-a { animation: slotIn .65s cubic-bezier(.65, 0, .35, 1) 1.05s forwards; }
+.boot.run .sym-slot-b { animation: slotIn .65s cubic-bezier(.65, 0, .35, 1) 1.35s forwards; }
+.boot.run .boot-word { animation: wordIn 1s cubic-bezier(.16, 1, .3, 1) 1.9s forwards; }
+@keyframes symIn { to { opacity: 1; transform: none; } }
+@keyframes slotIn { to { transform: scaleX(1); } }
+@keyframes wordIn { from { opacity: 0; transform: translateY(1.4vh); } to { opacity: 1; transform: none; } }
 
 /* ---------- veille & extinction ---------- */
 .off { position: fixed; inset: 0; z-index: 45; display: grid; place-items: center; text-align: center; background: #000; color: var(--text-2); cursor: pointer; overflow: hidden; }
@@ -530,7 +532,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .off[data-kind="off"] .saver-bg, .off[data-kind="off"] .saver-time, .off[data-kind="off"] .saver-date { display: none; }
 @keyframes aurora { from { transform: translate3d(-4%, -3%, 0) rotate(0deg); } to { transform: translate3d(4%, 3%, 0) rotate(12deg); } }
 .saver { position: relative; }
-.saver-time { margin: 0; font-family: var(--font-brand); font-weight: 300; font-size: calc(10rem * var(--fs)); line-height: 1; color: #ffffffd8; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.saver-time { margin: 0; font-weight: 500; font-size: calc(10rem * var(--fs)); line-height: 1; color: #ffffffd8; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .saver-date { margin: 1rem 0 0; font-size: calc(2.5rem * var(--fs)); font-weight: 600; color: #ffffffa8; text-transform: capitalize; }
 .off-msg { margin: 2.4rem 0 0; font-size: calc(1.65rem * var(--fs)); color: var(--muted); }
 .off-led { position: absolute; right: max(3rem, calc(env(safe-area-inset-right, 0px) + 16px)); bottom: max(2.4rem, calc(env(safe-area-inset-bottom, 0px) + 16px)); width: .7rem; height: .7rem; border-radius: 50%; background: var(--led); box-shadow: 0 0 .9rem var(--led); }
@@ -604,7 +606,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .shelf { height: auto; }
   .status, .shelf-info, .dock, .foot { position: relative; top: auto; bottom: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); left: auto; }
   .status { margin-top: 1.4rem; }
-  .brand-word, .wx-cap { display: none; }
+  .wx-cap { display: none; }
+  .brand-logo { height: 2.6rem; }
   .capsule { gap: .9rem; padding: .6rem 1.1rem; }
   .scene-art { right: 1rem; top: 5rem; width: 14rem; height: 11rem; }
   .shelf-info { margin-top: 13rem; max-width: none; }
@@ -627,8 +630,6 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .qr-big { width: min(80vw, 22rem); }
   .qr-title { font-size: calc(2.2rem * var(--fs)); }
   .qr-url { font-size: calc(1.8rem * var(--fs)); }
-  .boot-word { font-size: calc(3rem * var(--fs)); }
-  .boot .mark { width: 6rem; height: 6rem; }
   .saver-time { font-size: calc(6rem * var(--fs)); }
   .toast { right: 16px; left: 16px; max-width: none; }
   .vol-track { width: 12rem; }
@@ -681,10 +682,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     <div class="home-scrim" aria-hidden="true"></div>
 
     <header class="status">
-      <div class="brand" aria-label="Scaros">
-        <svg class="mark" viewBox="0 0 64 64" aria-hidden="true" data-mark></svg>
-        <span class="brand-word">scaros</span>
-      </div>
+      <div class="brand" role="img" aria-label="Scaros" data-logo="lockup"></div>
       <div class="status-right">
         <div class="capsule">
           <span class="clock" id="clock">--:--</span>
@@ -754,8 +752,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   <div class="boot" id="boot">
     <div class="boot-logo" role="img" aria-label="Scaros">
-      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true" data-mark="boot"></svg>
-      <div class="boot-word"><span>scaros</span></div>
+      <span class="boot-sym" data-logo="symbol"></span>
+      <span class="boot-word" data-logo="word"></span>
     </div>
   </div>
 
@@ -862,23 +860,26 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   };
   const icon = (n, cls = 'ic') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
 
-  // Scaros mark: graphite tile, a white S, the red standby LED
-  let uid = 0;
-  function markSVG(id) {
-    const k = 'm' + (++uid);
-    return `<defs><linearGradient id="${k}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#343945"/><stop offset="1" stop-color="#0d0f14"/></linearGradient>`
-      + `<linearGradient id="${k}h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>`
-      + `<linearGradient id="${k}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#c9d0dc"/></linearGradient>`
-      + `<linearGradient id="${k}w" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`
-      + `<clipPath id="${k}c"><rect x="2" y="2" width="60" height="60" rx="15"/></clipPath></defs>`
-      + `<rect x="2" y="2" width="60" height="60" rx="15" fill="url(#${k}b)"/>`
-      + `<rect x="2" y="2" width="60" height="60" rx="15" fill="url(#${k}h)"/>`
-      + `<rect x="2.5" y="2.5" width="59" height="59" rx="14.5" fill="none" stroke="#fff" stroke-opacity=".12"/>`
-      + `<path d="M42.5 21.5C40.2 17.8 36.4 16 31.9 16 25.8 16 21.4 19.4 21.4 24.6c0 5.8 5.5 7 10.6 8 5.3 1 10.6 2.5 10.6 8.3 0 5.2-4.6 7.7-10.7 7.7-4.8 0-8.8-2-11-5.6" fill="none" stroke="url(#${k}s)" stroke-width="6.4" stroke-linecap="round"/>`
-      + (id === 'boot' ? `<g clip-path="url(#${k}c)"><rect class="sweep" x="-40" y="-10" width="30" height="84" fill="url(#${k}w)" transform="translate(-70 0)"/></g>` : '')
-      + `<circle class="led" cx="32" cy="56.2" r="2" fill="#ff3b30"/>`;
-  }
-  document.querySelectorAll('[data-mark]').forEach(el => { el.innerHTML = markSVG(el.dataset.mark); });
+  let uid = 0;  // identifiants uniques des dégradés SVG
+  // Logo Scaros (kit officiel) : le S taillé dans une touche, deux fentes ambre.
+  // Le corps prend la couleur du texte (blanc sur fond sombre, Nuit sur fond clair).
+  const LOGO = {
+    body: 'M58 0 H166 C201.96 0 224 22.04 224 58 V59 H76 A17 17 0 0 0 76 93 H224 V166 C224 201.96 201.96 224 166 224 H58 C22.04 224 0 201.96 0 166 V165 H148 A17 17 0 0 0 148 131 H0 V58 C0 22.04 22.04 0 58 0 Z',
+    slotA: 'M224 57.8 H76 A18.2 18.2 0 0 0 76 94.2 H224 Z',
+    slotB: 'M0 166.2 H148 A18.2 18.2 0 0 0 148 129.8 H0 Z',
+    word: 'M71.78 186.65C99.46 186.65 119.30 172.86 119.30 151.01C119.30 134.57 109.01 124.81 86.84 120.15L66.69 116.01C57.36 114.0 51.84 109.86 51.84 103.18C51.84 95.54 59.06 89.60 70.83 89.60C83.03 89.60 91.19 96.92 91.40 106.89H116.54C115.90 83.87 97.34 69.56 70.19 69.56C42.83 69.56 25.12 83.45 25.12 104.03C25.12 121.0 36.36 131.92 57.78 136.37L76.87 140.30C86.31 142.31 92.15 146.24 92.15 153.03C92.15 160.98 84.30 166.60 71.36 166.60C58.0 166.60 50.15 160.34 48.98 149.42H22.57C24.27 173.5 44.53 186.65 71.78 186.65Z M186.07 186.54C214.39 186.54 234.96 168.30 236.87 143.80H210.46C207.92 156.21 200.39 164.27 186.39 164.27C168.78 164.27 158.39 150.16 158.39 128.10C158.39 105.93 168.89 91.72 186.39 91.72C200.28 91.72 208.66 100.10 210.68 112.09H236.87C234.54 87.16 214.18 69.45 186.07 69.45C153.30 69.45 131.34 93.53 131.34 128.10C131.34 162.68 153.30 186.54 186.07 186.54Z M287.95 185.80C306.19 185.80 315.63 178.16 320.93 168.19H321.36V184.0H347.66V107.63C347.66 84.30 330.37 69.77 301.21 69.77C271.93 69.77 253.69 84.51 252.42 106.78H278.19C278.93 97.34 287.63 90.56 300.68 90.56C313.51 90.56 321.15 97.34 321.15 106.89V107.74C321.15 115.37 314.04 115.69 293.25 118.03C270.13 120.46 249.24 126.72 249.24 152.18C249.24 174.56 265.68 185.80 287.95 185.80ZM294.53 165.96C282.86 165.96 275.33 160.77 275.33 151.96C275.33 141.78 285.09 137.65 296.54 135.95C307.57 134.25 317.96 132.56 321.25 130.43V142.53C321.25 155.57 312.03 165.96 294.53 165.96Z M370.31 184.0H397.04V120.57C397.04 103.07 406.90 94.27 419.63 94.27C424.93 94.27 430.24 94.80 432.25 95.12V71.36C430.13 71.15 427.16 70.93 423.56 70.93C409.13 70.93 400.54 77.72 396.40 90.56H396.09V72.0H370.31Z M496.69 186.54C529.68 186.54 551.95 162.89 551.95 128.10C551.95 93.31 529.68 69.45 496.69 69.45C463.71 69.45 441.43 93.31 441.43 128.10C441.43 162.89 463.71 186.54 496.69 186.54ZM496.69 164.16C479.40 164.16 468.48 150.48 468.48 128.10C468.48 105.62 479.51 91.83 496.69 91.83C513.77 91.83 524.80 105.72 524.80 128.10C524.80 150.37 513.87 164.16 496.69 164.16Z M613.31 186.65C641.0 186.65 660.83 172.86 660.83 151.01C660.83 134.57 650.54 124.81 628.37 120.15L608.22 116.01C598.89 114.0 593.37 109.86 593.37 103.18C593.37 95.54 600.59 89.60 612.36 89.60C624.56 89.60 632.72 96.92 632.93 106.89H658.07C657.43 83.87 638.87 69.56 611.72 69.56C584.36 69.56 566.65 83.45 566.65 104.03C566.65 121.0 577.89 131.92 599.31 136.37L618.40 140.30C627.84 142.31 633.68 146.24 633.68 153.03C633.68 160.98 625.83 166.60 612.89 166.60C599.53 166.60 591.68 160.34 590.51 149.42H564.10C565.80 173.5 586.06 186.65 613.31 186.65Z'
+  };
+  const symbolSVG = (cls = 'sym') => `<svg class="${cls}" viewBox="0 0 224 224" aria-hidden="true">`
+    + `<path class="sym-slot sym-slot-a" fill="#FF5A1F" d="${LOGO.slotA}"/><path class="sym-slot sym-slot-b" fill="#FF5A1F" d="${LOGO.slotB}"/>`
+    + `<path fill="currentColor" d="${LOGO.body}"/></svg>`;
+  const wordSVG = (cls = 'word') => `<svg class="${cls}" viewBox="22.58 69.45 638.26 117.2" aria-hidden="true"><path fill="currentColor" d="${LOGO.word}"/></svg>`;
+  // version horizontale (symbole + mot), proportions du kit
+  const lockupSVG = (cls = 'brand-logo') => `<svg class="${cls}" viewBox="0 0 924.84 224" aria-hidden="true">`
+    + `<path fill="#FF5A1F" d="${LOGO.slotA}"/><path fill="#FF5A1F" d="${LOGO.slotB}"/><path fill="currentColor" d="${LOGO.body}"/>`
+    + `<path fill="currentColor" transform="translate(264 -16)" d="${LOGO.word}"/></svg>`;
+  document.querySelectorAll('[data-logo]').forEach(el => {
+    el.innerHTML = { symbol: symbolSVG, word: wordSVG, lockup: lockupSVG }[el.dataset.logo]();
+  });
   document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon) + el.innerHTML; });
 
   // app artwork (drawn for the menu; the apps keep their own icons)
@@ -1659,7 +1660,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     } else {
       pane.style.setProperty('--pa', p.pa);
       const trail = [...state.panelStack.map(s => s.id), state.panel].filter(id => id !== 'control').map(id => PAGE_NAME[id]);
-      const art = p.mark ? `<svg class="mark" viewBox="0 0 64 64" aria-hidden="true">${markSVG()}</svg>` : p.art ? ART[p.art]() : icon(p.icon);
+      const art = p.mark ? symbolSVG('mark') : p.art ? ART[p.art]() : icon(p.icon);
       pane.innerHTML = `<p class="crumbs">${trail.slice(0, -1).map(t => `${t} › `).join('')}<b>${trail[trail.length - 1]}</b></p>
         <div class="pane-grid${p.wide ? ' wide' : ''}">
           <div class="pane-art"><div class="art-tile" style="--pa:${p.pa};--pb:${p.pb}${p.mark ? ';background:none;box-shadow:none' : ''}">${art}</div><p class="art-caption">${p.caption || ''}</p></div>
@@ -2211,7 +2212,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     state.booting = true;
     B.hidden = false; B.classList.remove('run', 'out'); void B.offsetWidth; B.classList.add('run');
     clearTimeout(bootTimer);
-    bootTimer = setTimeout(endBoot, reduce ? 0 : 3000);
+    bootTimer = setTimeout(endBoot, reduce ? 0 : 3400);
   }
   function endBoot() {
     if (!state.booting) return;
