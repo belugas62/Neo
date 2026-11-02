@@ -588,7 +588,8 @@ class Scaros:
         """La fenêtre de l'appli ouverte (la dernière repérée, sinon la plus récente qui n'est pas le menu)."""
         if self.windows:
             return self.windows[-1]
-        launcher = set(run(["xdotool", "search", "--class", LAUNCHER_CLASS], timeout=3, quiet=True)[1].split())
+        self.launcher_window()
+        launcher = self.launcher_ids
         others = [w for w in self._visible_windows() if w not in launcher]
         return others[-1] if others else None
 
@@ -601,14 +602,51 @@ class Scaros:
             return
         self.focus_checked = now
         if not self.launcher_ids:
-            self.launcher_ids = set(run(["xdotool", "search", "--class", LAUNCHER_CLASS], timeout=3, quiet=True)[1].split())
-        active = run(["xdotool", "getactivewindow"], timeout=3, quiet=True)[1].strip()
+            self.launcher_window()
+        active = self._active_window()
         if not active or active in self.launcher_ids:
             log.info("focus rendu à l'appli (était sur %s)", active or "aucune fenêtre")
             run(["xdotool", "windowactivate", self.windows[-1]], timeout=3, quiet=True)
 
+    def launcher_window(self):
+        """La fenêtre visible du menu. Chromium crée aussi une fenêtre cachée de la même classe,
+        souvent listée en premier : l'activer ne faisait rien (le centre de contrôle restait
+        caché derrière l'appli). On ne garde que les fenêtres affichées, avec le titre en secours."""
+        for args in (["--onlyvisible", "--class", LAUNCHER_CLASS], ["--onlyvisible", "--name", "^Scaros OS$"]):
+            ids = run(["xdotool", "search", *args], timeout=3, quiet=True)[1].split()
+            if ids:
+                self.launcher_ids = set(ids)
+                return ids[-1]
+        return None
+
+    @staticmethod
+    def _active_window():
+        return run(["xdotool", "getactivewindow"], timeout=3, quiet=True)[1].strip()
+
+    def _activate(self, win):
+        """Met une fenêtre devant et lui donne le clavier, puis vérifie que c'est bien le cas."""
+        run(["xdotool", "windowactivate", "--sync", win], timeout=2, quiet=True)
+        if self._active_window() == win:
+            return True
+        run(["xdotool", "windowraise", win], timeout=2, quiet=True)
+        run(["xdotool", "windowfocus", "--sync", win], timeout=2, quiet=True)
+        return self._active_window() == win
+
     def focus_launcher(self):
-        run(["xdotool", "search", "--class", LAUNCHER_CLASS, "windowactivate"], timeout=3, quiet=True)
+        if DRY:
+            return True
+        win = self.launcher_window()
+        if not win:
+            log.warning("fenêtre du menu introuvable")
+            return False
+        if self._activate(win):
+            return True
+        # dernier recours : on réduit les fenêtres de l'appli, le menu se retrouve devant
+        for w in self.windows:
+            run(["xdotool", "windowminimize", w], timeout=2, quiet=True)
+        ok = self._activate(win)
+        log.info("menu ramené devant en réduisant l'appli : %s", "réussi" if ok else "échec")
+        return ok
 
     def show_overlay(self):
         """Centre de contrôle pendant une appli : le menu passe devant, l'appli reste ouverte derrière."""
@@ -616,9 +654,10 @@ class Scaros:
             if (self.current is None and not self.mirroring) or self.overlay:
                 return
             self.overlay = True
-        log.info("centre de contrôle par-dessus %s", "la recopie AirPlay" if self.mirroring else self.current[0])
         self.osd.send(t="hide")
-        self.focus_launcher()
+        ok = self.focus_launcher()
+        log.info("centre de contrôle par-dessus %s%s", "la recopie AirPlay" if self.mirroring else self.current[0],
+                 "" if ok else " : le menu n'a pas pu passer devant")
 
     def resume_app(self):
         """Ferme le centre de contrôle et rend l'écran à l'appli restée ouverte."""
@@ -628,14 +667,14 @@ class Scaros:
             self.overlay = False
             cur = self.current
         if self.mirroring and self.airplay_win:
-            run(["xdotool", "windowactivate", self.airplay_win], timeout=3, quiet=True)
+            self._activate(self.airplay_win)
             log.info("retour dans la recopie AirPlay")
             return
         if cur is None:
             return
         win = self._app_window()
         if win:
-            run(["xdotool", "windowactivate", win], timeout=3, quiet=True)
+            self._activate(win)
         log.info("retour dans %s", cur[0])
 
     # ---------- entrées (manette, téléphone) : une seule file, dans l'ordre ----------
