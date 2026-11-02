@@ -301,7 +301,12 @@ class Scaros:
         self.airplay_device = None
         self.airplay_proc = None
         self.airplay_win = None
-        self.airplay_watch_until = 0.0
+        self.airplay_connected_at = 0.0
+        self.airplay_running = False      # UxPlay tourne depuis quelques secondes
+        self.airplay_error = None         # pourquoi AirPlay ne marche pas (affiché dans Réglages)
+        self.airplay_advertised = None    # « Scaros » vu sur le réseau (avahi-browse) : True / False / inconnu
+        self.airplay_checking = False
+        self.airplay_restart = False
         self.mirroring = False
         self.update = {"checking": False, "running": False, "available": None, "step": None}
         self.weather = None
@@ -1404,7 +1409,9 @@ class Scaros:
     # ---------- AirPlay (UxPlay) : recopie d'écran et vidéos depuis un iPhone ----------
     def airplay_state(self):
         return {"enabled": self.settings.get("airplay", True), "available": DRY or shutil.which("uxplay") is not None,
-                "state": self.airplay, "device": self.airplay_device, "name": AIRPLAY_NAME}
+                "state": self.airplay, "device": self.airplay_device, "name": AIRPLAY_NAME,
+                "running": self.airplay_running, "error": self.airplay_error,
+                "advertised": self.airplay_advertised, "checking": self.airplay_checking}
 
     def _airplay_changed(self):
         self.bus.emit("airplay", **self.airplay_state())
@@ -1412,65 +1419,153 @@ class Scaros:
     def _airplay_loop(self):
         """Garde UxPlay prêt : Scaros apparaît alors dans la liste AirPlay de l'iPhone."""
         fails = 0
-        if not DRY:  # un UxPlay resté d'une session précédente (écran redémarré) ferait doublon
-            run(["pkill", "-x", "-u", str(os.getuid()), "uxplay"], timeout=5, quiet=True)
+        if DRY:
+            self.airplay_running, self.airplay_advertised = True, True
+            return
+        # un UxPlay resté d'une session précédente (écran redémarré) ferait doublon
+        run(["pkill", "-x", "-u", str(os.getuid()), "uxplay"], timeout=5, quiet=True)
         while True:
-            if DRY or not self.settings.get("airplay", True) or not shutil.which("uxplay") \
-                    or not os.environ.get("DISPLAY"):
+            if not self.settings.get("airplay", True) or not shutil.which("uxplay") or not os.environ.get("DISPLAY"):
+                if self.airplay_running:
+                    self.airplay_running = False
+                    self._airplay_changed()
                 time.sleep(5)
                 continue
+            if not self._avahi_ok():
+                self._airplay_fail("Le service de découverte du réseau (Avahi) est arrêté : lance scaros-update.")
+                time.sleep(30)
+                continue
             started = time.monotonic()
+            # UxPlay écrit ses messages avec printf : sans « stdbuf -oL », ils restent en mémoire
+            # au lieu d'arriver ligne par ligne (connexion d'un iPhone repérée trop tard)
+            cmd = ["uxplay", "-n", AIRPLAY_NAME, "-nh", "-fs", "-nohold", "-reset", "15"]
+            if shutil.which("stdbuf"):
+                cmd = ["stdbuf", "-oL", "-eL"] + cmd
             try:
                 STATE_DIR.mkdir(parents=True, exist_ok=True)
                 logf = open(STATE_DIR / "airplay.log", "w")
-                p = subprocess.Popen(["uxplay", "-n", AIRPLAY_NAME, "-nh", "-fs", "-nohold", "-reset", "15"],
-                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
                                      text=True, errors="replace", start_new_session=True)
             except OSError as e:
-                log.warning("AirPlay impossible : %s", e)
+                self._airplay_fail(f"UxPlay ne se lance pas : {e}")
                 time.sleep(30)
                 continue
             self.airplay_proc = p
-            log.info("AirPlay prêt (« %s » sur l'iPhone)", AIRPLAY_NAME)
-            written = 0
+            self.airplay_restart = False
+            log.info("AirPlay : UxPlay lancé (« %s » sur l'iPhone)", AIRPLAY_NAME)
+            # quelques secondes après le lancement : est-ce que Scaros est bien annoncé sur le réseau ?
+            threading.Timer(6, self._airplay_ready, args=(p,)).start()
+            written, last, errors = 0, "", []
             for line in p.stdout:
                 if written < 2_000_000:  # journal limité : UxPlay peut être bavard
                     logf.write(line)
                     logf.flush()
                     written += len(line)
+                if line.strip():
+                    last = line.strip()
+                if "*** ERROR" in line and len(errors) < 5:
+                    errors.append(line.replace("*** ERROR:", "").strip())
                 m = re.search(r"connection request from (.+?) \(([^)]*)\) with deviceID", line)
                 if m:
                     self.airplay_device = m.group(1).strip()
-                    self.airplay_watch_until = time.monotonic() + 90
+                    self.airplay_connected_at = time.monotonic()
                     if self.airplay == "idle":
                         self.airplay = "connected"
                         self._airplay_changed()
                     log.info("AirPlay : connexion de %s", self.airplay_device)
-            p.wait()
+            code = p.wait()
             logf.close()
             self.airplay_proc = None
             self._airplay_ended()
-            fails = fails + 1 if time.monotonic() - started < 10 else 0
+            quick = time.monotonic() - started < 10
+            if self.airplay_restart:  # redémarrage demandé (Réglages, ou recopie arrêtée avec B)
+                fails = 0
+                self.airplay_running = False
+                continue
+            if quick:
+                why = errors[0] if errors else last or f"code {code}"
+                if "dnssd" in why.lower():
+                    why = "annonce sur le réseau impossible (Avahi). Lance scaros-update, puis redémarre le PC."
+                self._airplay_fail(f"UxPlay s'arrête au démarrage : {why}")
+            fails = fails + 1 if quick else 0
             time.sleep(min(60, 2 * 2 ** min(fails, 5)))  # UxPlay qui plante en boucle : on espace
+
+    def _avahi_ok(self):
+        code, out = run(["systemctl", "is-active", "avahi-daemon"], timeout=5, quiet=True)
+        return code == 0 or out.strip() == "active" or not shutil.which("systemctl")
+
+    def _airplay_fail(self, why):
+        log.warning("AirPlay : %s", why)
+        self.airplay_running, self.airplay_error, self.airplay_advertised = False, why, None
+        self._airplay_changed()
+
+    def _airplay_ready(self, p):
+        if p.poll() is not None or self.airplay_proc is not p:
+            return
+        self.airplay_running, self.airplay_error = True, None
+        self.check_airplay()
+
+    def check_airplay(self):
+        """Regarde, comme le ferait l'iPhone, si « Scaros » est annoncé sur le réseau (avahi-browse)."""
+        if self.airplay_checking:
+            return
+        if DRY:
+            self.airplay_advertised = True
+            self._airplay_changed()
+            return
+        if not shutil.which("avahi-browse"):
+            self.airplay_advertised = None
+            self._airplay_changed()
+            return
+        self.airplay_checking = True
+        self._airplay_changed()
+        try:
+            code, out = run(["avahi-browse", "-t", "-p", "-r", "_airplay._tcp"], timeout=10, quiet=True)
+            names = set()
+            for line in out.splitlines():
+                parts = line.split(";")
+                if len(parts) > 3 and parts[0] in ("+", "="):
+                    names.add(re.sub(r"\\(\d{3})", lambda m: chr(int(m.group(1))), parts[3]))
+            self.airplay_advertised = any(n == AIRPLAY_NAME or n.startswith(AIRPLAY_NAME + " ") for n in names)
+            log.info("AirPlay annoncé sur le réseau : %s (vus : %s)", self.airplay_advertised, ", ".join(sorted(names)) or "aucun")
+        finally:
+            self.airplay_checking = False
+            self._airplay_changed()
+
+    def restart_airplay(self):
+        """Relance UxPlay (Réglages > AirPlay > Redémarrer AirPlay)."""
+        self.airplay_error, self.airplay_advertised = None, None
+        p = self.airplay_proc
+        if DRY:
+            self._airplay_changed()
+            threading.Timer(1.5, self.check_airplay).start()
+            return
+        if p and p.poll() is None:
+            self.airplay_restart = True
+            try:
+                os.killpg(p.pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+        self._airplay_changed()
 
     def _watch_airplay_window(self):
         """La recopie commence quand la fenêtre vidéo d'UxPlay (nommée « Scaros ») s'affiche,
-        et s'arrête quand elle se ferme (l'iPhone a arrêté la recopie)."""
+        et s'arrête quand elle se ferme (l'iPhone a arrêté la recopie). On regarde les fenêtres
+        directement, sans dépendre des messages d'UxPlay."""
         while True:
-            time.sleep(1)
-            if DRY or not (self.mirroring or time.monotonic() < self.airplay_watch_until):
+            time.sleep(1.5)
+            if DRY or self.airplay_proc is None:
                 continue
             wins = run(["xdotool", "search", "--onlyvisible", "--name", f"^{AIRPLAY_NAME}$"], timeout=3, quiet=True)[1].split()
-            if not wins and not self.mirroring and self.airplay == "connected" \
-                    and time.monotonic() > self.airplay_watch_until - 1.5:
-                self.airplay = "idle"  # musique seule ou connexion abandonnée : pas de fenêtre vidéo
-                self._airplay_changed()
-                continue
             if wins and not self.mirroring:
                 self.airplay_win = wins[-1]
                 self._mirroring_started()
             elif not wins and self.mirroring:
                 self._airplay_ended()
+            elif not wins and self.airplay == "connected" and self.airplay_connected_at \
+                    and time.monotonic() - self.airplay_connected_at > 90:
+                self.airplay = "idle"  # musique seule ou connexion abandonnée : pas de fenêtre vidéo
+                self._airplay_changed()
 
     def _mirroring_started(self):
         with self.lock:
@@ -1506,6 +1601,7 @@ class Scaros:
             self._airplay_ended()
             return
         if p and p.poll() is None:
+            self.airplay_restart = True
             try:
                 os.killpg(p.pid, signal.SIGTERM)
             except (ProcessLookupError, PermissionError):
@@ -2043,6 +2139,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/airplay":
             if "enabled" in body:
                 return self.json({"ok": a.set_airplay(bool(body.get("enabled")))})
+            if body.get("action") == "check":
+                threading.Thread(target=a.check_airplay, daemon=True).start()
+                return self.json({"ok": True})
+            if body.get("action") == "restart":
+                threading.Thread(target=a.restart_airplay, daemon=True).start()
+                return self.json({"ok": True})
             if body.get("action") == "stop":
                 with a.lock:
                     a.overlay = False  # le menu était devant : on arrête puis on revient au menu

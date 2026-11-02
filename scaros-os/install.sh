@@ -61,7 +61,7 @@ apt_install \
   bluez dbus-user-session polkitd \
   python3 python3-evdev python3-qrcode \
   python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-rsvg-2.0 fontconfig \
-  uxplay gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav \
+  uxplay avahi-utils gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav \
   gstreamer1.0-x gstreamer1.0-gl gstreamer1.0-pulseaudio \
   curl ca-certificates wget flatpak plymouth avahi-daemon zram-tools wireless-tools iw openssh-server
 
@@ -203,7 +203,7 @@ if [ "$(hostname)" != scaros ]; then
   hostnamectl set-hostname scaros
   sed -i "s/\b$old\b/scaros/g" /etc/hosts
 fi
-systemctl enable avahi-daemon >/dev/null 2>&1 || true
+systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------------------
 step "7/9 Portable fermé + télé : pas de mise en veille"

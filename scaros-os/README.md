@@ -172,6 +172,11 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
 - **Changer de Wi-Fi :** **Réglages > Wi-Fi**, choisis le réseau et tape le mot de passe avec le clavier à l'écran
   (ou un vrai clavier, ou la télécommande du téléphone). En secours : console, `su -` puis `nmtui`.
 - **Vérifier le décodage vidéo :** `vainfo` doit lister VP9 et HEVC.
+- **Scaros n'apparaît pas dans la recopie de l'écran de l'iPhone :** regarde **Réglages > AirPlay**, qui dit ce qui
+  coince. « Prêt » veut dire que Scaros est bien annoncé sur le Wi-Fi : c'est alors la box qui empêche l'iPhone de le
+  voir (réseau invité ou option « isolation » des appareils Wi-Fi). Test simple : si `scaros.local:8421/remote` ne
+  s'ouvre pas sur l'iPhone, la découverte entre appareils est bloquée. Sinon, « Redémarrer AirPlay », et le journal
+  est dans `~/.local/state/scaros/airplay.log`.
 - **Une appli met du temps à s'ouvrir :** la première ouverture peut prendre jusqu'à une minute sur ce PC.
   Si elle se ferme aussitôt, Scaros la relance une fois tout seul.
 - **Mettre à jour les applis :** **Réglages > Applis > Mettre à jour les applis**.

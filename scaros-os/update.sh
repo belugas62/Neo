@@ -44,7 +44,7 @@ status "install"
 NEW_PACKAGES=(
   libspa-0.2-bluetooth
   # AirPlay : recopie d'écran depuis un iPhone (UxPlay et le décodage vidéo GStreamer)
-  uxplay gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
+  uxplay avahi-daemon avahi-utils gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
   gstreamer1.0-x gstreamer1.0-gl gstreamer1.0-pulseaudio
   # volume et notifications affichés par-dessus les applis
   python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-rsvg-2.0 fontconfig
@@ -60,6 +60,9 @@ if [ "${#missing[@]}" -gt 0 ]; then
   apt-get install -y --no-install-recommends "${missing[@]}"
   [[ " ${missing[*]} " == *" libspa-0.2-bluetooth "* ]] && need_reboot=1
 fi
+
+# AirPlay : l'iPhone trouve Scaros grâce à Avahi (Bonjour) ; il doit tourner
+systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
 
 # applis ajoutées depuis l'installation
 NEW_FLATPAKS=(com.valvesoftware.SteamLink)

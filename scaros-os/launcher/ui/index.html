@@ -939,7 +939,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     // maquette : valeurs d'exemple (sur le PC, elles viennent du serveur)
     weather: { city: 'Lille', temp: 14, kind: 'rain', label: 'Pluie', day: true, max: 16, min: 9 },
     place: { city: 'Lille', auto: true },
-    airplay: { enabled: true, available: true, state: 'idle', device: null, name: 'Scaros' },
+    airplay: { enabled: true, available: true, state: 'idle', device: null, name: 'Scaros', running: true, advertised: true, error: null, checking: false },
     update: { available: false, checking: false, running: false, step: null, checked: Date.now() / 1000 },
     cityQuery: '', cityResults: null
   };
@@ -1334,7 +1334,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
           ${row('panel:wifi', 'wifi', 'Wi-Fi', '', esc(wifiCurrent() || 'Non connecté'))}
           ${row('panel:bluetooth', 'bluetooth', 'Bluetooth', '', btSummary())}
           ${row('panel:remote', 'phone', 'Télécommande', '', phonesCount() ? 'Connectée' : '')}
-          ${row('panel:airplay', 'airplay', 'AirPlay', '', !state.airplay.available ? 'À installer' : !state.airplay.enabled ? 'Désactivé' : mirroring() ? 'Recopie en cours' : 'Activé')}
+          ${row('panel:airplay', 'airplay', 'AirPlay', '', !state.airplay.available ? 'À installer' : !state.airplay.enabled ? 'Désactivé' : mirroring() ? 'Recopie en cours' : state.airplay.error ? 'Ne démarre pas' : state.airplay.advertised === false ? 'Invisible' : 'Activé')}
         </div>
         ${group('Image et son')}<div class="opts">
           ${row('panel:display', 'display', 'Écran', '', outputLabel())}
@@ -1521,19 +1521,34 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     },
     airplay: () => {
       const a = state.airplay, on = a.enabled && a.available;
-      const title = !a.available ? 'AirPlay à installer' : !a.enabled ? 'AirPlay désactivé' : mirroring() ? `Recopie : ${esc(a.device || 'iPhone')}` : 'Prêt';
-      const sub = !a.available ? 'Lance scaros-update pour l’ajouter.' : !a.enabled ? 'Scaros n’apparaît pas sur tes appareils.' : `Scaros apparaît sous le nom « ${esc(a.name || 'Scaros')} ».`;
+      // l'état réel : installé ? lancé ? annoncé sur le réseau (ce que voit l'iPhone) ?
+      let title, sub, ok = false;
+      if (!a.available) { title = 'AirPlay à installer'; sub = 'Lance scaros-update pour l’ajouter.'; }
+      else if (!a.enabled) { title = 'AirPlay désactivé'; sub = 'Scaros n’apparaît pas sur tes appareils.'; }
+      else if (mirroring()) { title = `Recopie : ${esc(a.device || 'iPhone')}`; sub = 'B ou bouton Xbox pour l’arrêter.'; ok = true; }
+      else if (a.error) { title = 'AirPlay ne démarre pas'; sub = esc(a.error); }
+      else if (!a.running) { title = 'Démarrage d’AirPlay…'; sub = 'Quelques secondes.'; }
+      else if (a.checking) { title = 'Vérification sur le réseau…'; sub = 'Scaros regarde s’il est bien visible, comme le ferait l’iPhone.'; }
+      else if (a.advertised === false) { title = 'Lancé, mais invisible sur le réseau'; sub = 'Redémarre AirPlay. Si ça persiste, redémarre le PC.'; }
+      else { title = 'Prêt'; sub = `Visible sur le réseau sous le nom « ${esc(a.name || 'Scaros')} ».`; ok = true; }
       return {
         title: 'AirPlay', icon: 'airplay', pa: '#7a6cff', pb: '#2e2a8a', caption: 'Depuis un iPhone, un iPad ou un Mac.',
         lead: 'Envoie l’écran de ton iPhone, une vidéo ou des photos sur la télé, comme avec une Apple TV.',
-        body: `<div class="card"><span class="sdot ${on ? 'on' : ''}"></span><div><div class="card-title">${title}</div><div class="card-sub">${sub}</div></div></div>
-          ${mirroring() ? `<div class="opts">${row('airplaystop', 'close', 'Arrêter la recopie', '')}</div>` : ''}
-          <div class="opts" role="radiogroup" aria-label="AirPlay"${mirroring() ? ' style="margin-top:.55rem"' : ''}>
+        body: `<div class="card"><span class="sdot ${ok ? 'on' : ''}"></span><div><div class="card-title">${title}${a.checking ? ' <span class="spin"></span>' : ''}</div><div class="card-sub">${sub}</div></div></div>
+          <div class="opts">
+            ${mirroring() ? row('airplaystop', 'close', 'Arrêter la recopie', '') : ''}
+            ${on && !mirroring() ? row('airplayrestart', 'replay', 'Redémarrer AirPlay', 'À faire si Scaros n’apparaît pas sur l’iPhone.') : ''}
+            ${on && a.running && !mirroring() ? row('airplaycheck', 'search', 'Vérifier la visibilité', 'Regarde si Scaros est bien annoncé sur le Wi-Fi.') : ''}
+          </div>
+          ${group('AirPlay')}
+          <div class="opts" role="radiogroup" aria-label="AirPlay">
             ${radio('airplay:on', 'Activé', '', a.enabled, !a.available)}
             ${radio('airplay:off', 'Désactivé', 'Scaros n’apparaît plus dans la liste AirPlay.', !a.enabled, !a.available)}
           </div>
           ${group('Sur l’iPhone')}
-          <ol class="steps"><li>Même Wi-Fi que Scaros.</li><li>Centre de contrôle › Recopie de l’écran › Scaros.</li><li>Ou le bouton AirPlay d’une appli (vidéo, photos, musique).</li><li>B ou bouton Xbox pour arrêter la recopie.</li></ol>
+          <ol class="steps"><li>Même Wi-Fi que Scaros (pas le réseau invité).</li><li>Centre de contrôle › Recopie de l’écran › Scaros.</li><li>Ou le bouton AirPlay d’une appli (vidéo, photos, musique).</li><li>B ou bouton Xbox pour arrêter la recopie.</li></ol>
+          ${group('Scaros n’apparaît pas ?')}
+          <ol class="steps"><li>Si l’état ci-dessus dit « Prêt » : c’est le Wi-Fi qui empêche l’iPhone de voir Scaros.</li><li>Test : ouvre scaros.local:8421/remote sur l’iPhone. Si la page ne s’ouvre pas, la box bloque la découverte entre appareils (option « isolation » ou réseau invité).</li><li>Sur la box, désactive l’isolation Wi-Fi, ou mets l’iPhone et Scaros sur le même réseau (même nom de Wi-Fi).</li></ol>
           ${state.live && !state.dry ? '' : `${group('Démo')}<div class="opts">${row('airplaydemo', 'airplay', mirroring() ? 'Arrêter la recopie de démo' : 'Essayer une recopie', 'Simule un iPhone qui envoie son écran.')}</div>`}`
       };
     },
@@ -1687,6 +1702,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (id === 'update' && state.live && !state.update.checking && !state.update.running
         && Date.now() / 1000 - (state.update.checked || 0) > 600) api('/api/update/check', {}).catch(() => {});
     if (id === 'citysearch') { state.cityQuery = ''; state.kbMode = 'abc'; state.kbShift = false; }
+    if (id === 'airplay' && state.live && state.airplay.running && !state.airplay.checking) api('/api/airplay', { action: 'check' }).catch(() => {});
     if (id === 'wifi' && state.live && Date.now() - lastWifiScan > 20000) {
       lastWifiScan = Date.now();
       api('/api/wifi/scan', {}).catch(() => {});
@@ -1756,6 +1772,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else { state.airplay.enabled = v === 'on'; renderPanel(act); }
     }
     else if (k === 'airplaystop') { closePanel({ resume: false }); stopAirplay(); }
+    else if (k === 'airplayrestart' || k === 'airplaycheck') {
+      const action = k === 'airplayrestart' ? 'restart' : 'check';
+      if (state.live) api('/api/airplay', { action }).then(() => { if (action === 'restart') toast('airplay', 'AirPlay redémarre…'); }).catch(fail);
+      else { state.airplay = { ...state.airplay, checking: true }; renderPanel(act); setTimeout(() => { state.airplay = { ...state.airplay, checking: false, running: true, advertised: true }; rerenderPane(); }, 1200); }
+    }
     else if (k === 'airplaydemo') {
       const was = state.airplay.state;
       if (state.live) { api('/api/dev/airplay', {}).catch(fail); return; }
