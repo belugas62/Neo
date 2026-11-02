@@ -9,7 +9,6 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST=/opt/scaros
-SPOTIFYD_URL="https://github.com/Spotifyd/spotifyd/releases/download/v0.4.2/spotifyd-linux-x86_64-full.tar.gz"
 FLATPAKS=(rocks.shy.VacuumTube org.jellyfin.JellyfinDesktop tv.plex.PlexHTPC)
 
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -32,14 +31,14 @@ export DEBIAN_FRONTEND=noninteractive
 apt_install() { apt-get install -y --no-install-recommends "$@"; }
 
 # ---------------------------------------------------------------------------
-step "1/10 Paquets du système (affichage, son, manette, vidéo)"
+step "1/9 Paquets du système (affichage, son, manette, vidéo)"
 apt-get update
 apt_install \
   xserver-xorg-core xserver-xorg-input-libinput xinit x11-xserver-utils xdotool openbox unclutter-xfixes \
   chromium fonts-noto-core \
   pipewire pipewire-pulse wireplumber pulseaudio-utils alsa-ucm-conf libspa-0.2-bluetooth \
   intel-media-va-driver i965-va-driver vainfo \
-  bluez playerctl dbus-user-session polkitd \
+  bluez dbus-user-session polkitd \
   python3 python3-evdev python3-qrcode \
   curl ca-certificates wget flatpak plymouth avahi-daemon zram-tools wireless-tools iw openssh-server
 
@@ -47,11 +46,9 @@ apt_install \
 for fw in firmware-sof-signed firmware-misc-nonfree firmware-iwlwifi firmware-realtek; do
   apt_install "$fw" >/dev/null 2>&1 || warn "Micrologiciel $fw non installé (pas grave s'il n'est pas utile sur ce PC)."
 done
-apt_install libasound2t64 >/dev/null 2>&1 || apt_install libasound2 >/dev/null 2>&1 || true
-apt_install libpulse0 libdbus-1-3 >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------------------
-step "2/10 Wi-Fi géré par NetworkManager"
+step "2/9 Wi-Fi géré par NetworkManager"
 apt_install network-manager
 IFACES=/etc/network/interfaces
 if grep -qE '^[[:space:]]*wpa-ssid' "$IFACES" 2>/dev/null; then
@@ -84,7 +81,7 @@ for dev in /sys/class/net/wl*; do
 done
 
 # ---------------------------------------------------------------------------
-step "3/10 Applis YouTube, Jellyfin et Plex (Flathub)"
+step "3/9 Applis YouTube, Jellyfin et Plex (Flathub)"
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 for app in "${FLATPAKS[@]}"; do
   if flatpak info "$app" >/dev/null 2>&1; then
@@ -101,22 +98,7 @@ flatpak list --runtime --columns=application,branch 2>/dev/null | awk '$1=="org.
   done
 
 # ---------------------------------------------------------------------------
-step "4/10 Spotify Connect (spotifyd)"
-if [ ! -x /usr/local/bin/spotifyd ]; then
-  tmp="$(mktemp -d)"
-  if wget -q -O "$tmp/spotifyd.tar.gz" "$SPOTIFYD_URL" && tar -xzf "$tmp/spotifyd.tar.gz" -C "$tmp"; then
-    install -m 755 "$(find "$tmp" -type f -name spotifyd | head -n1)" /usr/local/bin/spotifyd
-  else
-    warn "Téléchargement de spotifyd raté : Spotify ne sera pas disponible."
-  fi
-  rm -rf "$tmp"
-fi
-if [ -x /usr/local/bin/spotifyd ] && ldd /usr/local/bin/spotifyd | grep -q "not found"; then
-  warn "spotifyd : bibliothèques manquantes ($(ldd /usr/local/bin/spotifyd | grep 'not found' | awk '{print $1}' | xargs))."
-fi
-
-# ---------------------------------------------------------------------------
-step "5/10 Fichiers de Scaros dans $DEST"
+step "4/9 Fichiers de Scaros dans $DEST"
 mkdir -p "$DEST"
 rm -rf "$DEST/launcher" "$DEST/system"
 cp -r "$HERE/launcher" "$HERE/system" "$DEST/"
@@ -135,7 +117,7 @@ cat > /etc/chromium/policies/managed/scaros.json <<'EOF'
 EOF
 
 # ---------------------------------------------------------------------------
-step "6/10 Compte « $USER_NAME » : démarrage automatique de Scaros"
+step "5/9 Compte « $USER_NAME » : démarrage automatique de Scaros"
 for g in input video render audio bluetooth; do
   getent group "$g" >/dev/null && usermod -aG "$g" "$USER_NAME"
 done
@@ -163,19 +145,11 @@ fi
 # <<< scaros <<<
 EOF
 fi
-mkdir -p "$USER_HOME/.config/spotifyd" "$USER_HOME/.local/state/scaros"
-cat > "$USER_HOME/.config/spotifyd/spotifyd.conf" <<'EOF'
-[global]
-device_name = "Scaros"
-device_type = "t_v"
-backend = "pulseaudio"
-bitrate = 320
-use_mpris = true
-EOF
-chown -R "$USER_NAME:$USER_NAME" "$profile" "$USER_HOME/.config" "$USER_HOME/.local"
+mkdir -p "$USER_HOME/.local/state/scaros"
+chown -R "$USER_NAME:$USER_NAME" "$profile" "$USER_HOME/.local"
 
 # ---------------------------------------------------------------------------
-step "7/10 Manette Bluetooth et nom réseau « scaros »"
+step "6/9 Manette Bluetooth et nom réseau « scaros »"
 main_conf=/etc/bluetooth/main.conf
 if [ -f "$main_conf" ]; then
   sed -i -E 's/^#?[[:space:]]*FastConnectable[[:space:]]*=.*/FastConnectable = true/;
@@ -192,7 +166,7 @@ fi
 systemctl enable avahi-daemon >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------------------
-step "8/10 Portable fermé + télé : pas de mise en veille"
+step "7/9 Portable fermé + télé : pas de mise en veille"
 mkdir -p /etc/systemd/logind.conf.d
 cat > /etc/systemd/logind.conf.d/scaros.conf <<'EOF'
 [Login]
@@ -207,7 +181,7 @@ EOF
 systemctl enable zramswap >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------------------
-step "9/10 Écran de démarrage Scaros"
+step "8/9 Écran de démarrage Scaros"
 rm -rf /usr/share/plymouth/themes/scaros
 cp -r "$DEST/system/plymouth/scaros" /usr/share/plymouth/themes/scaros
 grep -qx i915 /etc/initramfs-tools/modules || echo i915 >> /etc/initramfs-tools/modules
@@ -225,11 +199,10 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-step "10/10 Vérifications"
+step "9/9 Vérifications"
 vainfo --display drm --device /dev/dri/renderD128 2>/dev/null | grep -qi "VAProfileVP9" && echo "Décodage vidéo par la puce Intel : OK (VP9 disponible)." \
   || warn "Le décodage vidéo matériel n'a pas pu être vérifié (normal tant que la session graphique n'a pas démarré)."
 for app in "${FLATPAKS[@]}"; do flatpak info "$app" >/dev/null 2>&1 || warn "$app manquant."; done
-[ -x /usr/local/bin/spotifyd ] || warn "spotifyd manquant."
 
 echo
 if [ "${#WARNINGS[@]}" -gt 0 ]; then

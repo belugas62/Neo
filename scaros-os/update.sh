@@ -37,6 +37,9 @@ if [ "${#missing[@]}" -gt 0 ]; then
   need_reboot=1
 fi
 
+# Spotify n'est plus dans Scaros
+rm -f /usr/local/bin/spotifyd
+
 # 3) fichiers de Scaros
 mkdir -p /opt/scaros
 rm -rf /opt/scaros/launcher /opt/scaros/system

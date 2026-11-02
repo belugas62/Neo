@@ -332,23 +332,6 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
 .badge { position: absolute; right: 1.1rem; bottom: 1.1rem; z-index: 2; padding: .2rem .6rem; font-size: .8rem; font-weight: 700; letter-spacing: .06em; color: var(--ink); background: var(--text-2); border-radius: .35rem; }
 .tile.sys .badge { display: none; }
 .qr-card img { display: block; width: 13rem; height: 13rem; border-radius: .9rem; background: #fff; }
-.launch-inner, .np { transition: opacity .3s ease; }
-.launch.np-on .launch-inner, .launch:not(.np-on) .np { display: none; }
-.np { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 3.4rem; max-width: 76rem; padding: 0 max(16px, env(safe-area-inset-right, 0px)); text-align: left; }
-.np-art { display: block; width: 24rem; height: 24rem; object-fit: cover; border-radius: 1.2rem; background: #0000002e; box-shadow: 0 2.4rem 4.8rem -1.6rem #000000b8; }
-.np-state { display: flex; align-items: center; gap: .7rem; margin: 0; font-size: .95rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #ffffffc4; }
-.np-title { margin: .9rem 0 .7rem; font-family: var(--font-display); font-weight: 500; font-size: 3.4rem; line-height: 1.05; text-wrap: balance; }
-.np-artist { margin: 0; font-size: 1.6rem; font-weight: 600; color: #ffffffe0; }
-.np-album { margin: .35rem 0 0; font-size: 1.15rem; color: #ffffffa8; }
-.np-hint { margin: 1.8rem 0 0; display: flex; flex-wrap: wrap; gap: 1.4rem; font-size: 1rem; color: #ffffffb0; }
-.np-hint span { display: flex; align-items: center; gap: .5rem; }
-.eq { display: inline-flex; align-items: flex-end; gap: .18rem; height: 1rem; }
-.eq i { width: .22rem; height: 100%; background: currentColor; border-radius: 2px; transform-origin: bottom; animation: eq 1s ease-in-out infinite; }
-.eq i:nth-child(2) { animation-delay: -.35s; }
-.eq i:nth-child(3) { animation-delay: -.7s; }
-.np[data-status="Paused"] .eq i { animation-play-state: paused; transform: scaleY(.3); }
-@keyframes eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
-.g-y { background: #f5c518; }
 .opt-group { margin: 1.6rem 0 .5rem; padding: 0 1.2rem; font-size: .85rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
 .opt-empty { margin: 0; padding: .6rem 1.2rem; font-size: 1rem; color: var(--muted); }
 .spin { display: inline-block; width: 1.2rem; height: 1.2rem; box-sizing: border-box; border: .16rem solid #ffffff33; border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; }
@@ -381,10 +364,6 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   .remote-grid { grid-template-columns: 1fr; justify-items: center; }
   .word { font-size: 2.8rem; }
   .sleep-clock { font-size: 6rem; }
-  .np { grid-template-columns: 1fr; justify-items: center; gap: 1.6rem; text-align: center; }
-  .np-art { width: 14rem; height: 14rem; }
-  .np-title { font-size: 2.2rem; }
-  .np-hint { justify-content: center; }
   .phone { top: auto; bottom: 0; left: 0; right: 0; width: auto; transform: none; border-radius: 1.6rem 1.6rem 0 0; padding-bottom: max(1.4rem, env(safe-area-inset-bottom, 0px)); animation: none; }
   .dpad { width: 10rem; height: 10rem; }
 }
@@ -465,17 +444,6 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       <p class="launch-fine" id="l-fine"></p>
       <button type="button" class="l-back" id="l-back"><span class="bg g-b">B</span> Retour au menu</button>
     </div>
-    <div class="np" id="np">
-      <img class="np-art" id="np-art" alt="" hidden>
-      <div>
-        <p class="np-state"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="np-state-text"></span></p>
-        <h2 class="np-title" id="np-title"></h2>
-        <p class="np-artist" id="np-artist"></p>
-        <p class="np-album" id="np-album"></p>
-        <p class="np-hint"><span><span class="bg g-y">Y</span> Lecture / pause</span><span><span class="bg g-home" data-icon="phone"></span> Ou depuis l’appli Spotify</span></p>
-        <button type="button" class="l-back" id="np-back"><span class="bg g-b">B</span> Retour au menu</button>
-      </div>
-    </div>
   </div>
 
   <div class="blink" id="blink"></div>
@@ -536,7 +504,6 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       <button type="button" class="pbtn" data-pact="ch1">1</button>
       <button type="button" class="pbtn" data-pact="ch2">2</button>
       <button type="button" class="pbtn" data-pact="ch3">3</button>
-      <button type="button" class="pbtn" data-pact="ch4">4</button>
     </div>
     <p class="phone-addr">scaros.local:8080</p>
   </div>
@@ -591,7 +558,6 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
         + `<path fill="url(#${g})" d="M261.42 23.3C199.83 23.3 1.57 382.73 31.8 443.43s429.34 60 459.24 0S323 23.3 261.42 23.3zM411.9 390.76c-19.59 39.33-281.08 39.77-300.9 0S221.1 115.48 261.45 115.48 431.49 351.42 411.9 390.76z"/></svg>`;
     },
     plex: () => '<svg class="ic logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1f1f1f"/><path d="M6.6 3.8h5.4l6 8.2-6 8.2H6.6l6-8.2z" fill="#ebaf00"/></svg>',
-    spotify: () => '<svg class="ic logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1ed760"/><g fill="none" stroke="#000" stroke-linecap="round"><path d="M5.6 9.2c4-1.3 9.1-1 12.9 1.3" stroke-width="2"/><path d="M6.4 12.7c3.4-1 7.3-.7 10.3 1.1" stroke-width="1.7"/><path d="M7.1 16c2.8-.8 5.7-.6 8 .8" stroke-width="1.45"/></g></svg>'
   };
   const logo = id => LOGOS[id] ? LOGOS[id]() : '';
   const mark = t => t.ch ? logo(t.id) : icon(t.glyph);
@@ -607,10 +573,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       chips: ['Mode TV', 'Reprise de lecture', 'Sous-titres'] },
     { id: 'plex', ch: 3, name: 'Plex', c1: '#f2a516', c2: '#7a4a00',
       desc: 'Ta médiathèque Plex en plein écran, avec Plex HTPC.',
-      chips: ['Plex HTPC', 'Manette', 'Plein écran'] },
-    { id: 'spotify', ch: 4, name: 'Spotify', c1: '#1fd760', c2: '#0d5c33',
-      desc: 'Lance la musique depuis ton téléphone : Scaros apparaît comme une enceinte et la pochette s’affiche en grand.',
-      chips: ['Spotify Connect', 'Premium requis'] }
+      chips: ['Plex HTPC', 'Manette', 'Plein écran'] }
   ];
   const SYS = [
     { id: 'display', name: 'Écran', glyph: 'display', c1: '#7fa7ff', c2: '#23345e' },
@@ -664,7 +627,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   function applyState(s) {
     Object.assign(state, {
       live: true, dry: !!s.dry, version: s.version, mode: s.mode, hdmi: s.hdmi, output: s.output,
-      pad: s.pad, padSupport: !!s.padSupport, volume: s.volume ?? state.volume, now: s.now,
+      pad: s.pad, padSupport: !!s.padSupport, volume: s.volume ?? state.volume,
       phones: s.remote ? s.remote.phones : 0, remoteUrl: s.remote ? s.remote.url : state.remoteUrl,
       qr: !!(s.remote && s.remote.qr), wifi: s.wifi, ip: s.ip,
       audio: s.audio && s.audio.target ? s.audio : state.audio, bt: s.bt || state.bt,
@@ -707,10 +670,6 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       if (state.panel === 'settings') renderPanel(currentAct());
     } else if (m.type === 'volume') {
       if (m.level != null) showVol(m.level);
-    } else if (m.type === 'nowplaying') {
-      state.now = m.now;
-      renderNow();
-      if (m.started && !state.launched && !state.panel && !state.power && !state.booting) openOverlay('spotify');
     } else if (m.type === 'remote') {
       const more = m.phones > state.phones;
       state.phones = m.phones;
@@ -780,8 +739,8 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     tiles.forEach(el => { el.querySelector('.badge').hidden = !(state.live && state.installed[el.dataset.id] === false); });
   }
   const G = {
-    a: '<span class="bg g-a">A</span>', b: '<span class="bg g-b">B</span>', y: '<span class="bg g-y">Y</span>',
-    home: `<span class="bg g-home">${icon('home')}</span>`, num: '<span class="bg g-num">1–4</span>'
+    a: '<span class="bg g-a">A</span>', b: '<span class="bg g-b">B</span>',
+    home: `<span class="bg g-home">${icon('home')}</span>`, num: '<span class="bg g-num">1–3</span>'
   };
   function updateHints() {
     const h = (g, t) => `<span class="hint">${g}${t}</span>`;
@@ -790,7 +749,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       : h(G.a, 'Ouvrir') + h(G.home, 'Accueil') + h(G.num, 'Chaîne directe');
   }
   function renderAll() {
-    renderStatus(); renderTiles(); renderNow(); updateHints(); renderHero();
+    renderStatus(); renderTiles(); updateHints(); renderHero();
     if (state.panel) renderPanel(currentAct());
   }
 
@@ -1148,16 +1107,9 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     L.classList.remove('ready');
     L.dataset.app = id;
     state.launched = id;
-    renderNow();
     L.hidden = false; void L.offsetWidth; L.classList.add('on');
     clearTimeout(launchTimer);
-    if (id === 'spotify') {
-      $('#l-status').textContent = 'Prêt pour Spotify Connect';
-      $('#l-note').textContent = 'Sur ton téléphone, ouvre Spotify, touche l’icône des appareils et choisis « Scaros ». La pochette s’affichera ici en grand.';
-      $('#l-fine').textContent = state.live ? '' : 'Maquette : aucune musique ne joue.';
-      L.classList.add('ready');
-      $('#l-back').focus({ preventScroll: true });
-    } else if (!state.live) {
+    if (!state.live) {
       launchTimer = setTimeout(() => {
         $('#l-status').textContent = `${t.name} est ouvert`;
         $('#l-note').textContent = `Sur le PC, ${t.name} s’affiche ici en plein écran, en interface TV.`;
@@ -1171,25 +1123,10 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     clearTimeout(launchTimer);
     const was = state.launched;
     state.launched = null;
-    if (state.live && notify && was && was !== 'spotify') api('/api/close', {}).catch(() => {});
+    if (state.live && notify && was) api('/api/close', {}).catch(() => {});
     L.classList.remove('on');
     setTimeout(() => { if (!state.launched) L.hidden = true; }, 650);
     setFocus(state.focus);
-  }
-  function renderNow() {
-    const n = state.now;
-    const show = state.launched === 'spotify' && !!n;
-    L.classList.toggle('np-on', show);
-    if (!n) return;
-    const np = $('#np');
-    np.dataset.status = n.status;
-    const art = $('#np-art');
-    if (n.art && art.getAttribute('src') !== n.art) art.src = n.art;
-    art.hidden = !n.art;
-    $('#np-state-text').textContent = n.status === 'Playing' ? 'Lecture en cours' : 'En pause';
-    $('#np-title').textContent = n.title || 'Titre inconnu';
-    $('#np-artist').textContent = n.artist || '';
-    $('#np-album').textContent = n.album || '';
   }
   function goHome() {
     if (state.power === 'sleep') { wake(); return; }
@@ -1328,7 +1265,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   // keyboard (on the PC, the controller and the phone arrive here as keys too)
   const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok',
     Escape: 'back', Backspace: 'back', Home: 'home', '+': 'volup', '=': 'volup', '-': 'voldown',
-    '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4' };
+    '1': 'ch1', '2': 'ch2', '3': 'ch3' };
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -1375,7 +1312,6 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
   });
   scrim.addEventListener('click', closePanel);
   $('#l-back').addEventListener('click', () => closeLaunch());
-  $('#np-back').addEventListener('click', () => closeLaunch());
   B.addEventListener('click', endBoot);
   OFF.addEventListener('click', () => act('ok'));
 

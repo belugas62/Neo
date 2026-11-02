@@ -2,8 +2,8 @@
 """Scaros OS — le serveur local du menu TV.
 
 Il sert le menu (ui/index.html) et la télécommande téléphone (ui/remote.html),
-lance les applis, choisit l'écran (PC ou télé en HDMI), règle le son, lit la
-manette et affiche ce que joue Spotify.
+lance les applis, choisit l'écran (PC ou télé en HDMI), règle le son et le
+Bluetooth, et lit la manette.
 
     python3 scaros.py              # sur le PC, dans la session graphique de Scaros
     python3 scaros.py --dry-run    # pour tester ailleurs : aucune commande système n'est lancée
@@ -135,7 +135,6 @@ class Scaros:
         self.output = "pc"
         self.pad = None
         self.volume = 35 if DRY else None
-        self.now = None
         self.current = None          # (id, Popen) de l'appli ouverte
         self.installed = {}
         self.phones = {}             # ip -> dernière visite
@@ -188,7 +187,7 @@ class Scaros:
                 "version": VERSION, "dry": DRY,
                 "mode": self.mode, "hdmi": self.hdmi, "output": self.output,
                 "pad": self.pad, "padSupport": evdev is not None,
-                "volume": self.volume, "now": self.now,
+                "volume": self.volume,
                 "app": self.current[0] if self.current else None,
                 "apps": {k: {"name": v["name"], "installed": self.installed.get(k, True)}
                          for k, v in self.apps.items()},
@@ -216,10 +215,6 @@ class Scaros:
         conf = self.apps.get(app_id)
         if not conf:
             return False
-        if conf.get("builtin"):
-            self.close_app()
-            self.bus.emit("app", id=app_id, state="running")
-            return True
         if not self.installed.get(app_id, True):
             self.refresh_installed()
         if not self.installed.get(app_id, True):
@@ -336,8 +331,6 @@ class Scaros:
             n = int(action[2:]) - 1
             if 0 <= n < len(ids):
                 self.launch(ids[n])
-        elif action == "playpause" and self.current is None and self.now:
-            run(["playerctl", "-p", "spotifyd", "play-pause"], timeout=3)
         elif action in KEYS:
             key = KEYS[action]
             cur = self.current
@@ -712,29 +705,6 @@ class Scaros:
                 self.set_hdmi(self.hdmi_connected())
             time.sleep(1.5)
 
-    # ---------- Spotify ----------
-    def _watch_spotify(self):
-        fmt = "{{status}}\t{{xesam:title}}\t{{xesam:artist}}\t{{xesam:album}}\t{{mpris:artUrl}}"
-        while True:
-            now = None
-            if not DRY:
-                code, out = run(["playerctl", "-p", "spotifyd", "metadata", "--format", fmt], timeout=3, quiet=True)
-                parts = out.rstrip("\n").split("\t")
-                if code == 0 and len(parts) == 5 and parts[0] in ("Playing", "Paused"):
-                    now = dict(zip(("status", "title", "artist", "album", "art"), parts))
-            else:
-                now = self.now
-            if now != self.now:
-                started = bool(now and now["status"] == "Playing" and not (self.now and self.now["status"] == "Playing"))
-                self.now = now
-                self.bus.emit("nowplaying", now=now, started=started)
-            time.sleep(2)
-
-    def set_now(self, now):
-        started = bool(now and now.get("status") == "Playing" and not (self.now and self.now.get("status") == "Playing"))
-        self.now = now
-        self.bus.emit("nowplaying", now=now, started=started)
-
     # ---------- alimentation ----------
     def power(self, action):
         self.close_app(focus=False)
@@ -785,7 +755,6 @@ class Scaros:
         threading.Thread(target=self.refresh_installed, daemon=True).start()
         threading.Thread(target=self.apply_output, daemon=True).start()
         threading.Thread(target=self._watch_hdmi, daemon=True).start()
-        threading.Thread(target=self._watch_spotify, daemon=True).start()
         threading.Thread(target=self._watch_audio, daemon=True).start()
         if evdev is not None:
             threading.Thread(target=Pad(self).run, daemon=True).start()
@@ -1056,9 +1025,6 @@ class Handler(BaseHTTPRequestHandler):
             return self.json({"ok": True})
         if DRY and path == "/api/dev/pad":
             a.set_pad(None if a.pad else "Xbox Wireless Controller")
-            return self.json({"ok": True})
-        if DRY and path == "/api/dev/nowplaying":
-            a.set_now(body.get("now"))
             return self.json({"ok": True})
         self.json({"error": "introuvable"}, 404)
 

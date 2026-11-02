@@ -4,7 +4,7 @@ SCAROS=/opt/scaros
 LOG="$HOME/.local/state/scaros"
 MENU_PROFILE="$HOME/.config/scaros-menu"
 mkdir -p "$LOG"
-for f in scaros chromium spotifyd; do
+for f in scaros chromium; do
   [ -f "$LOG/$f.log" ] && mv -f "$LOG/$f.log" "$LOG/$f.old.log"
 done
 
@@ -14,11 +14,6 @@ xsetroot -solid "#06080c"
 
 openbox --config-file "$SCAROS/system/openbox/rc.xml" &
 unclutter --timeout 2 --jitter 4 --ignore-scrolling &
-
-# Spotify Connect : le PC apparaît comme une enceinte « Scaros » dans l'appli Spotify
-if command -v spotifyd >/dev/null 2>&1; then
-  ( while true; do spotifyd --no-daemon >>"$LOG/spotifyd.log" 2>&1; sleep 5; done ) &
-fi
 
 # serveur du menu, relancé s'il s'arrête
 ( while true; do python3 "$SCAROS/launcher/scaros.py" >>"$LOG/scaros.log" 2>&1; sleep 2; done ) &

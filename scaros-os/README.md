@@ -1,7 +1,7 @@
 # Scaros OS
 
 Transforme un vieux PC portable en box TV. Au démarrage, l'animation Scaros se lance, puis
-un menu plein écran façon console : YouTube (interface TV), Jellyfin, Plex et Spotify.
+un menu plein écran façon console : YouTube (interface TV), Jellyfin et Plex.
 Tout se pilote à la manette Xbox ou depuis ton téléphone. Quand tu branches la télé en HDMI,
 l'image et le son passent dessus tout seuls.
 
@@ -97,8 +97,6 @@ reboot
 - **Jellyfin** : entre l'adresse de ton serveur, puis dans
   **Paramètres > Affichage > Mode d'affichage**, choisis **TV**.
 - **Plex** : connecte-toi avec le code affiché, sur <https://plex.tv/link>.
-- **Spotify** : sur ton téléphone (même Wi-Fi), ouvre Spotify, touche l'icône des appareils
-  et choisis **Scaros**. Un compte Premium est obligatoire.
 
 ## Utilisation
 
@@ -112,7 +110,7 @@ reboot
 | Y | lecture / pause |
 
 Au clavier : flèches, Entrée, Échap ; la **touche Windows** ramène au menu ;
-**1 à 4** ouvrent directement YouTube, Jellyfin, Plex et Spotify ; **+ / −** pour le volume.
+**1 à 3** ouvrent directement YouTube, Jellyfin et Plex ; **+ / −** pour le volume.
 
 **Casque ou enceinte Bluetooth :** **Paramètres > Bluetooth > Rechercher des appareils**, mets
 l'appareil en mode appairage, puis choisis-le dans la liste. Le son passe dessus tout seul.
@@ -126,7 +124,7 @@ dans la tuile **Écran**.
 ## Si quelque chose coince
 
 - **Console de secours :** Ctrl+Alt+F2, puis connecte-toi. Ctrl+Alt+F1 pour revenir à Scaros.
-- **Journaux :** dans `~/.local/state/scaros/` (`scaros.log`, `chromium.log`, `spotifyd.log`,
+- **Journaux :** dans `~/.local/state/scaros/` (`scaros.log`, `chromium.log`,
   et un fichier par appli, par exemple `youtube.log`). Envoie-les si tu demandes de l'aide.
 - **Démarrer sans Scaros** (pour réparer) : `touch ~/.scaros-off` puis `reboot`.
   Pour le remettre : `rm ~/.scaros-off`.
@@ -152,14 +150,14 @@ mais pas encore sur ta machine. À surveiller au premier essai :
 scaros-os/
 ├── install.sh              installe tout sur un Debian 13 minimal
 ├── launcher/
-│   ├── scaros.py           serveur local : applis, écrans, son, manette, Spotify, télécommande
+│   ├── scaros.py           serveur local : applis, écrans, son, Bluetooth, manette, télécommande
 │   ├── apps.json           les applis du menu et la commande qui les lance
 │   └── ui/
 │       ├── index.html      le menu (marche aussi seul, en maquette)
 │       ├── remote.html     la télécommande téléphone (http://<adresse du PC>:8421/remote)
 │       └── fonts/          polices Figtree et Unbounded (licence OFL)
 └── system/
-    ├── session.sh          session graphique : Openbox, serveur, Spotify, menu plein écran
+    ├── session.sh          session graphique : Openbox, serveur, menu plein écran
     ├── openbox/rc.xml      toutes les fenêtres en plein écran
     └── plymouth/scaros/    écran de démarrage
 ```
@@ -168,7 +166,6 @@ Au démarrage : GRUB (masqué), écran Plymouth Scaros, connexion automatique su
 puis `startx` lance `session.sh`. Le menu tourne dans Chromium en mode kiosque. Les applis sont des
 Flatpak de Flathub : VacuumTube (`rocks.shy.VacuumTube`) pour l'interface TV de YouTube,
 Jellyfin Desktop (`org.jellyfin.JellyfinDesktop`) et Plex HTPC (`tv.plex.PlexHTPC`).
-Spotify passe par [spotifyd](https://github.com/Spotifyd/spotifyd).
 
 `scaros.py` réserve la manette et la transforme en touches clavier, pour qu'elle marche pareil dans
 toutes les applis. Pour tester sans le portable : `python3 launcher/scaros.py --dry-run`, puis
