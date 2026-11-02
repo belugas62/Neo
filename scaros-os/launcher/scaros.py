@@ -79,6 +79,11 @@ def run(cmd, timeout=10, quiet=False):
     return p.returncode, p.stdout
 
 
+def bt_audio_available():
+    """Le module qui permet à PipeWire d'envoyer le son en Bluetooth est-il installé ?"""
+    return DRY or bool(glob.glob("/usr/lib/*/spa-0.2/bluez5/libspa-bluez5.so"))
+
+
 def lan_ip():
     """Adresse du PC sur le Wi-Fi (aucun paquet n'est envoyé)."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -191,7 +196,7 @@ class Scaros:
                            "qr": qrcode is not None},
                 "wifi": self.wifi(), "ip": ip,
                 "audio": {"mode": self.audio_mode, "target": self.audio_target, "device": self.audio_device},
-                "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning},
+                "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning, "audio": bt_audio_available()},
             }
 
     def refresh_installed(self):
@@ -531,7 +536,7 @@ class Scaros:
         return devices
 
     def _bt_changed(self):
-        self.bus.emit("bt", devices=self.bt_devices(), scanning=self.bt_scanning)
+        self.bus.emit("bt", devices=self.bt_devices(), scanning=self.bt_scanning, audio=bt_audio_available())
 
     def bt_scan(self, seconds=20):
         if self.bt_scanning or self.pairing:
@@ -576,14 +581,35 @@ class Scaros:
             ok = True
         else:
             if not info["paired"]:
-                run(["bluetoothctl", "--agent", "NoInputNoOutput", "pair", mac], timeout=30)
-            run(["bluetoothctl", "trust", mac], timeout=10)
-            ok = run(["bluetoothctl", "connect", mac], timeout=30)[0] == 0
+                log.info("appairage %s : %s", mac, self._bt_cmd("--agent", "NoInputNoOutput", "pair", mac))
+            self._bt_cmd("trust", mac, timeout=10)
+            log.info("connexion %s : %s", mac, self._bt_cmd("connect", mac))
+            # la commande peut échouer alors que l'appareil finit de se connecter juste après
+            ok = False
+            for _ in range(8):
+                now = self._bt_info(mac)
+                if now and now["connected"]:
+                    ok = True
+                    break
+                time.sleep(1)
         if ok and info["kind"] == "audio":
             self.settings["audio_bt"] = mac.upper()
             self._save_settings()
-        self.bus.emit("btmsg", state="connected" if ok else "failed", name=info["name"])
+        state = "connected" if ok else "failed"
+        if info["kind"] == "audio" and not bt_audio_available():
+            state = "noaudio"
+        self.bus.emit("btmsg", state=state, name=info["name"])
         self._bt_changed()
+
+    def _bt_cmd(self, *args, timeout=30):
+        """Lance bluetoothctl et renvoie tout ce qu'il affiche (il y écrit aussi ses erreurs)."""
+        if DRY or not shutil.which("bluetoothctl"):
+            return ""
+        try:
+            p = subprocess.run(["bluetoothctl", *args], capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return "délai dépassé"
+        return " ".join(((p.stdout or "") + (p.stderr or "")).split())[-300:]
 
     def bt_disconnect(self, mac):
         info = self._bt_info(mac) or {"name": mac}

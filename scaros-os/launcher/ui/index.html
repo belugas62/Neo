@@ -719,7 +719,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
     } else if (m.type === 'audio') {
       onAudio(m);
     } else if (m.type === 'bt') {
-      state.bt = { devices: m.devices || [], scanning: !!m.scanning };
+      state.bt = { devices: m.devices || [], scanning: !!m.scanning, audio: m.audio ?? state.bt.audio };
       rerenderBt();
     } else if (m.type === 'btmsg') {
       btToast(m.state, m.name);
@@ -907,7 +907,9 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
             ${radio('audio:auto', 'Auto', 'Sur le casque ou l’enceinte Bluetooth dès qu’il est connecté, sinon sur l’écran utilisé.', state.audio.mode === 'auto')}
             ${radio('audio:tv', 'Télé (HDMI)', state.hdmi ? 'Par la télé, même si l’image est sur le PC.' : 'Branche le câble HDMI pour la choisir.', state.audio.mode === 'tv', !state.hdmi)}
             ${radio('audio:pc', 'Haut-parleurs du PC', 'Même quand l’image est sur la télé.', state.audio.mode === 'pc')}
-            ${radio('audio:bluetooth', 'Appareil Bluetooth', btDev ? esc(btDev.name) : 'Aucun casque ni enceinte connecté.', state.audio.mode === 'bluetooth', !btDev)}
+            ${state.bt.audio === false
+              ? radio('audio:bluetooth', 'Appareil Bluetooth', 'Le module son Bluetooth manque : lance scaros-update.', state.audio.mode === 'bluetooth', true)
+              : radio('audio:bluetooth', 'Appareil Bluetooth', btDev ? esc(btDev.name) : 'Aucun casque ni enceinte connecté.', state.audio.mode === 'bluetooth', !btDev)}
           </div>
           <div class="sep"></div>
           <div class="opts">${row('panel:bluetooth', 'bluetooth', 'Connecter un casque ou une enceinte', 'Appareils Bluetooth')}</div>`
@@ -1086,6 +1088,7 @@ kbd { font-family: var(--font-body); font-weight: 700; padding: .05rem .45rem; b
       connecting: ['bluetooth', `Connexion à ${name}…`, 15000],
       connected: ['bluetooth', `${name} est connecté.`],
       failed: ['alert', `Impossible de joindre ${name}. Vérifie qu’il est allumé et en mode appairage.`, 5200],
+      noaudio: ['alert', `${name} ne peut pas recevoir le son : le module son Bluetooth manque. Lance scaros-update.`, 8000],
       disconnected: ['bluetooth', `${name} est déconnecté.`],
       removed: ['bluetooth', `${name} est oublié.`]
     }[st];
