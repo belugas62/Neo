@@ -1457,7 +1457,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
               <p class="qr-net">${icon('wifi')}<span>Wi-Fi de Scaros : <b>${esc(wifiCurrent() || 'aucun')}</b>${state.localName ? ` · ${esc(state.localName)}` : ''}</span></p>
               <ol class="steps"><li>Téléphone sur ce même Wi-Fi (pas l’invité).</li><li>Appareil photo, puis touche le lien.</li><li>Pour la garder : Partager › Sur l’écran d’accueil.</li></ol>
               <p class="qr-status"><span class="sdot ${phones ? 'on' : ''}"></span>${phones ? `${phones > 1 ? phones + ' téléphones connectés' : 'Téléphone connecté'}` : 'En attente d’un téléphone…'}</p>
-              <p class="qr-help">L’icône de l’iPhone ne s’ouvre plus ? Rescanne ce code : l’adresse a pu changer.</p>
+              <p class="qr-help">La page ne s’ouvre pas ? Sur iPhone, utilise Safari : Brave ou Chrome doivent d’abord avoir l’accès « Réseau local » (Réglages › Confidentialité et sécurité).</p>
               <div class="opts">
                 ${row('back', 'back', 'Retour', '')}
                 ${state.live ? '' : row('phone', 'phone', state.phoneDemo ? 'Masquer la télécommande de démo' : 'Essayer la télécommande ici', '')}

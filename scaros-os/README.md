@@ -172,7 +172,11 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
 - **Changer de Wi-Fi :** **Réglages > Wi-Fi**, choisis le réseau et tape le mot de passe avec le clavier à l'écran
   (ou un vrai clavier, ou la télécommande du téléphone). En secours : console, `su -` puis `nmtui`.
 - **Vérifier le décodage vidéo :** `vainfo` doit lister VP9 et HEVC.
-- **La télécommande du téléphone ne s'ouvre pas :** ouvre **≡ > Télécommande** sur la télé et scanne le QR code :
+- **La télécommande du téléphone ne s'ouvre pas (« Ce site est inaccessible ») :** sur iPhone, ouvre-la dans **Safari**.
+  Les autres navigateurs (Brave, Chrome, Firefox…) ne peuvent joindre les appareils de la maison qu'avec l'accès
+  « Réseau local » : **Réglages > Confidentialité et sécurité > Réseau local**, active ton navigateur. Attention, l'appareil
+  photo ouvre les QR codes dans le navigateur par défaut.
+- **Toujours rien :** ouvre **≡ > Télécommande** sur la télé et scanne le QR code :
   il donne toujours l'adresse actuelle du PC. L'écran indique aussi le Wi-Fi de Scaros : le téléphone doit être sur le
   même (pas le réseau invité). Si le QR code marche mais pas l'icône de l'écran d'accueil, c'est que l'adresse du PC a
   changé : supprime l'icône et ajoute-la de nouveau depuis la page ouverte par le QR code. Pour qu'elle ne change
