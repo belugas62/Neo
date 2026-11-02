@@ -89,69 +89,111 @@ body {
 button { font: inherit; color: inherit; }
 .ic { display: block; width: 1.4rem; height: 1.4rem; flex: none; }
 
-/* ---------- home ---------- */
+/* ---------- accueil (façon tvOS) ----------
+   Un décor plein écran (paysage qui suit la météo et l'heure, ou les couleurs de l'appli),
+   le nom de l'appli choisie en grand en haut à gauche, l'heure et la météo dans une pastille
+   en haut à droite, et les applis dans un dock translucide. */
 .tv { position: relative; height: 100%; overflow: hidden; background: #000; }
 .stage { position: relative; height: 100%; background: var(--ink); transition: opacity .6s ease, filter .6s ease; }
 .stage.off-anim { opacity: 0; filter: brightness(.3); }
+/* sur le décor (une « photo »), le texte reste blanc, même en apparence claire */
+.stage[data-bg="decor"] { --text: #ffffff; --text-2: #eef1f6; --muted: #dde2ea; --line: #ffffff2e; --glass: #ffffff1f; color: var(--text); }
+.stage[data-bg="decor"] .status, .stage[data-bg="decor"] .shelf-info, .stage[data-bg="decor"] .foot { text-shadow: 0 .15rem 1.4rem #00000059; }
 
-.shelf { position: absolute; inset: 0 0 auto; height: 66%; overflow: hidden; }
+/* décor : ciel, soleil ou lune, montagnes, lac, prairie */
+.decor { position: absolute; inset: 0; display: none; overflow: hidden;
+  --sky-a: #2c6cc0; --sky-b: #a7d0f2; --far: #8fa9c6; --mid: #5b7896; --near: #2d4a3e; --lake: #79acdf; --tree: #1f362d; --cap: .85;
+  --orb: #fff6d8; --orb-glow: #ffd77a99; --orb-x: 74%; --orb-y: 24%; --orb-size: 7rem; }
+.stage[data-bg="decor"] .decor { display: block; }
+.decor-sky { position: absolute; inset: 0; background: linear-gradient(180deg, var(--sky-a) 0%, var(--sky-b) 68%); transition: opacity 1s ease; }
+.decor-orb { position: absolute; left: var(--orb-x); top: var(--orb-y); width: var(--orb-size); height: var(--orb-size); border-radius: 50%;
+  transform: translate(-50%, -50%); background: radial-gradient(circle at 42% 38%, #ffffff 0 18%, var(--orb) 62%); box-shadow: 0 0 4rem 1.4rem var(--orb-glow), 0 0 14rem 6rem color-mix(in oklab, var(--orb-glow) 45%, transparent);
+  transition: top 1.2s var(--ease), background 1s ease, opacity 1s ease; }
+.decor[data-orb="none"] .decor-orb { opacity: 0; }
+.decor[data-orb="moon"] .decor-orb { --orb-size: 5rem;
+  background: radial-gradient(circle at 62% 64%, #00000014 0 9%, transparent 10%), radial-gradient(circle at 38% 42%, #0000000f 0 13%, transparent 14%),
+    radial-gradient(circle at 40% 36%, #ffffff, var(--orb) 70%); }
+.decor-land { position: absolute; inset: 0; width: 100%; height: 100%; }
+.decor-land path, .decor-land rect { transition: fill 1.2s ease, opacity 1.2s ease; }
+
+/* mode « Couleurs des applis » : dégradé de l'appli choisie et son logo en grand */
+.shelf { position: absolute; inset: 0; overflow: hidden; display: none; }
+.stage[data-bg="apps"] .shelf { display: block; }
 .scene {
   position: absolute; inset: 0; opacity: 0; transition: opacity .9s ease;
   background:
-    radial-gradient(60% 85% at 76% 38%, color-mix(in oklab, var(--a) 46%, transparent), transparent 70%),
-    radial-gradient(55% 70% at 8% 108%, color-mix(in oklab, var(--b) 70%, transparent), transparent 72%),
+    radial-gradient(60% 75% at 76% 30%, color-mix(in oklab, var(--a) 46%, transparent), transparent 70%),
+    radial-gradient(55% 60% at 8% 100%, color-mix(in oklab, var(--b) 70%, transparent), transparent 72%),
     linear-gradient(180deg, color-mix(in oklab, var(--b) 35%, var(--ink)) 0%, var(--ink) 100%);
 }
 .scene.on { opacity: 1; }
-.scene::before {
-  content: ""; position: absolute; inset: 0; opacity: .5;
-  background: linear-gradient(115deg, transparent 38%, #ffffff10 48%, transparent 58%);
-}
-.scene-art { position: absolute; right: 9rem; top: 5.6rem; width: 26rem; height: 19rem; display: grid; place-items: center; }
+.scene-art { position: absolute; right: 9rem; top: 8.5rem; width: 24rem; height: 17rem; display: grid; place-items: center; }
 .scene-art svg { width: 100%; height: 100%; filter: drop-shadow(0 2.4rem 4rem color-mix(in oklab, var(--a) 50%, transparent)); }
 .scene.on .scene-art { animation: float 9s ease-in-out infinite alternate; }
 @keyframes float { from { transform: translateY(-.6rem) rotate(-1.5deg); } to { transform: translateY(.6rem) rotate(1.5deg); } }
-.shelf-fade { position: absolute; inset: 0 0 auto; height: 66%; pointer-events: none; background: linear-gradient(180deg, transparent 45%, var(--ink) 100%), linear-gradient(90deg, var(--shade) 0%, transparent 55%); }
+
+/* voiles discrets : texte lisible en haut à gauche, dock posé sur le décor */
+.home-scrim { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(70% 55% at 0% 0%, #00000052, transparent 70%), linear-gradient(180deg, transparent 62%, #00000047 100%); }
+.stage[data-bright] .status, .stage[data-bright] .shelf-info, .stage[data-bright] .foot { text-shadow: 0 .1rem 1rem #00000085, 0 0 .3rem #00000040; }
+.stage[data-bright] .home-scrim { background: radial-gradient(75% 62% at 0% 0%, #0000007a, transparent 72%), radial-gradient(40% 30% at 100% 0%, #00000047, transparent 75%), linear-gradient(180deg, transparent 55%, #00000066 100%); }
+.stage[data-bg="apps"] .home-scrim { background: linear-gradient(90deg, var(--shade) 0%, transparent 55%); }
 
 .status {
-  position: absolute; top: 2.4rem; left: 0; right: 0; z-index: 2;
-  display: flex; align-items: center; justify-content: space-between;
+  position: absolute; top: 2.6rem; left: 0; right: 0; z-index: 2;
+  display: flex; align-items: flex-start; justify-content: space-between;
   padding-left: max(16px, env(safe-area-inset-left, 0px), 6rem);
-  padding-right: max(16px, env(safe-area-inset-right, 0px), 6rem);
+  padding-right: max(16px, env(safe-area-inset-right, 0px), 5rem);
 }
-.brand { display: flex; align-items: center; gap: .9rem; opacity: .9; }
+.brand { display: flex; align-items: center; gap: .9rem; margin-top: .5rem; opacity: .92; }
 .brand .mark { width: 3rem; height: 3rem; }
 .brand-word { font-family: var(--font-brand); font-weight: 500; font-size: calc(1.8rem * var(--fs)); letter-spacing: -.01em; }
-.status-right { display: flex; align-items: center; gap: 1.6rem; color: var(--text-2); }
+.status-right { display: flex; flex-direction: column; align-items: flex-end; gap: .7rem; }
+/* la pastille en haut à droite : heure, météo, appareils connectés */
+.capsule { display: flex; align-items: center; gap: 1.3rem; padding: .75rem 1.6rem; border-radius: 99px;
+  background: #10131a5c; border: 1px solid #ffffff24; color: #fff; text-shadow: none; }
+html[data-look="light"] .stage[data-bg="apps"] .capsule { background: #ffffffa8; border-color: #0b0d121a; color: var(--text); }
 .st { display: grid; place-items: center; transition: opacity .3s; }
 .st .ic { width: 1.9rem; height: 1.9rem; }
-.st.dim { opacity: .35; }
-.clock { font-size: calc(2.4rem * var(--fs)); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.st.dim { opacity: .45; }
+.clock { font-size: calc(2.2rem * var(--fs)); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.cap-sep { width: 1px; height: 2rem; background: currentColor; opacity: .25; }
+.capsule:not(.has-icons) .cap-sep { display: none; }
+.cap-icons { display: flex; align-items: center; gap: 1.1rem; }
+.cap-icons:empty { display: none; }
+.wx-cap { margin: 0; padding: .35rem 1.1rem; border-radius: 99px; background: #10131a40; font-size: calc(1.4rem * var(--fs)); font-weight: 600; color: #eef1f6; text-shadow: none; }
+.wx-cap:empty { display: none; }
+html[data-look="light"] .stage[data-bg="apps"] .wx-cap { background: #ffffff8c; color: var(--text-2); }
 
 .shelf-info {
-  position: absolute; z-index: 2; top: 15.6rem; max-width: 56rem;
+  position: absolute; z-index: 2; top: 9.4rem; max-width: 58rem;
   left: max(16px, env(safe-area-inset-left, 0px), 6rem);
 }
 .shelf-info.in { animation: infoIn .5s var(--ease); }
 @keyframes infoIn { from { opacity: 0; transform: translateY(.6rem); } }
-.kicker { margin: 0; font-size: calc(1.4rem * var(--fs)); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); }
-.shelf-desc { margin: .8rem 0 0; font-size: calc(2.9rem * var(--fs)); font-weight: 600; line-height: 1.25; letter-spacing: -.015em; text-wrap: balance; }
-.chips { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1.2rem 0 0; padding: 0; list-style: none; }
-.chips li { padding: .45rem 1.1rem; font-size: calc(1.35rem * var(--fs)); font-weight: 600; color: var(--text-2); background: var(--glass); border: 1px solid var(--line); border-radius: 99px; }
-.chips li.warn { color: var(--focus-fg); background: var(--text-2); border-color: transparent; }
+.kicker { margin: 0; font-size: calc(1.4rem * var(--fs)); font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--text-2); }
+.shelf-title { margin: .4rem 0 0; font-size: calc(6.2rem * var(--fs)); font-weight: 800; line-height: 1; letter-spacing: -.045em; }
+.shelf-desc { margin: 1.1rem 0 0; max-width: 46rem; font-size: calc(2rem * var(--fs)); font-weight: 500; line-height: 1.35; color: var(--text-2); text-wrap: balance; }
+.chips { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1.3rem 0 0; padding: 0; list-style: none; }
+.chips li { padding: .45rem 1.1rem; font-size: calc(1.35rem * var(--fs)); font-weight: 600; color: var(--text-2); background: var(--glass); border: 1px solid var(--line); border-radius: 99px; text-shadow: none; }
+.chips li.warn { color: #0b0d12; background: #f3f5f9; border-color: transparent; }
 
+/* dock : une barre translucide, comme sur l'Apple TV */
 .dock {
-  position: absolute; z-index: 2; top: 34.6rem; left: 0; right: 0;
-  padding-left: max(16px, env(safe-area-inset-left, 0px), 6rem);
-  padding-right: max(16px, env(safe-area-inset-right, 0px), 6rem);
+  position: absolute; z-index: 2; top: 32.4rem; left: 0; right: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px), 4rem);
+  padding-right: max(16px, env(safe-area-inset-right, 0px), 4rem);
 }
-.icons { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: 2.2rem; perspective: 60rem; }
+.dock-glass { padding: 1.9rem 2.1rem; border-radius: 3.2rem; background: #12151c61; border: 1px solid #ffffff1f; box-shadow: 0 2rem 4rem -2rem #0000008c; }
+html[data-look="light"] .dock-glass { background: #ffffff47; border-color: #ffffff80; }
+.stage[data-bg="apps"] .dock-glass { background: var(--glass); border-color: var(--line); box-shadow: none; }
+.icons { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: 2rem; perspective: 60rem; }
 .icon { position: relative; min-width: 0; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; }
 .icon:focus { outline: none; }
 .icon-art {
   position: relative; display: grid; place-items: center; overflow: hidden;
-  aspect-ratio: 5 / 3; border-radius: 1.15rem; background: var(--bg);
-  box-shadow: 0 .8rem 1.6rem -1rem #000000b0, inset 0 0 0 1px #ffffff14;
+  aspect-ratio: 5 / 3; border-radius: 1.3rem; background: var(--bg);
+  box-shadow: 0 .8rem 1.6rem -1rem #00000099, inset 0 0 0 1px #ffffff14;
   transition: transform .35s var(--spring), box-shadow .35s ease;
 }
 .icon-art svg { width: 46%; height: 52%; }
@@ -162,44 +204,42 @@ button { font: inherit; color: inherit; }
   background: linear-gradient(120deg, transparent 40%, #ffffff40 50%, transparent 60%);
   transform: translateX(-60%); opacity: 0;
 }
+/* icône choisie : elle grandit et se soulève, sans cadre (comme tvOS) */
+.icon-art::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .3s ease;
+  background: linear-gradient(180deg, #ffffff2e, transparent 55%); box-shadow: inset 0 0 0 .12rem #ffffff70; }
+.icon.is-focus .icon-art::before { opacity: 1; }
 .icon.is-focus .icon-art {
-  transform: translateY(-.7rem) scale(1.12);
-  /* reflet coloré de l'appli sous l'icône, comme une lumière sur la table */
-  box-shadow: 0 2.6rem 3.4rem -1.2rem #000000d8, 0 0 0 .18rem var(--ring), 0 2.2rem 5rem -1.4rem color-mix(in oklab, var(--glow, #fff) 60%, transparent);
+  transform: translateY(-.9rem) scale(1.16);
+  box-shadow: 0 2.6rem 3.2rem -1.2rem #000000c0, 0 2.2rem 5rem -1.6rem color-mix(in oklab, var(--glow, #fff) 55%, transparent);
   animation: tilt 5s ease-in-out .4s infinite alternate;
 }
 .icon.is-focus .icon-art::after { animation: shine 1.1s ease .1s 1; }
 @keyframes tilt {
-  0% { transform: translateY(-.7rem) scale(1.12) rotateX(2deg) rotateY(-3deg); }
-  100% { transform: translateY(-.7rem) scale(1.12) rotateX(-2deg) rotateY(3deg); }
+  0% { transform: translateY(-.9rem) scale(1.16) rotateX(2deg) rotateY(-3deg); }
+  100% { transform: translateY(-.9rem) scale(1.16) rotateX(-2deg) rotateY(3deg); }
 }
 @keyframes shine { 0% { opacity: 1; transform: translateX(-60%); } 100% { opacity: 1; transform: translateX(60%); } }
 .icon.bump .icon-art { animation: bump .32s ease; }
-@keyframes bump { 40% { transform: translateY(-.7rem) scale(1.12) translateX(var(--bx, 0)); } }
-.icon-name {
-  position: absolute; left: 50%; top: calc(100% + 1.4rem); transform: translateX(-50%);
-  white-space: nowrap; font-size: calc(1.9rem * var(--fs)); font-weight: 600; opacity: 0; transition: opacity .25s ease;
-}
-.icon.is-focus .icon-name { opacity: 1; }
-.badge { position: absolute; right: .7rem; top: .7rem; z-index: 1; padding: .2rem .55rem; font-size: calc(.95rem * var(--fs)); font-weight: 700; color: var(--focus-fg); background: var(--text-2); border-radius: .35rem; }
+@keyframes bump { 40% { transform: translateY(-.9rem) scale(1.16) translateX(var(--bx, 0)); } }
+.icon-name { display: none; }
+.badge { position: absolute; right: .7rem; top: .7rem; z-index: 1; padding: .2rem .55rem; font-size: calc(.95rem * var(--fs)); font-weight: 700; color: #0b0d12; background: #f3f5f9; border-radius: .35rem; }
 
 .foot {
-  position: absolute; bottom: 2rem; left: 0; right: 0; z-index: 2;
-  display: flex; align-items: center; justify-content: space-between; font-size: calc(1.4rem * var(--fs)); color: var(--muted);
-  padding-left: max(16px, env(safe-area-inset-left, 0px), 6rem);
-  padding-right: max(16px, env(safe-area-inset-right, 0px), 6rem);
+  position: absolute; bottom: 2.2rem; left: 0; right: 0; z-index: 2;
+  display: flex; justify-content: center; font-size: calc(1.4rem * var(--fs)); color: var(--muted);
 }
-.ver { font-size: calc(1.2rem * var(--fs)); }
-.hint-list { display: flex; gap: 1.8rem; }
+.ver { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.hint-list { display: flex; gap: 2.2rem; opacity: .85; }
 .hint { display: flex; align-items: center; gap: .55rem; }
-.bg { display: inline-grid; place-items: center; min-width: 2.3rem; height: 2.3rem; padding: 0 .1rem; box-sizing: border-box; border-radius: 99px; font-size: calc(1.2rem * var(--fs)); font-weight: 700; color: var(--ink); }
+.bg { display: inline-grid; place-items: center; min-width: 2.3rem; height: 2.3rem; padding: 0 .1rem; box-sizing: border-box; border-radius: 99px; font-size: calc(1.2rem * var(--fs)); font-weight: 700; color: #0b0d12; text-shadow: none; }
 .bg .ic { width: 1.45rem; height: 1.45rem; }
 .g-a { background: var(--pad-a); }
 .g-b { background: var(--pad-b); }
-.g-menu { background: var(--text); }
+.g-menu { background: var(--text); color: var(--ink); }
+.stage[data-bg="decor"] .g-menu { color: #0b0d12; }
 .g-num { background: transparent; color: var(--text); border: 1px solid var(--line); padding: 0 .5rem; border-radius: .4rem; font-variant-numeric: tabular-nums; }
 
-.stage.enter .shelf { animation: fadeIn .9s ease both; }
+.stage.enter .decor, .stage.enter .shelf { animation: fadeIn .9s ease both; }
 .stage.enter .status { animation: rise .8s var(--ease) .1s both; }
 .stage.enter .shelf-info { animation: rise .8s var(--ease) .18s both; }
 .stage.enter .dock { animation: rise .8s var(--ease) .26s both; }
@@ -207,66 +247,66 @@ button { font: inherit; color: inherit; }
 @keyframes rise { from { opacity: 0; transform: translateY(1.6rem); } to { opacity: 1; transform: none; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* ---------- fond animé de l'accueil (météo en direct, ou un fond au choix) ----------
+/* ---------- météo animée sur le décor : nuages, pluie, neige, étoiles, aurore ----------
    Uniquement des déplacements et des fondus de calques déjà dessinés : la carte graphique
    s'en charge, le processeur reste libre. Tout s'arrête quand une appli est ouverte. */
 .sky {
   position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none;
-  --drop: #ffffff8c; --flake: #ffffffe6; --star: #ffffff; --cloud: 205, 214, 232; --cloud-o: .14;
-  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 52%, transparent 90%);
-  mask-image: linear-gradient(180deg, #000 0, #000 52%, transparent 90%);
+  --drop: #ffffff80; --flake: #ffffffee; --star: #ffffff; --cloud: 255, 255, 255; --cloud-o: .5;
   opacity: 0; transition: opacity 1.2s ease;
 }
 .sky.on { opacity: 1; }
-html[data-look="light"] .sky { --drop: #2a3c5e66; --flake: #8fa2c4; --star: #3a4a6a; --cloud: 120, 134, 160; --cloud-o: .16; }
 .sky > * { position: absolute; display: none; }
-.sky[data-sky~="tint"] .sky-tint, .sky[data-sky~="sun"] .sky-sun, .sky[data-sky~="stars"] .sky-stars,
+.sky[data-sky~="rays"] .sky-sun, .sky[data-sky~="stars"] .sky-stars,
 .sky[data-sky~="aurora"] .sky-aurora, .sky[data-sky~="clouds"] .sky-clouds, .sky[data-sky~="fog"] .sky-fog,
 .sky[data-sky~="rain"] .sky-rain, .sky[data-sky~="snow"] .sky-snow, .sky[data-sky~="flash"] .sky-flash { display: block; }
-.sky-tint { inset: 0; background: linear-gradient(180deg, #0a122066, transparent 70%); }
-.sky[data-sky~="night"] .sky-tint { background: linear-gradient(180deg, #02061a80, transparent 75%); }
-html[data-look="light"] .sky-tint { background: linear-gradient(180deg, #5d6b8540, transparent 75%); }
 
-.sky-sun { right: -6rem; top: -18rem; width: 54rem; height: 54rem; border-radius: 50%;
-  background: radial-gradient(closest-side, #ffd77a70, #ffb24a24 45%, transparent);
-  animation: sunGlow 7s ease-in-out infinite alternate; }
-.sky-sun::before { content: ""; position: absolute; inset: 8%; border-radius: 50%;
-  background: repeating-conic-gradient(#ffe6a01a 0 5deg, transparent 5deg 15deg);
-  -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent); mask-image: radial-gradient(closest-side, #000 30%, transparent);
-  animation: spin 140s linear infinite; }
-@keyframes sunGlow { from { transform: scale(.94); opacity: .8; } to { transform: scale(1.04); opacity: 1; } }
+/* rayons qui tournent lentement autour du soleil du décor */
+.sky-sun { left: var(--orb-x, 74%); top: var(--orb-y, 24%); width: 44rem; height: 44rem; transform: translate(-50%, -50%); }
+.sky-sun::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: repeating-conic-gradient(#fff3c81f 0 5deg, transparent 5deg 15deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 22%, transparent); mask-image: radial-gradient(closest-side, #000 22%, transparent);
+  animation: spin 160s linear infinite; }
 
-.sky-stars { inset: 0 0 30%; background-size: 31rem 23rem; animation: twinkle 3.6s ease-in-out infinite alternate;
+.sky-stars { inset: 0 0 42%; background-size: 31rem 23rem; animation: twinkle 3.6s ease-in-out infinite alternate;
   background-image:
     radial-gradient(.13rem .13rem at 3rem 4rem, var(--star) 50%, transparent), radial-gradient(.1rem .1rem at 11rem 15rem, var(--star) 50%, transparent),
     radial-gradient(.16rem .16rem at 19rem 7rem, var(--star) 50%, transparent), radial-gradient(.1rem .1rem at 26rem 18rem, var(--star) 50%, transparent),
     radial-gradient(.12rem .12rem at 7rem 20rem, var(--star) 50%, transparent), radial-gradient(.09rem .09rem at 23rem 2rem, var(--star) 50%, transparent),
-    radial-gradient(.11rem .11rem at 15rem 11rem, var(--star) 50%, transparent), radial-gradient(.14rem .14rem at 29rem 12rem, var(--star) 50%, transparent); }
+    radial-gradient(.11rem .11rem at 15rem 11rem, var(--star) 50%, transparent), radial-gradient(.14rem .14rem at 29rem 12rem, var(--star) 50%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent); }
 .sky-stars + .sky-stars { background-size: 23rem 17rem; background-position: 7rem 5rem; animation-duration: 5.2s; animation-direction: alternate-reverse; opacity: .7; }
 @keyframes twinkle { from { opacity: .35; } to { opacity: .95; } }
 
-.sky-aurora { inset: -20% -10% 30%; filter: saturate(1.2); }
-.sky-aurora i { position: absolute; width: 70rem; height: 26rem; border-radius: 50%; opacity: .5; }
-.sky-aurora i:nth-child(1) { left: 0; top: 8rem; background: radial-gradient(closest-side, #2ee59d80, transparent); animation: auroraA 22s ease-in-out infinite alternate; }
-.sky-aurora i:nth-child(2) { left: 30%; top: 3rem; background: radial-gradient(closest-side, #3fb6ff70, transparent); animation: auroraB 27s ease-in-out infinite alternate; }
-.sky-aurora i:nth-child(3) { left: 55%; top: 12rem; background: radial-gradient(closest-side, #a46bff66, transparent); animation: auroraA 31s ease-in-out -9s infinite alternate-reverse; }
+.sky-aurora { inset: -10% -10% 45%; }
+.sky-aurora i { position: absolute; width: 70rem; height: 22rem; border-radius: 50%; opacity: .55; }
+.sky-aurora i:nth-child(1) { left: 0; top: 7rem; background: radial-gradient(closest-side, #2ee59d80, transparent); animation: auroraA 22s ease-in-out infinite alternate; }
+.sky-aurora i:nth-child(2) { left: 30%; top: 3rem; background: radial-gradient(closest-side, #3fb6ff66, transparent); animation: auroraB 27s ease-in-out infinite alternate; }
+.sky-aurora i:nth-child(3) { left: 55%; top: 10rem; background: radial-gradient(closest-side, #a46bff5c, transparent); animation: auroraA 31s ease-in-out -9s infinite alternate-reverse; }
 @keyframes auroraA { from { transform: translateX(-8rem) rotate(-8deg) scaleY(.8); } to { transform: translateX(10rem) rotate(6deg) scaleY(1.15); } }
 @keyframes auroraB { from { transform: translateX(6rem) rotate(5deg); } to { transform: translateX(-9rem) rotate(-7deg) scaleY(1.2); } }
 
-.sky-clouds { inset: 0; }
-.sky-clouds i { position: absolute; left: 0; width: 64rem; height: 20rem; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(var(--cloud), var(--cloud-o)), transparent); animation: drift 130s linear infinite; }
-.sky-clouds i:nth-child(1) { top: 2rem; animation-delay: -20s; }
-.sky-clouds i:nth-child(2) { top: 10rem; width: 52rem; animation-duration: 170s; animation-delay: -95s; }
-.sky-clouds i:nth-child(3) { top: -3rem; width: 80rem; height: 24rem; animation-duration: 210s; animation-delay: -150s; }
-.sky[data-sky~="dense"] { --cloud-o: .3; }
-@keyframes drift { from { transform: translateX(-70rem); } to { transform: translateX(110rem); } }
+/* nuages : plusieurs boules douces qui forment un vrai nuage, et qui dérivent */
+.sky-clouds { inset: 0 0 45%; }
+.sky-clouds i { position: absolute; left: 0; width: 36rem; height: 12rem; animation: drift 150s linear infinite;
+  background:
+    radial-gradient(closest-side at 30% 62%, rgba(var(--cloud), var(--cloud-o)), transparent),
+    radial-gradient(closest-side at 52% 44%, rgba(var(--cloud), var(--cloud-o)), transparent),
+    radial-gradient(closest-side at 72% 64%, rgba(var(--cloud), var(--cloud-o)), transparent),
+    radial-gradient(46% 25% at 50% 72%, rgba(var(--cloud), calc(var(--cloud-o) * .9)), transparent); }
+.sky-clouds i:nth-child(1) { top: 3rem; animation-delay: -30s; }
+.sky-clouds i:nth-child(2) { top: 10rem; width: 28rem; height: 9rem; animation-duration: 190s; animation-delay: -120s; }
+.sky-clouds i:nth-child(3) { top: 0; width: 46rem; height: 15rem; animation-duration: 230s; animation-delay: -170s; }
+.sky-clouds i:nth-child(4) { top: 15rem; width: 24rem; height: 8rem; animation-duration: 170s; animation-delay: -60s; }
+.sky[data-sky~="dense"] .sky-clouds i { width: 60rem; height: 18rem; }
+@keyframes drift { from { transform: translateX(-62rem); } to { transform: translateX(112rem); } }
 
-.sky-fog { inset: 8rem 0 auto; height: 40rem; }
+.sky-fog { inset: 14rem 0 auto; height: 40rem; }
 .sky-fog i { position: absolute; left: 0; width: 200%; height: 16rem;
-  background: linear-gradient(90deg, transparent, rgba(var(--cloud), .2) 20%, transparent 40%, rgba(var(--cloud), .16) 65%, transparent 85%);
+  background: linear-gradient(90deg, transparent, #ffffff3d 20%, transparent 40%, #ffffff33 65%, transparent 85%);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 40%, #000 60%, transparent); mask-image: linear-gradient(180deg, transparent, #000 40%, #000 60%, transparent);
   animation: fogMove 70s linear infinite; }
-.sky-fog i + i { top: 14rem; animation-duration: 95s; animation-direction: reverse; opacity: .8; }
+.sky-fog i + i { top: 14rem; animation-duration: 95s; animation-direction: reverse; opacity: .85; }
 @keyframes fogMove { from { transform: translateX(-50%); } to { transform: translateX(0); } }
 
 .sky-rain { inset: -30rem -12% 0; transform: rotate(9deg); }
@@ -295,8 +335,8 @@ html[data-look="light"] .sky-tint { background: linear-gradient(180deg, #5d6b854
 @keyframes flash { 0%, 90% { opacity: 0; } 91% { opacity: .28; } 92% { opacity: 0; } 94% { opacity: .18; } 96%, 100% { opacity: 0; } }
 
 /* météo : à côté de l'heure, dans le centre de contrôle, sur l'écran de veille */
-.wx-chip { display: flex; align-items: center; gap: .5rem; font-size: calc(2rem * var(--fs)); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
-.wx-chip .ic { width: 2.3rem; height: 2.3rem; }
+.wx-chip { display: flex; align-items: center; gap: .55rem; font-size: calc(2.1rem * var(--fs)); font-weight: 600; color: inherit; font-variant-numeric: tabular-nums; }
+.wx-chip .ic { width: 2.4rem; height: 2.4rem; }
 .cc-wx { display: flex; align-items: center; gap: .6rem; margin: .5rem 0 0; font-size: calc(1.6rem * var(--fs)); color: var(--text-2); }
 .cc-wx .ic { width: 2rem; height: 2rem; }
 .saver-wx { display: flex; justify-content: center; align-items: center; gap: .7rem; margin: .8rem 0 0; font-size: calc(2rem * var(--fs)); font-weight: 600; color: #ffffffa8; }
@@ -500,7 +540,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
 /* ---------- notifications & volume ---------- */
 .toast {
-  position: fixed; z-index: 60; top: max(7rem, calc(env(safe-area-inset-top, 0px) + 16px)); right: max(16px, env(safe-area-inset-right, 0px), 6rem);
+  position: fixed; z-index: 60; top: max(12.4rem, calc(env(safe-area-inset-top, 0px) + 16px)); right: max(16px, env(safe-area-inset-right, 0px), 6rem);
   display: flex; align-items: center; gap: 1.1rem; box-sizing: border-box; max-width: min(48rem, calc(100% - 32px));
   padding: 1rem 1.4rem; border-radius: 1.2rem; background: var(--sheet); border: 1px solid var(--line); box-shadow: 0 1.4rem 3rem -1rem var(--shadow);
   font-size: calc(1.6rem * var(--fs)); font-weight: 500; opacity: 0; transform: translateY(-.8rem); transition: opacity .3s ease, transform .35s var(--ease); pointer-events: none;
@@ -561,14 +601,17 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   body { overflow-y: auto; }
   .tv { height: auto; min-height: 100%; display: flex; flex-direction: column; }
   .stage { height: auto; flex: 1; display: flex; flex-direction: column; padding-bottom: 2rem; }
-  .shelf, .shelf-fade { height: 30rem; }
+  .shelf { height: auto; }
   .status, .shelf-info, .dock, .foot { position: relative; top: auto; bottom: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); left: auto; }
   .status { margin-top: 1.4rem; }
-  .brand-word { display: none; }
+  .brand-word, .wx-cap { display: none; }
+  .capsule { gap: .9rem; padding: .6rem 1.1rem; }
   .scene-art { right: 1rem; top: 5rem; width: 14rem; height: 11rem; }
-  .shelf-info { margin-top: 11rem; max-width: none; }
+  .shelf-info { margin-top: 13rem; max-width: none; }
+  .shelf-title { font-size: calc(4rem * var(--fs)); }
   .shelf-desc { font-size: calc(1.5rem * var(--fs)); }
   .dock { margin-top: 3rem; }
+  .dock-glass { padding: 1.4rem; border-radius: 2.2rem; }
   .icons { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem 1.2rem; }
   .icon-name { display: none; }
   .icon.is-focus .icon-art { transform: scale(1.05); animation: none; }
@@ -605,19 +648,37 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 </style>
 
 <div class="tv" id="tv">
-  <div class="stage" id="stage">
+  <div class="stage" id="stage" data-bg="decor">
+    <div class="decor" id="decor" aria-hidden="true">
+      <div class="decor-sky"></div>
+      <div class="decor-orb"></div>
+      <svg class="decor-land" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+        <defs>
+          <linearGradient id="dl-haze" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".22"/></linearGradient>
+          <linearGradient id="dl-lake" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--sky-b)"/><stop offset="1" style="stop-color: var(--lake)"/></linearGradient>
+        </defs>
+        <path d="M0 560 L90 470 L160 505 L250 400 L330 470 L410 432 L500 330 L585 420 L660 395 L760 300 L860 410 L930 382 L1020 455 L1110 360 L1200 440 L1290 392 L1380 470 L1470 410 L1600 480 L1600 900 L0 900 Z" style="fill: var(--far)"/>
+        <path d="M500 330 L470 365 L485 362 L500 376 L515 360 L532 369 Z M760 300 L726 342 L744 337 L760 352 L777 335 L796 346 Z M1110 360 L1084 392 L1098 389 L1110 401 L1124 387 L1138 395 Z M250 400 L228 427 L240 425 L252 435 L262 423 L274 431 Z M1470 410 L1450 433 L1462 431 L1472 440 L1482 430 L1492 436 Z" fill="#fff" style="opacity: var(--cap)"/>
+        <rect x="0" y="420" width="1600" height="200" fill="url(#dl-haze)"/>
+        <path d="M0 600 C120 556 220 574 330 588 C440 603 520 556 640 560 C760 565 840 612 960 602 C1080 592 1180 546 1300 556 C1420 566 1500 598 1600 588 L1600 900 L0 900 Z" style="fill: var(--mid)"/>
+        <path d="M0 646 C420 636 1180 636 1600 646 L1600 712 L0 712 Z" fill="url(#dl-lake)"/>
+        <path d="M220 664h180M610 676h260M1040 662h210M1330 684h140" stroke="#fff" stroke-opacity=".22" stroke-width="2" stroke-linecap="round"/>
+        <path d="M0 698 C150 676 300 708 470 702 C640 696 760 672 930 680 C1100 688 1260 706 1420 694 C1500 688 1560 690 1600 694 L1600 900 L0 900 Z" style="fill: var(--near)"/>
+        <path d="M40 675 L2 778 L19 772 L-15 854 L9 848 L-29 905 L109 905 L71 848 L95 854 L61 772 L78 778 Z M110 600 L60 735 L83 726 L38 834 L70 825 L20 900 L200 900 L150 825 L182 834 L137 726 L160 735 Z M185 695 L150 790 L166 783 L135 859 L157 852 L122 905 L248 905 L213 852 L235 859 L204 783 L220 790 Z M250 725 L222 802 L235 796 L209 858 L227 852 L199 895 L301 895 L273 852 L291 858 L265 796 L278 802 Z M315 780 L295 834 L304 830 L286 874 L299 870 L279 900 L351 900 L331 870 L344 874 L326 830 L335 834 Z M1300 780 L1280 834 L1289 830 L1271 874 L1284 870 L1264 900 L1336 900 L1316 870 L1329 874 L1311 830 L1320 834 Z M1370 725 L1340 806 L1354 801 L1327 865 L1346 860 L1316 905 L1424 905 L1394 860 L1413 865 L1386 801 L1400 806 Z M1440 640 L1397 757 L1417 749 L1378 843 L1405 835 L1362 900 L1518 900 L1475 835 L1502 843 L1463 749 L1483 757 Z M1520 585 L1467 729 L1491 719 L1443 835 L1477 825 L1424 905 L1616 905 L1563 825 L1597 835 L1549 719 L1573 729 Z M1590 680 L1554 779 L1570 772 L1537 852 L1560 845 L1524 900 L1656 900 L1620 845 L1643 852 L1610 772 L1626 779 Z" style="fill: var(--tree)"/>
+      </svg>
+    </div>
     <div class="shelf" id="shelf" aria-hidden="true"></div>
-    <div class="shelf-fade" aria-hidden="true"></div>
     <div class="sky" id="sky" aria-hidden="true">
-      <div class="sky-tint"></div><div class="sky-sun"></div>
+      <div class="sky-sun"></div>
       <div class="sky-stars"></div><div class="sky-stars"></div>
       <div class="sky-aurora"><i></i><i></i><i></i></div>
-      <div class="sky-clouds"><i></i><i></i><i></i></div>
+      <div class="sky-clouds"><i></i><i></i><i></i><i></i></div>
       <div class="sky-fog"><i></i><i></i></div>
       <div class="sky-rain"></div><div class="sky-rain"></div>
       <div class="sky-snow"></div><div class="sky-snow"></div>
       <div class="sky-flash"></div>
     </div>
+    <div class="home-scrim" aria-hidden="true"></div>
 
     <header class="status">
       <div class="brand" aria-label="Scaros">
@@ -625,31 +686,38 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         <span class="brand-word">scaros</span>
       </div>
       <div class="status-right">
-        <span class="st" id="st-out"></span>
-        <span class="st" id="st-mute" title="Son coupé" data-icon="mute" hidden></span>
-        <span class="st" id="st-audio" data-icon="headphones" hidden></span>
-        <span class="st" id="st-phone" title="Téléphone connecté" data-icon="phone" hidden></span>
-        <span class="st dim" id="st-pad" title="Aucune manette" data-icon="gamepad"></span>
-        <span class="st" id="st-airplay" title="Recopie AirPlay en cours" data-icon="airplay" hidden></span>
-        <span class="st" id="st-wifi" title="Wi-Fi" data-icon="wifi"></span>
-        <span class="wx-chip" id="st-wx" hidden></span>
-        <span class="clock" id="clock">--:--</span>
+        <div class="capsule">
+          <span class="clock" id="clock">--:--</span>
+          <span class="wx-chip" id="st-wx" hidden></span>
+          <span class="cap-sep"></span>
+          <span class="cap-icons">
+            <span class="st" id="st-out" hidden></span>
+            <span class="st" id="st-mute" title="Son coupé" data-icon="mute" hidden></span>
+            <span class="st" id="st-audio" data-icon="headphones" hidden></span>
+            <span class="st" id="st-phone" title="Téléphone connecté" data-icon="phone" hidden></span>
+            <span class="st" id="st-pad" title="Manette connectée" data-icon="gamepad" hidden></span>
+            <span class="st" id="st-airplay" title="Recopie AirPlay en cours" data-icon="airplay" hidden></span>
+            <span class="st dim" id="st-wifi" title="Pas de Wi-Fi" data-icon="wifi" hidden></span>
+          </span>
+        </div>
+        <p class="wx-cap" id="wx-cap"></p>
       </div>
     </header>
 
     <section class="shelf-info" id="shelf-info" aria-live="polite">
       <p class="kicker" id="sh-kicker"></p>
+      <h1 class="shelf-title" id="sh-title"></h1>
       <p class="shelf-desc" id="sh-desc"></p>
       <ul class="chips" id="sh-chips"></ul>
     </section>
 
     <main class="dock">
-      <div class="icons" id="icons" role="list" aria-label="Applis"></div>
+      <div class="dock-glass"><div class="icons" id="icons" role="list" aria-label="Applis"></div></div>
     </main>
 
     <footer class="foot">
-      <span class="ver" id="ver">Scaros OS · maquette</span>
       <span class="hint-list" id="hints"></span>
+      <span class="ver" id="ver">Scaros OS · maquette</span>
     </footer>
   </div>
 
@@ -1063,6 +1131,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const t = byId[state.focus];
     scenes.forEach(s => s.classList.toggle('on', s.dataset.id === t.id));
     $('#sh-kicker').textContent = t.kicker;
+    $('#sh-title').textContent = t.name;
     $('#sh-desc').textContent = t.desc;
     $('#sh-chips').innerHTML = shelfChips(t).map(c => c.startsWith('!') ? `<li class="warn">${esc(c.slice(1))}</li>` : `<li>${esc(c)}</li>`).join('');
     const info = $('#shelf-info');
@@ -1071,23 +1140,24 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   function renderStatus() {
     const so = $('#st-out'), tvOut = state.output === 'tv';
     so.innerHTML = icon(tvOut ? 'tv' : 'laptop');
+    so.hidden = true;
     so.title = tvOut ? 'Image sur la télé' : 'Image sur l’écran du PC';
-    const sp = $('#st-pad');
-    sp.classList.toggle('dim', !state.pad);
-    sp.title = state.pad ? 'Manette connectée' : 'Aucune manette';
+    $('#st-pad').hidden = !state.pad;
     $('#st-phone').hidden = !(state.live ? state.phones > 0 : state.phoneDemo);
     $('#st-mute').hidden = !state.muted;
     $('#st-airplay').hidden = !mirroring();
     const wx = $('#st-wx'), w = state.weather;
     wx.hidden = !w;
     if (w) { wx.innerHTML = `${icon(wxIcon(w))}<span>${w.temp}°</span>`; wx.title = `${w.label} · ${w.city || ''}`; }
+    const capIcons = [...document.querySelectorAll('.cap-icons .st')].some(el => !el.hidden);
+    document.querySelector('.capsule').classList.toggle('has-icons', capIcons);
+    $('#wx-cap').textContent = w ? `${w.label}${w.max != null ? ` · max ${w.max}°` : ''}${w.city ? ` · ${w.city}` : ''}` : '';
     $('#sleep-wx').innerHTML = w ? wxLine(w, true) : '';
     const sa = $('#st-audio');
     sa.hidden = state.audio.target !== 'bt';
     sa.title = `Son sur ${state.audio.device}`;
     const sw = $('#st-wifi'), cur = wifiCurrent();
-    sw.classList.toggle('dim', !cur);
-    sw.title = cur ? `Wi-Fi : ${cur}` : 'Pas de Wi-Fi';
+    sw.hidden = !!cur;
     $('#ver').textContent = state.live ? `Scaros OS ${state.version}${state.dry ? ' · test' : ''}` : 'Scaros OS · maquette';
   }
   function renderTiles() {
@@ -1418,12 +1488,12 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         title: 'Fond et météo', icon: wxIcon(w), pa: '#3a9bff', pb: '#1d4f9a', caption: 'Le fond de l’accueil s’anime selon le temps qu’il fait dehors.',
         body: `<div class="card wx-big">${icon(wxIcon(w))}<div><div class="card-title">${w ? `${w.temp}° · ${esc(w.label)}` : 'Météo indisponible'}</div><div class="card-sub">${w ? `${esc(w.city || city || '')}${w.max != null ? ` · max ${w.max}°, min ${w.min}°` : ''}` : 'Vérifie la connexion internet.'}</div></div></div>
           ${group('Fond de l’accueil')}<div class="opts" role="radiogroup" aria-label="Fond de l’accueil">
-            ${radio('pref:bg:weather', 'Météo en direct · recommandé', `Soleil, nuages, pluie ou neige, selon le temps${city ? ` à ${esc(city)}` : ''}.`, bg === 'weather')}
-            ${radio('pref:bg:stars', 'Ciel étoilé', 'Des étoiles qui scintillent doucement.', bg === 'stars')}
-            ${radio('pref:bg:aurora', 'Aurore boréale', 'Des voiles colorés qui ondulent.', bg === 'aurora')}
+            ${radio('pref:bg:weather', 'Météo en direct · recommandé', `Le paysage suit le temps${city ? ` à ${esc(city)}` : ''} et l’heure : soleil, nuages, pluie, neige, nuit.`, bg === 'weather')}
+            ${radio('pref:bg:stars', 'Nuit étoilée', 'Le paysage de nuit, sous les étoiles.', bg === 'stars')}
+            ${radio('pref:bg:aurora', 'Aurore boréale', 'Des voiles colorés au-dessus des montagnes.', bg === 'aurora')}
             ${radio('pref:bg:rain', 'Pluie douce', 'Toujours de la pluie, même au soleil.', bg === 'rain')}
-            ${radio('pref:bg:snow', 'Neige', 'Des flocons qui tombent lentement.', bg === 'snow')}
-            ${radio('pref:bg:none', 'Aucun', 'Seulement les couleurs de l’appli choisie, sans animation.', bg === 'none')}
+            ${radio('pref:bg:snow', 'Neige', 'Le paysage enneigé, des flocons qui tombent.', bg === 'snow')}
+            ${radio('pref:bg:none', 'Couleurs des applis', 'Sans paysage : la couleur et le logo de l’appli choisie.', bg === 'none')}
           </div>
           ${group('Ville de la météo')}<div class="opts">
             ${row('citysearch', 'search', 'Changer de ville', '', esc(city || 'Non trouvée'))}
@@ -1783,7 +1853,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   // ---------- météo et fond animé ----------
   const wxIcon = w => w ? (w.kind === 'clear' && !w.day ? 'wx-night' : 'wx-' + w.kind) : 'wx-cloudy';
-  const BG_LABEL = { weather: 'Météo en direct', stars: 'Ciel étoilé', aurora: 'Aurore', rain: 'Pluie', snow: 'Neige', none: 'Aucun' };
+  const BG_LABEL = { weather: 'Météo en direct', stars: 'Ciel étoilé', aurora: 'Aurore', rain: 'Pluie', snow: 'Neige', none: 'Couleurs des applis' };
   const DEMO_WX = [
     { temp: 14, kind: 'rain', label: 'Pluie', day: true, max: 16, min: 9 },
     { temp: 21, kind: 'clear', label: 'Ciel dégagé', day: true, max: 24, min: 12 },
@@ -1794,30 +1864,74 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     { temp: 11, kind: 'cloudy', label: 'Couvert', day: true, max: 12, min: 7 }
   ];
   let demoWx = 0;
-  // calques du fond selon le réglage et le temps qu'il fait
-  function skyLayers() {
-    const bg = state.prefs.bg || 'weather', w = state.weather;
-    const night = w ? !w.day : (h => h < 7 || h >= 19)(new Date().getHours());
-    if (bg === 'none') return '';
-    if (bg === 'stars') return 'stars tint night';
-    if (bg === 'aurora') return 'aurora stars tint night';
-    if (bg === 'rain') return 'clouds rain tint';
-    if (bg === 'snow') return 'clouds snow';
-    const kind = w ? w.kind : 'clear', n = night ? ' night tint' : '';
-    return {
-      clear: night ? 'stars tint night' : 'sun',
-      partly: (night ? 'stars' : 'sun') + ' clouds' + n,
-      cloudy: 'clouds dense tint' + n,
-      fog: 'fog clouds tint' + n,
-      rain: 'clouds dense rain tint' + n,
-      snow: 'clouds snow tint' + n,
-      storm: 'clouds dense rain heavy flash tint' + n
-    }[kind] || 'clouds' + n;
+  // Décor de l'accueil : un paysage dont le ciel, la lumière et les couleurs suivent la météo et l'heure.
+  // Palettes : ciel (haut, bas), montagnes lointaines, collines, prairie, lac, sapins, neige sur les sommets.
+  const PAL = {
+    clear:  { a: '#2c6cc0', b: '#a7d0f2', far: '#8fa9c6', mid: '#5b7896', near: '#2d4a3e', lake: '#79acdf', tree: '#1f362d', cap: .85, cloud: '255,255,255', co: .55 },
+    cloudy: { a: '#66768b', b: '#b9c3d0', far: '#9aa7b6', mid: '#6e7d8e', near: '#3a4a44', lake: '#8d9cae', tree: '#2a3833', cap: .6, cloud: '236,240,245', co: .62 },
+    rain:   { a: '#46505f', b: '#8b96a5', far: '#7a8594', mid: '#586371', near: '#2c3934', lake: '#6c7a8a', tree: '#1f2a27', cap: .45, cloud: '196,203,214', co: .55 },
+    storm:  { a: '#1f252e', b: '#4b5462', far: '#4c5563', mid: '#363e4a', near: '#1b2422', lake: '#3c4553', tree: '#141c1a', cap: .3, cloud: '120,128,142', co: .65 },
+    snow:   { a: '#7f93ab', b: '#dbe3ec', far: '#bccad8', mid: '#98a9bb', near: '#dfe6ee', lake: '#aebfd1', tree: '#3f505d', cap: .95, cloud: '245,247,250', co: .55 },
+    fog:    { a: '#9fa8b2', b: '#dde1e5', far: '#b9c0c7', mid: '#a2a9b1', near: '#7a8581', lake: '#bcc3ca', tree: '#5d6965', cap: .35, cloud: '240,242,244', co: .45 },
+    dawn:   { a: '#38457a', b: '#f3a77c', far: '#7d7192', mid: '#4d4a69', near: '#262c38', lake: '#d29882', tree: '#1a1f29', cap: .7, cloud: '255,214,196', co: .5 },
+    dusk:   { a: '#272b5c', b: '#ec8a5e', far: '#6a5a7c', mid: '#413d5c', near: '#1c2130', lake: '#bb7465', tree: '#141822', cap: .6, cloud: '255,190,170', co: .45 },
+    night:  { a: '#040a1d', b: '#1a2a50', far: '#22324f', mid: '#17233b', near: '#0c1322', lake: '#1c2b4b', tree: '#070c16', cap: .35, cloud: '130,145,175', co: .28 },
+    murk:   { a: '#0a0f19', b: '#252f3f', far: '#283242', mid: '#1b2330', near: '#0d131c', lake: '#222c3b', tree: '#080c12', cap: .25, cloud: '115,125,140', co: .38 }
+  };
+  // moment de la journée : nuit d'après la météo (lever et coucher réels), aube et soir d'après l'heure
+  function dayPhase(w) {
+    const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
+    const night = w ? !w.day : (h < 7 || h >= 20.5);
+    if (night) return 'night';
+    if (h < 8.5) return 'dawn';
+    if (h >= 18) return 'dusk';
+    return 'day';
   }
+  // ce que montre le décor : temps qu'il fait (réel ou choisi), moment de la journée
+  function skyScene() {
+    const bg = state.prefs.bg || 'weather', w = state.weather;
+    if (bg === 'none') return null;
+    let kind = bg === 'weather' ? (w ? w.kind : 'clear') : { stars: 'clear', aurora: 'clear', rain: 'rain', snow: 'snow' }[bg];
+    let phase = bg === 'stars' || bg === 'aurora' ? 'night' : dayPhase(bg === 'weather' ? w : null);
+    const bright = kind === 'clear' || kind === 'partly';
+    const pal = phase === 'night' ? (bright ? PAL.night : PAL.murk)
+      : (phase === 'dawn' || phase === 'dusk') && bright ? PAL[phase]
+      : PAL[kind === 'partly' ? 'clear' : kind] || PAL.cloudy;
+    const orb = !bright ? 'none' : phase === 'night' ? 'moon' : 'sun';
+    const layers = [];
+    if (orb === 'sun' && phase === 'day' && kind === 'clear') layers.push('rays');
+    if (phase === 'night' && bright) layers.push('stars');
+    if (bg === 'aurora') layers.push('aurora');
+    if (kind === 'partly') layers.push('clouds');
+    if (kind === 'cloudy') layers.push('clouds', 'dense');
+    if (kind === 'fog') layers.push('fog', 'clouds');
+    if (kind === 'rain') layers.push('clouds', 'dense', 'rain');
+    if (kind === 'storm') layers.push('clouds', 'dense', 'rain', 'heavy', 'flash');
+    if (kind === 'snow') layers.push('clouds', 'snow');
+    return { pal, orb, phase, kind, layers: layers.join(' ') };
+  }
+  let skyKey = '';
   function applySky() {
-    const sky = $('#sky'), layers = skyLayers();
-    if (sky.dataset.sky !== layers) sky.dataset.sky = layers;
-    sky.classList.toggle('on', !!layers);
+    const sc = skyScene(), stage = $('#stage'), sky = $('#sky'), decor = $('#decor');
+    const key = sc ? `${sc.layers}|${sc.orb}|${sc.phase}|${sc.pal.a}` : 'apps';
+    if (key === skyKey) return;
+    skyKey = key;
+    stage.dataset.bg = sc ? 'decor' : 'apps';
+    if (sc && sc.phase !== 'night' && ['snow', 'fog', 'cloudy', 'clear', 'partly', 'rain'].includes(sc.kind)) stage.dataset.bright = '';
+    else delete stage.dataset.bright;
+    sky.classList.toggle('on', !!sc);
+    if (!sc) { sky.dataset.sky = ''; return; }
+    const p = sc.pal;
+    const vars = { '--sky-a': p.a, '--sky-b': p.b, '--far': p.far, '--mid': p.mid, '--near': p.near, '--lake': p.lake, '--tree': p.tree, '--cap': p.cap,
+      '--orb': sc.orb === 'moon' ? '#f1efe6' : sc.phase === 'day' ? '#fff6d8' : '#ffd2a3',
+      '--orb-glow': sc.orb === 'moon' ? '#a9bcff55' : sc.phase === 'day' ? '#ffd77a99' : '#ff9d6a99',
+      '--orb-y': sc.orb === 'sun' && sc.phase !== 'day' ? '46%' : '24%' };
+    for (const [k, v] of Object.entries(vars)) decor.style.setProperty(k, v);
+    decor.dataset.orb = sc.orb;
+    sky.style.setProperty('--orb-y', vars['--orb-y']);
+    sky.style.setProperty('--cloud', p.cloud);
+    sky.style.setProperty('--cloud-o', p.co);
+    sky.dataset.sky = sc.layers;
   }
   function wxLine(w, withCity) {
     if (!w) return '';
@@ -2362,6 +2476,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const cc = pane.querySelector('.cc-time');
     if (cc) cc.textContent = fT.format(d);
     if (state.prefs.theme === 'auto') applyPrefs();  // bascule clair/sombre à 7 h et 19 h
+    applySky();  // aube, journée, soir : le décor suit l'heure
   }
   tick(); setInterval(tick, 10000);
 

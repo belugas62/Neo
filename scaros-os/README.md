@@ -148,9 +148,10 @@ pour le désactiver.
 **Volume par-dessus les applis :** pendant une vidéo, le volume, le son coupé, la manette ou les AirPods qui se
 connectent s'affichent en haut de l'écran, sans interrompre l'appli.
 
-**Fond et météo :** la météo de ta ville s'affiche à côté de l'heure, et le fond de l'accueil s'anime selon le
-temps qu'il fait : soleil, nuages, pluie, neige, orage, nuit étoilée. Dans **Réglages > Fond et météo**, choisis un
-autre fond (ciel étoilé, aurore, pluie, neige, aucun) ou change de ville. La ville est devinée au premier
+**Fond et météo :** l'accueil est un paysage (montagnes, lac, sapins) dont le ciel suit le temps qu'il fait
+et l'heure : soleil, nuages, pluie, neige, orage, brouillard, aube, soir, nuit étoilée. La température s'affiche
+avec l'heure dans la pastille en haut à droite. Dans **Réglages > Fond et météo**, choisis un autre fond
+(nuit étoilée, aurore, pluie, neige, ou les couleurs de l'appli choisie) ou change de ville. La ville est devinée au premier
 démarrage grâce à l'adresse internet de la box ; la météo vient d'Open-Meteo (gratuit, sans compte).
 
 **Apparence :** dans **Réglages > Affichage et veille**, choisis **Sombre**, **Clair**, ou **Automatique**
