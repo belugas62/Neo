@@ -19,5 +19,10 @@
     "cmd": ["flatpak", "run", "com.valvesoftware.SteamLink"],
     "flatpak": "com.valvesoftware.SteamLink",
     "controller": "native"
+  },
+  "twitch": {
+    "name": "Twitch",
+    "web": "https://fgl27.github.io/SmartTwitchTV/release/index.html",
+    "profile": "scaros-twitch"
   }
 }

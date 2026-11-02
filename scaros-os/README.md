@@ -1,8 +1,8 @@
 # Scaros OS
 
 Transforme un vieux PC portable en box TV. Au démarrage, l'animation Scaros se lance, puis
-un menu plein écran façon console : YouTube (interface TV), Jellyfin, Plex et Steam Link
-pour jouer aux jeux de ton PC sur la télé.
+un menu plein écran façon console : YouTube (interface TV), Jellyfin, Plex, Steam Link
+pour jouer aux jeux de ton PC sur la télé, et Twitch en interface télé.
 Tout se pilote à la manette Xbox ou depuis ton téléphone. Quand tu branches la télé en HDMI,
 l'image et le son passent dessus tout seuls.
 
@@ -106,6 +106,10 @@ reboot
   Remote Play. Au premier lancement de Steam Link sur le portable, choisis ton PC : un code
   s'affiche, entre-le dans Steam sur ton PC. Ton PC doit être allumé avec Steam ouvert.
   Si l'image saccade, baisse la qualité en 720p dans les réglages de Steam Link.
+- **Twitch** : c'est SmartTwitchTV, une appli Twitch non officielle faite pour les télés (elle se pilote
+  aux flèches, comme le reste). Tu peux regarder sans compte ; pour retrouver tes chaînes suivies,
+  ajoute ton compte Twitch dans ses réglages. Si l'image saccade, choisis 720p dans la qualité du lecteur.
+  Elle tourne dans le navigateur du PC et se met à jour toute seule : rien à installer.
 
 ## Utilisation
 
@@ -120,7 +124,7 @@ reboot
 | ≡ (Menu) | centre de contrôle : volume, son, écran, Bluetooth, veille. Pendant une vidéo, l'appli reste ouverte derrière : B pour y revenir |
 
 Au clavier : flèches, Entrée, Échap ; la **touche Windows** ramène au menu ; **M** ouvre le centre de contrôle ;
-**1 à 4** ouvrent directement YouTube, Jellyfin, Plex et Steam Link ; **+ / −** pour le volume, **0** coupe le son.
+**1 à 5** ouvrent directement YouTube, Jellyfin, Plex, Steam Link et Twitch ; **+ / −** pour le volume, **0** coupe le son.
 
 **Télécommande du téléphone :** glisse sur le pavé pour te déplacer, touche OK pour valider. Touche la barre
 de volume pour couper ou remettre le son. En haut, elle affiche ce qui est à l'écran.
@@ -166,7 +170,7 @@ mais pas encore sur ta machine. À surveiller au premier essai :
 - le centre de contrôle par-dessus une appli, puis le retour dans l'appli ;
 - le son sur la télé ;
 - l'appairage Bluetooth de la manette ;
-- la fluidité de YouTube avec le décodage matériel activé.
+- la fluidité de YouTube avec le décodage matériel activé, et celle de Twitch.
 
 ## Comment c'est fait
 
@@ -190,7 +194,8 @@ Au démarrage : GRUB (masqué), écran Plymouth Scaros, connexion automatique su
 puis `startx` lance `session.sh`. Le menu tourne dans Chromium en mode kiosque. Les applis sont des
 Flatpak de Flathub : VacuumTube (`rocks.shy.VacuumTube`) pour l'interface TV de YouTube,
 Jellyfin Desktop (`org.jellyfin.JellyfinDesktop`), Plex HTPC (`tv.plex.PlexHTPC`) et
-Steam Link (`com.valvesoftware.SteamLink`).
+Steam Link (`com.valvesoftware.SteamLink`). Twitch est l'appli web SmartTwitchTV
+(<https://github.com/fgl27/SmartTwitchTV>), ouverte dans un Chromium plein écran avec son propre profil.
 
 `scaros.py` réserve la manette et la transforme en touches clavier, pour qu'elle marche pareil dans
 toutes les applis. Pour tester sans le portable : `python3 launcher/scaros.py --dry-run`, puis

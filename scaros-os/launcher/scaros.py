@@ -47,10 +47,11 @@ ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "scaros"
 LAUNCHER_CLASS = "ScarosLauncher"
+WEB_CLASS = "ScarosWeb"        # fenêtres des applis web (Twitch), à part du menu
 INTERNAL = re.compile(r"^(eDP|LVDS|DSI)", re.I)
 KEYS = {"up": "Up", "down": "Down", "left": "Left", "right": "Right",
         "ok": "Return", "back": "Escape", "playpause": "space"}
-ACTIONS = set(KEYS) | {"home", "menu", "volup", "voldown", "mute", "ch1", "ch2", "ch3", "ch4"}
+ACTIONS = set(KEYS) | {"home", "menu", "volup", "voldown", "mute"} | {f"ch{n}" for n in range(1, 10)}
 MOVES = {"up", "down", "left", "right"}
 TV_RES = {"1080": (1920, 1080), "720": (1280, 720), "max": None}   # définition de l'image sur la télé
 PHONE_TTL = 40                # un téléphone qui ne donne plus signe de vie depuis 40 s est parti
@@ -310,12 +311,34 @@ class Scaros:
                 ok = True
             elif v.get("flatpak"):
                 ok = run(["flatpak", "info", v["flatpak"]], timeout=15, quiet=True)[0] == 0
+            elif v.get("web"):
+                ok = shutil.which("chromium") is not None
             elif v.get("cmd"):
                 ok = shutil.which(v["cmd"][0]) is not None
             self.installed[k] = ok
         log.info("applis installées : %s", self.installed)
 
     # ---------- applis ----------
+    @staticmethod
+    def _web_command(conf):
+        """Appli web (ex. Twitch) : un Chromium plein écran, avec son propre profil
+        (la connexion au compte est gardée), séparé de celui du menu."""
+        profile = Path.home() / ".config" / conf.get("profile", "scaros-web")
+        prefs = profile / "Default" / "Preferences"
+        try:  # après une coupure de courant : pas de bulle « restaurer les pages »
+            text = prefs.read_text()
+            text = text.replace('"exited_cleanly":false', '"exited_cleanly":true')
+            prefs.write_text(re.sub(r'"exit_type":"[^"]*"', '"exit_type":"Normal"', text))
+        except OSError:
+            pass
+        return ["chromium", "--kiosk", f"--app={conf['web']}", f"--class={WEB_CLASS}",
+                f"--user-data-dir={profile}", "--no-first-run", "--noerrdialogs",
+                "--disable-session-crashed-bubble", "--hide-crash-restore-bubble",
+                "--password-store=basic", "--autoplay-policy=no-user-gesture-required",
+                "--check-for-update-interval=31536000", "--disable-features=Translate,MediaRouter",
+                # décodage vidéo par la puce Intel (le nom du réglage a changé selon les versions)
+                "--enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxGL"]
+
     def launch(self, app_id, retry=True):
         conf = self.apps.get(app_id)
         if not conf:
@@ -326,7 +349,12 @@ class Scaros:
             self.bus.emit("app", id=app_id, state="missing")
             return False
         self.close_app(focus=False)
-        cmd = ["sleep", "8"] if DRY else conf["cmd"]
+        if DRY:
+            cmd = ["sleep", "8"]
+            if conf.get("web"):
+                log.info("[dry-run] %s", " ".join(self._web_command(conf)))
+        else:
+            cmd = self._web_command(conf) if conf.get("web") else conf["cmd"]
         before = set(self._visible_windows())
         try:
             STATE_DIR.mkdir(parents=True, exist_ok=True)
