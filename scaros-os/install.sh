@@ -30,6 +30,22 @@ echo "Scaros va démarrer automatiquement sur le compte « $USER_NAME »."
 export DEBIAN_FRONTEND=noninteractive
 apt_install() { apt-get install -y --no-install-recommends "$@"; }
 
+write_polkit_rule() {
+  # le compte de la box gère Wi-Fi, Bluetooth, alimentation et mises à jour d'applis sans mot de passe
+  mkdir -p /etc/polkit-1/rules.d
+  cat > /etc/polkit-1/rules.d/50-scaros.rules <<EOF
+// Scaros OS : le compte « $1 » pilote le Wi-Fi, l'alimentation et les applis depuis le menu.
+polkit.addRule(function (action, subject) {
+  if (subject.user == "$1" &&
+      (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
+       action.id.indexOf("org.freedesktop.login1.") == 0 ||
+       action.id.indexOf("org.freedesktop.Flatpak.") == 0)) {
+    return polkit.Result.YES;
+  }
+});
+EOF
+}
+
 # ---------------------------------------------------------------------------
 step "1/9 Paquets du système (affichage, son, manette, vidéo)"
 apt-get update
@@ -118,6 +134,7 @@ EOF
 
 # ---------------------------------------------------------------------------
 step "5/9 Compte « $USER_NAME » : démarrage automatique de Scaros"
+write_polkit_rule "$USER_NAME"
 for g in input video render audio bluetooth; do
   getent group "$g" >/dev/null && usermod -aG "$g" "$USER_NAME"
 done

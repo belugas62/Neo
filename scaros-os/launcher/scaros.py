@@ -184,6 +184,14 @@ class Scaros:
         self.audio_device = None
         self.bt_scanning = False
         self.dry_bt = []             # appareils Bluetooth simulés en --dry-run
+        self.wifi_scanning = False
+        self.apps_updating = False
+        self.dry_wifi = [            # réseaux simulés en --dry-run
+            {"ssid": "Freebox-3A2C1F", "signal": 82, "secure": True, "known": True, "active": True},
+            {"ssid": "Livebox-9F10", "signal": 61, "secure": True, "known": False, "active": False},
+            {"ssid": "Bbox-55AA12", "signal": 38, "secure": True, "known": False, "active": False},
+            {"ssid": "Wifi invités", "signal": 47, "secure": False, "known": False, "active": False},
+        ]
 
     # ---------- réglages ----------
     def _load_settings(self):
@@ -205,7 +213,7 @@ class Scaros:
 
     def wifi(self):
         if DRY:
-            return "Wi-Fi de test"
+            return next((n["ssid"] for n in self.dry_wifi if n["active"]), None)
         code, out = run(["nmcli", "-t", "-f", "ACTIVE,SSID", "dev", "wifi"], timeout=4, quiet=True)
         for line in out.splitlines():
             if line.startswith("yes:"):
@@ -230,7 +238,8 @@ class Scaros:
                          for k, v in self.apps.items()},
                 "remote": {"url": f"http://{ip}:{self.port}/remote", "phones": self.phone_count(),
                            "qr": qrcode is not None},
-                "wifi": self.wifi(), "ip": ip, "info": system_info(),
+                "wifi": self.wifi(), "wifiList": self.wifi_networks(), "ip": ip, "info": system_info(),
+                "prefs": self.settings.get("ui", {}),
                 "audio": {"mode": self.audio_mode, "target": self.audio_target, "device": self.audio_device},
                 "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning, "audio": bt_audio_available()},
             }
@@ -544,7 +553,8 @@ class Scaros:
         code, out = run(["bluetoothctl", "info", mac], timeout=5, quiet=True)
         if code != 0 or "Device" not in out:
             return None
-        info = {"mac": mac.upper(), "name": mac, "paired": False, "connected": False, "kind": "other"}
+        info = {"mac": mac.upper(), "name": mac, "paired": False, "connected": False, "kind": "other",
+                "public": "(public)" in out.splitlines()[0]}
         for line in out.splitlines():
             key, _, value = line.strip().partition(": ")
             if key in ("Name", "Alias") and value:
@@ -572,6 +582,15 @@ class Scaros:
                 unnamed = re.fullmatch(r"(?:[0-9A-F]{2}[-:]){5}[0-9A-F]{2}", info["name"], re.I)
                 if info["paired"] or (info["kind"] in ("audio", "input") and not unnamed):
                     devices.append(info)
+        # Les AirPods (et d'autres) se montrent sous deux adresses : la vraie, appairée, et une
+        # adresse Bluetooth LE qui change. On garde une seule ligne par nom, la meilleure.
+        best = {}
+        for d in devices:
+            key = d["name"].lower()
+            rank = (d["connected"], d["paired"], d.get("public", True), d["kind"] != "other")
+            if key not in best or rank > best[key][0]:
+                best[key] = (rank, d)
+        devices = [d for _, d in best.values()]
         devices.sort(key=lambda d: (not d["connected"], not d["paired"], d["name"].lower()))
         return devices
 
@@ -612,7 +631,8 @@ class Scaros:
 
     def bt_connect(self, mac):
         info = self._bt_info(mac) or {"name": mac, "paired": False, "kind": "other"}
-        self.bus.emit("btmsg", state="connecting", name=info["name"])
+        self.bus.emit("btmsg", state="connecting", name=info["name"], mac=mac)
+        out = ""
         if DRY:
             time.sleep(1.2)
             for d in self.dry_bt:
@@ -622,23 +642,35 @@ class Scaros:
         else:
             if not info["paired"]:
                 log.info("appairage %s : %s", mac, self._bt_cmd("--agent", "NoInputNoOutput", "pair", mac))
+            # « de confiance » : l'appareil pourra se reconnecter tout seul la prochaine fois
             self._bt_cmd("trust", mac, timeout=10)
-            log.info("connexion %s : %s", mac, self._bt_cmd("connect", mac))
-            # la commande peut échouer alors que l'appareil finit de se connecter juste après
             ok = False
-            for _ in range(8):
-                now = self._bt_info(mac)
-                if now and now["connected"]:
-                    ok = True
+            for attempt in range(3):
+                out = self._bt_cmd("connect", mac)
+                log.info("connexion %s (essai %s) : %s", mac, attempt + 1, out)
+                # la commande peut échouer alors que l'appareil finit de se connecter juste après
+                for _ in range(5):
+                    now = self._bt_info(mac)
+                    if now and now["connected"]:
+                        ok = True
+                        break
+                    time.sleep(1)
+                if ok or re.search(r"AuthenticationFailed|Authentication Rejected|Key Missing|profile-unavailable", out):
                     break
-                time.sleep(1)
         if ok and info["kind"] == "audio":
             self.settings["audio_bt"] = mac.upper()
             self._save_settings()
-        state = "connected" if ok else "failed"
-        if info["kind"] == "audio" and not bt_audio_available():
+        if ok:
+            state = "connected"
+        elif info["kind"] == "audio" and (not bt_audio_available() or "profile-unavailable" in out):
             state = "noaudio"
-        self.bus.emit("btmsg", state=state, name=info["name"])
+        elif info["paired"] and re.search(r"AuthenticationFailed|Authentication Rejected|Key Missing", out):
+            state = "repair"
+        elif re.search(r"page-timeout|Host is down|not available|create-socket|busy", out, re.I):
+            state = "unreachable"
+        else:
+            state = "failed"
+        self.bus.emit("btmsg", state=state, name=info["name"], mac=mac)
         self._bt_changed()
 
     def _bt_cmd(self, *args, timeout=30):
@@ -673,6 +705,133 @@ class Scaros:
             self._save_settings()
         self.bus.emit("btmsg", state="removed", name=info["name"])
         self._bt_changed()
+
+    # ---------- Wi-Fi ----------
+    def _nm(self, *args, timeout=20):
+        """nmcli sans jamais écrire la commande dans le journal (elle peut contenir un mot de passe)."""
+        if not shutil.which("nmcli"):
+            return 127, "nmcli absent"
+        try:
+            p = subprocess.run(["nmcli", *args], capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return 124, "délai dépassé"
+        return p.returncode, (p.stdout or "") + (p.stderr or "")
+
+    def _wifi_known(self):
+        code, out = self._nm("-t", "-f", "NAME,TYPE", "connection", "show", timeout=10)
+        names = set()
+        for line in out.splitlines():
+            parts = re.split(r"(?<!\\):", line)
+            if len(parts) >= 2 and parts[-1].endswith("wireless"):
+                names.add(":".join(parts[:-1]).replace("\\:", ":"))
+        return names
+
+    def wifi_networks(self):
+        """Réseaux Wi-Fi visibles, du connecté au plus faible."""
+        if DRY:
+            return sorted((dict(n) for n in self.dry_wifi), key=lambda n: (not n["active"], not n["known"], -n["signal"]))
+        code, out = self._nm("-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", timeout=15)
+        if code != 0:
+            return []
+        known = self._wifi_known()
+        nets = {}
+        for line in out.splitlines():
+            parts = [p.replace("\\:", ":") for p in re.split(r"(?<!\\):", line)]
+            if len(parts) < 4 or not parts[1]:
+                continue
+            inuse, ssid, signal, security = parts[0], parts[1], parts[2], parts[3]
+            net = {"ssid": ssid, "signal": int(signal) if signal.isdigit() else 0,
+                   "secure": security not in ("", "--"), "active": inuse == "*", "known": ssid in known}
+            old = nets.get(ssid)
+            if old is None or net["active"] or (not old["active"] and net["signal"] > old["signal"]):
+                nets[ssid] = net
+        return sorted(nets.values(), key=lambda n: (not n["active"], not n["known"], -n["signal"]))
+
+    def _wifi_changed(self):
+        self.bus.emit("wifi", networks=self.wifi_networks(), scanning=self.wifi_scanning, current=self.wifi(), ip=lan_ip())
+
+    def wifi_scan(self):
+        if self.wifi_scanning:
+            return
+        self.wifi_scanning = True
+        self._wifi_changed()
+        try:
+            if DRY:
+                time.sleep(1.5)
+            else:
+                self._nm("device", "wifi", "rescan", timeout=15)
+                time.sleep(3)
+        finally:
+            self.wifi_scanning = False
+            self._wifi_changed()
+
+    def wifi_connect(self, ssid, password=None):
+        self.bus.emit("wifimsg", state="connecting", ssid=ssid)
+        if DRY:
+            time.sleep(1.5)
+            net = next((n for n in self.dry_wifi if n["ssid"] == ssid), None)
+            ok = bool(net) and (not net["secure"] or net["known"] and not password or password == "scaros123")
+            state = "connected" if ok else ("needpass" if net and net["secure"] and not password else "badpass")
+            if ok:
+                for n in self.dry_wifi:
+                    n["active"] = n["ssid"] == ssid
+                net["known"] = True
+        else:
+            known = ssid in self._wifi_known()
+            if known and not password:
+                code, out = self._nm("connection", "up", "id", ssid, timeout=60)
+            else:
+                if known:
+                    self._nm("connection", "delete", "id", ssid)
+                args = ["device", "wifi", "connect", ssid] + (["password", password] if password else [])
+                code, out = self._nm(*args, timeout=60)
+                if code != 0:
+                    self._nm("connection", "delete", "id", ssid)  # pas de profil avec un mauvais mot de passe
+            ok = code == 0
+            secrets = re.search(r"secret|password|psk|802-1x|key", out, re.I)
+            state = "connected" if ok else ("needpass" if known and not password else "badpass" if secrets else "failed")
+            log.info("Wi-Fi %s : %s", ssid, "connecté" if ok else out.strip()[-200:])
+        self.bus.emit("wifimsg", state=state, ssid=ssid)
+        self._wifi_changed()
+        return ok
+
+    def wifi_forget(self, ssid):
+        if DRY:
+            for n in self.dry_wifi:
+                if n["ssid"] == ssid:
+                    n.update(known=False, active=False)
+        else:
+            self._nm("connection", "delete", "id", ssid)
+        self.bus.emit("wifimsg", state="forgotten", ssid=ssid)
+        self._wifi_changed()
+
+    # ---------- applis : mises à jour ----------
+    def update_apps(self):
+        if self.apps_updating:
+            return
+        self.apps_updating = True
+        self.bus.emit("appsmsg", state="updating")
+        try:
+            if DRY:
+                time.sleep(2)
+                code = 0
+            else:
+                code = run(["flatpak", "update", "-y", "--noninteractive"], timeout=1800)[0]
+            self.refresh_installed()
+            self.bus.emit("appsmsg", state="done" if code == 0 else "failed")
+        finally:
+            self.apps_updating = False
+
+    # ---------- réglages de l'interface (taille du texte, veille auto) ----------
+    PREFS = {"textScale": ("normal", "large", "xlarge"), "autoSleep": (0, 15, 30, 60)}
+
+    def set_pref(self, key, value):
+        if key not in self.PREFS or value not in self.PREFS[key]:
+            return False
+        self.settings.setdefault("ui", {})[key] = value
+        self._save_settings()
+        self.bus.emit("prefs", prefs=self.settings["ui"])
+        return True
 
     # ---------- écrans ----------
     def hdmi_connected(self):
@@ -1075,6 +1234,24 @@ class Handler(BaseHTTPRequestHandler):
             return self.json({"ok": True})
         if path == "/api/hello":
             return self.json({"ok": True})
+        if path == "/api/wifi/scan":
+            threading.Thread(target=a.wifi_scan, daemon=True).start()
+            return self.json({"ok": True})
+        if path in ("/api/wifi/connect", "/api/wifi/forget"):
+            ssid, password = body.get("ssid"), body.get("password")
+            if not isinstance(ssid, str) or not 0 < len(ssid) <= 64 or (password is not None and (not isinstance(password, str) or len(password) > 128)):
+                return self.json({"error": "réseau invalide"}, 400)
+            if path == "/api/wifi/connect":
+                threading.Thread(target=a.wifi_connect, args=(ssid, password or None), daemon=True).start()
+            else:
+                threading.Thread(target=a.wifi_forget, args=(ssid,), daemon=True).start()
+            return self.json({"ok": True})
+        if path == "/api/apps/update":
+            threading.Thread(target=a.update_apps, daemon=True).start()
+            return self.json({"ok": True})
+        if path == "/api/prefs":
+            ok = a.set_pref(str(body.get("key")), body.get("value"))
+            return self.json({"ok": ok}, 200 if ok else 400)
         if path == "/api/audio":
             ok = a.set_audio_mode(str(body.get("mode")), body.get("mac") or None)
             return self.json({"ok": ok}, 200 if ok else 400)

@@ -32,15 +32,18 @@
   --font: "Figtree", "Segoe UI", system-ui, sans-serif;
   --font-brand: "Unbounded", "Figtree", system-ui, sans-serif;
   --u: min(1vw, 1.7778vh);
+  --fs: 1;
   --ease: cubic-bezier(.2, .8, .2, 1);
   --spring: cubic-bezier(.3, 1.3, .45, 1);
   color-scheme: dark;
 }
 html, body { height: 100%; }
 html { font-size: var(--u); background: #000; }
+html[data-text="large"] { --fs: 1.12; }
+html[data-text="xlarge"] { --fs: 1.25; }
 body {
   margin: 0; background: var(--ink); color: var(--text);
-  font-family: var(--font); font-size: 1.65rem; line-height: 1.4;
+  font-family: var(--font); font-size: calc(1.65rem * var(--fs)); line-height: 1.4;
   overflow: hidden; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
 }
 [hidden] { display: none !important; }
@@ -79,12 +82,12 @@ button { font: inherit; color: inherit; }
 }
 .brand { display: flex; align-items: center; gap: .9rem; opacity: .9; }
 .brand .mark { width: 3rem; height: 3rem; }
-.brand-word { font-family: var(--font-brand); font-weight: 500; font-size: 1.8rem; letter-spacing: -.01em; }
+.brand-word { font-family: var(--font-brand); font-weight: 500; font-size: calc(1.8rem * var(--fs)); letter-spacing: -.01em; }
 .status-right { display: flex; align-items: center; gap: 1.6rem; color: var(--text-2); }
 .st { display: grid; place-items: center; transition: opacity .3s; }
 .st .ic { width: 1.9rem; height: 1.9rem; }
 .st.dim { opacity: .35; }
-.clock { font-size: 2.4rem; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.clock { font-size: calc(2.4rem * var(--fs)); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 
 .shelf-info {
   position: absolute; z-index: 2; top: 15.6rem; max-width: 56rem;
@@ -92,10 +95,10 @@ button { font: inherit; color: inherit; }
 }
 .shelf-info.in { animation: infoIn .5s var(--ease); }
 @keyframes infoIn { from { opacity: 0; transform: translateY(.6rem); } }
-.kicker { margin: 0; font-size: 1.4rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); }
-.shelf-desc { margin: .8rem 0 0; font-size: 2.9rem; font-weight: 600; line-height: 1.25; letter-spacing: -.015em; text-wrap: balance; }
+.kicker { margin: 0; font-size: calc(1.4rem * var(--fs)); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); }
+.shelf-desc { margin: .8rem 0 0; font-size: calc(2.9rem * var(--fs)); font-weight: 600; line-height: 1.25; letter-spacing: -.015em; text-wrap: balance; }
 .chips { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1.2rem 0 0; padding: 0; list-style: none; }
-.chips li { padding: .45rem 1.1rem; font-size: 1.35rem; font-weight: 600; color: var(--text-2); background: var(--glass); border: 1px solid var(--line); border-radius: 99px; }
+.chips li { padding: .45rem 1.1rem; font-size: calc(1.35rem * var(--fs)); font-weight: 600; color: var(--text-2); background: var(--glass); border: 1px solid var(--line); border-radius: 99px; }
 .chips li.warn { color: var(--focus-fg); background: var(--text-2); border-color: transparent; }
 
 .dock {
@@ -134,21 +137,21 @@ button { font: inherit; color: inherit; }
 @keyframes bump { 40% { transform: translateY(-.7rem) scale(1.12) translateX(var(--bx, 0)); } }
 .icon-name {
   position: absolute; left: 50%; top: calc(100% + 1.4rem); transform: translateX(-50%);
-  white-space: nowrap; font-size: 1.9rem; font-weight: 600; opacity: 0; transition: opacity .25s ease;
+  white-space: nowrap; font-size: calc(1.9rem * var(--fs)); font-weight: 600; opacity: 0; transition: opacity .25s ease;
 }
 .icon.is-focus .icon-name { opacity: 1; }
-.badge { position: absolute; right: .7rem; top: .7rem; z-index: 1; padding: .2rem .55rem; font-size: .95rem; font-weight: 700; color: var(--focus-fg); background: var(--text-2); border-radius: .35rem; }
+.badge { position: absolute; right: .7rem; top: .7rem; z-index: 1; padding: .2rem .55rem; font-size: calc(.95rem * var(--fs)); font-weight: 700; color: var(--focus-fg); background: var(--text-2); border-radius: .35rem; }
 
 .foot {
   position: absolute; bottom: 2rem; left: 0; right: 0; z-index: 2;
-  display: flex; align-items: center; justify-content: space-between; font-size: 1.4rem; color: var(--muted);
+  display: flex; align-items: center; justify-content: space-between; font-size: calc(1.4rem * var(--fs)); color: var(--muted);
   padding-left: max(16px, env(safe-area-inset-left, 0px), 6rem);
   padding-right: max(16px, env(safe-area-inset-right, 0px), 6rem);
 }
-.ver { font-size: 1.2rem; }
+.ver { font-size: calc(1.2rem * var(--fs)); }
 .hint-list { display: flex; gap: 1.8rem; }
 .hint { display: flex; align-items: center; gap: .55rem; }
-.bg { display: inline-grid; place-items: center; min-width: 2.3rem; height: 2.3rem; padding: 0 .1rem; box-sizing: border-box; border-radius: 99px; font-size: 1.2rem; font-weight: 700; color: var(--ink); }
+.bg { display: inline-grid; place-items: center; min-width: 2.3rem; height: 2.3rem; padding: 0 .1rem; box-sizing: border-box; border-radius: 99px; font-size: calc(1.2rem * var(--fs)); font-weight: 700; color: var(--ink); }
 .bg .ic { width: 1.45rem; height: 1.45rem; }
 .g-a { background: var(--pad-a); }
 .g-b { background: var(--pad-b); }
@@ -179,7 +182,7 @@ button { font: inherit; color: inherit; }
   transform: translateX(110%);
 }
 .pane.side.on { transform: none; }
-.crumbs { margin: 0; font-size: 1.45rem; font-weight: 600; color: var(--muted); }
+.crumbs { margin: 0; font-size: calc(1.45rem * var(--fs)); font-weight: 600; color: var(--muted); }
 .crumbs b { color: var(--text-2); font-weight: 600; }
 .pane-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 30% minmax(0, 1fr); gap: 4rem; margin-top: 1.4rem; }
 .pane-art { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.8rem; }
@@ -191,13 +194,13 @@ button { font: inherit; color: inherit; }
 .art-tile .ic { width: 8rem; height: 8rem; stroke-width: 1.6; }
 .art-tile > svg:not(.ic) { width: 60%; height: 60%; }
 .art-tile svg.mark { width: 100%; height: 100%; }
-.art-caption { margin: 0; max-width: 26rem; text-align: center; font-size: 1.55rem; color: var(--muted); }
+.art-caption { margin: 0; max-width: 26rem; text-align: center; font-size: calc(1.55rem * var(--fs)); color: var(--muted); }
 .pane-main { min-height: 0; overflow-y: auto; padding: 1rem 1.2rem 3rem; margin: -1rem -1.2rem 0; scrollbar-width: none; scroll-padding-bottom: 4rem; }
 /* fondu en bas tant qu'il reste des réglages plus bas */
 .pane-main.more { -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent); mask-image: linear-gradient(180deg, #000 82%, transparent); }
 .pane-main::-webkit-scrollbar { display: none; }
-.pane-title { margin: 0; font-size: 4.2rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
-.pane-lead { margin: .7rem 0 1.8rem; max-width: 52rem; font-size: 1.75rem; color: var(--text-2); }
+.pane-title { margin: 0; font-size: calc(4.2rem * var(--fs)); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+.pane-lead { margin: .7rem 0 1.8rem; max-width: 52rem; font-size: calc(1.75rem * var(--fs)); color: var(--text-2); }
 .opts { display: flex; flex-direction: column; gap: .55rem; }
 .opt {
   display: flex; align-items: center; gap: 1.5rem; width: 100%; min-height: 5.8rem; box-sizing: border-box;
@@ -210,22 +213,22 @@ button { font: inherit; color: inherit; }
 .opt.is-focus > .ic, .opt.is-focus .opt-desc, .opt.is-focus .opt-val { color: var(--focus-muted); }
 .opt[disabled] { cursor: default; opacity: .4; }
 .opt-main { display: flex; flex-direction: column; gap: .15rem; flex: 1; min-width: 0; }
-.opt-title { font-size: 1.95rem; font-weight: 600; }
-.opt-desc { font-size: 1.45rem; color: var(--muted); }
-.opt-val { flex: none; font-size: 1.65rem; color: var(--text-2); white-space: nowrap; }
+.opt-title { font-size: calc(1.95rem * var(--fs)); font-weight: 600; }
+.opt-desc { font-size: calc(1.45rem * var(--fs)); color: var(--muted); }
+.opt-val { flex: none; font-size: calc(1.65rem * var(--fs)); color: var(--text-2); white-space: nowrap; }
 .chev { flex: none; width: 1.8rem; height: 1.8rem; color: var(--muted); }
 .opt.is-focus .chev { color: var(--focus-muted); }
 .check { flex: none; width: 2.3rem; height: 2.3rem; color: var(--text); opacity: 0; }
 .opt[aria-checked="true"] .check { opacity: 1; }
 .opt.is-focus .check { color: var(--focus-fg); }
-.opt-group { margin: 2rem 0 .6rem; padding: 0 .4rem; font-size: 1.3rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.opt-group { margin: 2rem 0 .6rem; padding: 0 .4rem; font-size: calc(1.3rem * var(--fs)); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .opt-group:first-child { margin-top: 0; }
-.opt-empty, .note { margin: 0; padding: .4rem .4rem; font-size: 1.6rem; color: var(--muted); }
+.opt-empty, .note { margin: 0; padding: .4rem .4rem; font-size: calc(1.6rem * var(--fs)); color: var(--muted); }
 .card { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 1.6rem; padding: 1.3rem 1.5rem; border-radius: 1.1rem; background: var(--glass); border: 1px solid var(--line); }
 .sdot { flex: none; width: 1rem; height: 1rem; border-radius: 50%; background: var(--muted); }
 .sdot.on { background: var(--pad-a); box-shadow: 0 0 .8rem var(--pad-a); }
-.card-title { font-weight: 600; font-size: 1.8rem; }
-.card-sub { font-size: 1.45rem; color: var(--muted); }
+.card-title { font-weight: 600; font-size: calc(1.8rem * var(--fs)); }
+.card-sub { font-size: calc(1.45rem * var(--fs)); color: var(--muted); }
 .facts { display: grid; grid-template-columns: auto 1fr; gap: .9rem 2.4rem; margin: 0 0 2rem; padding: 1.5rem; border-radius: 1.1rem; background: var(--glass); }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
@@ -236,8 +239,8 @@ button { font: inherit; color: inherit; }
 .qr-card svg, .qr-card img { display: block; width: 13rem; height: 13rem; border-radius: 1rem; background: #fff; }
 .qr-addr { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-2); }
 .steps { display: flex; flex-direction: column; gap: 1.1rem; margin: 0; padding: 0; list-style: none; counter-reset: s; }
-.steps li { display: flex; align-items: center; gap: 1.2rem; font-size: 1.75rem; color: var(--text-2); counter-increment: s; }
-.steps li::before { content: counter(s); flex: none; display: grid; place-items: center; width: 2.8rem; height: 2.8rem; font-weight: 700; font-size: 1.4rem; color: var(--text); border: 1px solid var(--line); border-radius: 50%; }
+.steps li { display: flex; align-items: center; gap: 1.2rem; font-size: calc(1.75rem * var(--fs)); color: var(--text-2); counter-increment: s; }
+.steps li::before { content: counter(s); flex: none; display: grid; place-items: center; width: 2.8rem; height: 2.8rem; font-weight: 700; font-size: calc(1.4rem * var(--fs)); color: var(--text); border: 1px solid var(--line); border-radius: 50%; }
 kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border: 1px solid var(--line); border-radius: .35rem; }
 
 /* écran télécommande : le QR code en grand */
@@ -245,22 +248,45 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .qr-screen { flex: 1; min-height: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 5.5rem; }
 .qr-big { display: grid; place-items: center; width: min(40rem, 72vh); aspect-ratio: 1; box-sizing: border-box; padding: 1.6rem; border-radius: 2.4rem; background: #fff; box-shadow: 0 3rem 6rem -2rem #000000d0; }
 .qr-big svg, .qr-big img { display: block; width: 100%; height: 100%; }
-.qr-big .qr-wait { margin: 0; padding: 2rem; text-align: center; font-size: 1.6rem; font-weight: 600; color: var(--focus-fg); }
+.qr-big .qr-wait { margin: 0; padding: 2rem; text-align: center; font-size: calc(1.6rem * var(--fs)); font-weight: 600; color: var(--focus-fg); }
 .qr-side { min-width: 0; }
-.qr-title { margin: .6rem 0 0; font-size: 3.6rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.08; text-wrap: balance; }
-.qr-url { margin: 1.6rem 0 2rem; font-size: 2.6rem; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.qr-url small { display: block; margin-bottom: .2rem; font-size: 1.3rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
-.qr-status { display: flex; align-items: center; gap: 1rem; margin: 2.2rem 0 1.6rem; font-size: 1.75rem; font-weight: 600; }
+.qr-title { margin: .6rem 0 0; font-size: calc(3.6rem * var(--fs)); font-weight: 700; letter-spacing: -.03em; line-height: 1.08; text-wrap: balance; }
+.qr-url { margin: 1.6rem 0 2rem; font-size: calc(2.6rem * var(--fs)); font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.qr-url small { display: block; margin-bottom: .2rem; font-size: calc(1.3rem * var(--fs)); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.qr-status { display: flex; align-items: center; gap: 1rem; margin: 2.2rem 0 1.6rem; font-size: calc(1.75rem * var(--fs)); font-weight: 600; }
 .qr-side .opts { max-width: 34rem; }
+
+/* clavier à l'écran (mots de passe Wi-Fi) */
+.pw-field { display: flex; align-items: center; gap: 1rem; min-height: 5rem; margin-bottom: 1.4rem; padding: 0 1.6rem; border-radius: 1.1rem; background: #00000055; border: .15rem solid var(--line); font-size: calc(2rem * var(--fs)); font-weight: 600; letter-spacing: .04em; overflow: hidden; }
+.pw-field .caret { width: .15rem; height: 2.2rem; background: var(--text); animation: caret 1s steps(2) infinite; }
+.pw-field .ph { color: var(--muted); font-weight: 500; letter-spacing: 0; }
+@keyframes caret { 50% { opacity: 0; } }
+.kb { display: flex; flex-direction: column; gap: .55rem; margin-bottom: 1.2rem; }
+.kb-row { display: flex; gap: .55rem; }
+.kb-key { flex: 1 1 0; min-width: 0; height: 4.4rem; padding: 0; border: 0; border-radius: .8rem; background: var(--glass-2); font-size: calc(1.7rem * var(--fs)); font-weight: 600; cursor: pointer; transition: background .15s ease, color .15s ease, transform .2s var(--spring); }
+.kb-key.w2 { flex-grow: 2; } .kb-key.w3 { flex-grow: 3; } .kb-key.w5 { flex-grow: 5; }
+.kb-key.alt { background: var(--glass); font-size: calc(1.35rem * var(--fs)); color: var(--text-2); }
+.kb-key.go { background: #2f7cf6; color: #fff; }
+.kb-key.on { background: var(--text-2); color: var(--focus-fg); }
+.kb-key:focus { outline: none; }
+.kb-key.is-focus { background: var(--focus-bg); color: var(--focus-fg); transform: scale(1.06); box-shadow: 0 .8rem 1.6rem -.8rem #000; }
+.kb-key .ic { width: 2rem; height: 2rem; margin: 0 auto; }
+.pane-grid.wide { grid-template-columns: 22% minmax(0, 1fr); }
+.signal { display: inline-flex; align-items: flex-end; gap: .2rem; height: 1.6rem; }
+.signal i { width: .32rem; border-radius: 2px; background: currentColor; opacity: .25; }
+.signal i:nth-child(1) { height: 30%; } .signal i:nth-child(2) { height: 55%; } .signal i:nth-child(3) { height: 80%; } .signal i:nth-child(4) { height: 100%; }
+.signal i.on { opacity: 1; }
+.meter { flex: 0 0 14rem; height: .55rem; border-radius: 9px; background: color-mix(in oklab, currentColor 20%, transparent); overflow: hidden; }
+.meter i { display: block; height: 100%; background: currentColor; border-radius: 9px; }
 
 /* control center */
 .cc-head { margin-bottom: 1.6rem; }
-.cc-time { margin: 0; font-size: 5rem; font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
-.cc-date { margin: .4rem 0 0; font-size: 1.7rem; color: var(--text-2); }
+.cc-time { margin: 0; font-size: calc(5rem * var(--fs)); font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.cc-date { margin: .4rem 0 0; font-size: calc(1.7rem * var(--fs)); color: var(--text-2); }
 .quick { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; margin-bottom: 1.2rem; }
 .opt.q { flex-direction: column; justify-content: center; gap: .6rem; min-height: 7rem; padding: .9rem .6rem; text-align: center; }
 .opt.q > .ic { width: 2.6rem; height: 2.6rem; }
-.opt.q .opt-title { font-size: 1.6rem; }
+.opt.q .opt-title { font-size: calc(1.6rem * var(--fs)); }
 .pane.side .opts { gap: .45rem; }
 .pane.side .opt { min-height: 5.2rem; }
 
@@ -276,15 +302,15 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .launch-logo { width: 22rem; height: 13rem; display: grid; place-items: center; transform: scale(.55); transition: transform .6s var(--ease); }
 .launch.on .launch-logo { transform: none; }
 .launch-logo svg { width: 100%; height: 100%; }
-.launch-status { margin: .6rem 0 0; font-size: 2rem; font-weight: 600; opacity: .85; }
+.launch-status { margin: .6rem 0 0; font-size: calc(2rem * var(--fs)); font-weight: 600; opacity: .85; }
 .launch-bar { position: relative; width: 16rem; height: .25rem; overflow: hidden; border-radius: 9px; background: color-mix(in oklab, currentColor 22%, transparent); }
 .launch-bar i { position: absolute; top: 0; bottom: 0; width: 40%; background: currentColor; border-radius: 9px; animation: indet 1.1s ease-in-out infinite; }
 @keyframes indet { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
-.launch-note { margin: 0; font-size: 1.8rem; line-height: 1.5; opacity: .9; text-wrap: pretty; }
-.launch-fine { margin: 0; font-size: 1.45rem; opacity: .65; }
+.launch-note { margin: 0; font-size: calc(1.8rem * var(--fs)); line-height: 1.5; opacity: .9; text-wrap: pretty; }
+.launch-fine { margin: 0; font-size: calc(1.45rem * var(--fs)); opacity: .65; }
 .launch.ready .launch-bar { display: none; }
 .launch:not(.ready) .launch-note, .launch:not(.ready) .launch-fine { display: none; }
-.l-back { display: inline-flex; align-items: center; gap: .7rem; margin-top: 1rem; padding: .9rem 1.7rem .9rem 1rem; font-size: 1.65rem; border: 1px solid color-mix(in oklab, currentColor 30%, transparent); border-radius: 99px; background: color-mix(in oklab, currentColor 8%, transparent); font-weight: 600; cursor: pointer; }
+.l-back { display: inline-flex; align-items: center; gap: .7rem; margin-top: 1rem; padding: .9rem 1.7rem .9rem 1rem; font-size: calc(1.65rem * var(--fs)); border: 1px solid color-mix(in oklab, currentColor 30%, transparent); border-radius: 99px; background: color-mix(in oklab, currentColor 8%, transparent); font-weight: 600; cursor: pointer; }
 .l-back:focus-visible { outline: .18rem solid currentColor; outline-offset: .2rem; }
 
 /* ---------- démarrage ---------- */
@@ -292,7 +318,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .boot.out { opacity: 0; pointer-events: none; }
 .boot-logo { display: flex; align-items: center; }
 .boot .mark { width: 9rem; height: 9rem; opacity: 0; transform: scale(.86); }
-.boot-word { overflow: hidden; max-width: 0; opacity: 0; white-space: nowrap; font-family: var(--font-brand); font-weight: 500; font-size: 5rem; letter-spacing: -.01em; line-height: 1; }
+.boot-word { overflow: hidden; max-width: 0; opacity: 0; white-space: nowrap; font-family: var(--font-brand); font-weight: 500; font-size: calc(5rem * var(--fs)); letter-spacing: -.01em; line-height: 1; }
 .boot-word span { display: inline-block; padding-left: 2.2rem; }
 .boot.run .mark { animation: markIn 1s var(--ease) .25s forwards; }
 .boot.run .mark .sweep { animation: sweep 1.2s ease .7s forwards; }
@@ -312,9 +338,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .off[data-kind="off"] .saver-bg, .off[data-kind="off"] .saver-time, .off[data-kind="off"] .saver-date { display: none; }
 @keyframes aurora { from { transform: translate3d(-4%, -3%, 0) rotate(0deg); } to { transform: translate3d(4%, 3%, 0) rotate(12deg); } }
 .saver { position: relative; }
-.saver-time { margin: 0; font-family: var(--font-brand); font-weight: 300; font-size: 10rem; line-height: 1; color: #ffffffd8; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.saver-date { margin: 1rem 0 0; font-size: 2.5rem; font-weight: 600; color: #ffffffa8; text-transform: capitalize; }
-.off-msg { margin: 2.4rem 0 0; font-size: 1.65rem; color: var(--muted); }
+.saver-time { margin: 0; font-family: var(--font-brand); font-weight: 300; font-size: calc(10rem * var(--fs)); line-height: 1; color: #ffffffd8; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.saver-date { margin: 1rem 0 0; font-size: calc(2.5rem * var(--fs)); font-weight: 600; color: #ffffffa8; text-transform: capitalize; }
+.off-msg { margin: 2.4rem 0 0; font-size: calc(1.65rem * var(--fs)); color: var(--muted); }
 .off-led { position: absolute; right: max(3rem, calc(env(safe-area-inset-right, 0px) + 16px)); bottom: max(2.4rem, calc(env(safe-area-inset-bottom, 0px) + 16px)); width: .7rem; height: .7rem; border-radius: 50%; background: var(--led); box-shadow: 0 0 .9rem var(--led); }
 .blink { position: fixed; inset: 0; z-index: 40; background: #000; opacity: 0; pointer-events: none; }
 .blink.run { animation: blinkk .7s ease; }
@@ -325,7 +351,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   position: fixed; z-index: 60; top: max(5.4rem, calc(env(safe-area-inset-top, 0px) + 16px)); right: max(16px, env(safe-area-inset-right, 0px), 6rem);
   display: flex; align-items: center; gap: 1.1rem; box-sizing: border-box; max-width: min(48rem, calc(100% - 32px));
   padding: 1rem 1.4rem; border-radius: 1.2rem; background: #161b24f2; border: 1px solid var(--line); box-shadow: 0 1.4rem 3rem -1rem #000;
-  font-size: 1.6rem; font-weight: 500; opacity: 0; transform: translateY(-.8rem); transition: opacity .3s ease, transform .35s var(--ease); pointer-events: none;
+  font-size: calc(1.6rem * var(--fs)); font-weight: 500; opacity: 0; transform: translateY(-.8rem); transition: opacity .3s ease, transform .35s var(--ease); pointer-events: none;
 }
 .toast.on { opacity: 1; transform: none; }
 /* panneau ouvert : la notification passe en bas à gauche pour ne rien cacher */
@@ -342,7 +368,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .vol.on { opacity: 1; transform: translate(0, -50%); }
 .vol-track { position: relative; width: .5rem; height: 12rem; overflow: hidden; border-radius: 9px; background: #ffffff1f; }
 .vol-track i { position: absolute; inset: 0; background: var(--text); transform-origin: bottom; transform: scaleY(var(--v, .35)); transition: transform .15s ease; }
-.vol-num { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.vol-num { font-size: calc(1.7rem * var(--fs)); font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ---------- télécommande de démo (maquette) ---------- */
 .phone {
@@ -350,27 +376,27 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   display: flex; flex-direction: column; gap: 1.1rem; width: 17rem; box-sizing: border-box;
   padding: 1.5rem 1.3rem 1.4rem; transform: translateY(-50%);
   background: #0a0d13; border: 1px solid #ffffff26; border-radius: 2.6rem; box-shadow: 0 2rem 4rem -1rem #000000d0;
-  font-size: 1rem; animation: phoneIn .45s var(--ease);
+  font-size: calc(1rem * var(--fs)); animation: phoneIn .45s var(--ease);
 }
 @keyframes phoneIn { from { opacity: 0; transform: translate(2rem, -50%); } }
-.phone-head { display: flex; align-items: center; gap: .55rem; font-size: .9rem; font-weight: 600; color: var(--text-2); }
+.phone-head { display: flex; align-items: center; gap: .55rem; font-size: calc(.9rem * var(--fs)); font-weight: 600; color: var(--text-2); }
 .live { width: .55rem; height: .55rem; border-radius: 50%; background: var(--pad-a); box-shadow: 0 0 .6rem var(--pad-a); }
 .phone-x { margin-left: auto; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: none; cursor: pointer; }
 .phone-x .ic { width: 1rem; height: 1rem; }
 .psearch { display: flex; gap: .5rem; }
-.psearch input { flex: 1; min-width: 0; box-sizing: border-box; padding: .6rem .8rem; font: inherit; font-size: .95rem; color: var(--text); background: #ffffff0f; border: 1px solid var(--line); border-radius: .7rem; }
+.psearch input { flex: 1; min-width: 0; box-sizing: border-box; padding: .6rem .8rem; font: inherit; font-size: calc(.95rem * var(--fs)); color: var(--text); background: #ffffff0f; border: 1px solid var(--line); border-radius: .7rem; }
 .dpad { display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); width: 12rem; height: 12rem; margin: .2rem auto; border-radius: 50%; background: #ffffff0b; border: 1px solid var(--line); }
 .dpad button { display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; }
 .dpad .ic { width: 1.5rem; height: 1.5rem; }
 .dpad [data-pact="up"] { grid-area: 1 / 2; }
 .dpad [data-pact="left"] { grid-area: 2 / 1; }
-.dpad [data-pact="ok"] { grid-area: 2 / 2; margin: .35rem; background: #ffffff1c; font-weight: 700; font-size: 1.05rem; }
+.dpad [data-pact="ok"] { grid-area: 2 / 2; margin: .35rem; background: #ffffff1c; font-weight: 700; font-size: calc(1.05rem * var(--fs)); }
 .dpad [data-pact="right"] { grid-area: 2 / 3; }
 .dpad [data-pact="down"] { grid-area: 3 / 2; }
 .prow { display: flex; gap: .6rem; align-items: center; }
-.pbtn { flex: 1; display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .62rem 0; border: 1px solid var(--line); border-radius: .8rem; background: #ffffff0d; font-weight: 600; font-size: .95rem; cursor: pointer; }
+.pbtn { flex: 1; display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .62rem 0; border: 1px solid var(--line); border-radius: .8rem; background: #ffffff0d; font-weight: 600; font-size: calc(.95rem * var(--fs)); cursor: pointer; }
 .pbtn .ic { width: 1.1rem; height: 1.1rem; }
-.plabel { flex: 1.2; text-align: center; font-size: .85rem; color: var(--muted); }
+.plabel { flex: 1.2; text-align: center; font-size: calc(.85rem * var(--fs)); color: var(--muted); }
 .pbtn:focus-visible, .dpad button:focus-visible, .phone-x:focus-visible { outline: .14rem solid #fff; outline-offset: .1rem; }
 .press { animation: press .22s ease; }
 @keyframes press { 50% { background: #ffffff38; transform: scale(.94); } }
@@ -387,7 +413,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .brand-word { display: none; }
   .scene-art { right: 1rem; top: 5rem; width: 14rem; height: 11rem; }
   .shelf-info { margin-top: 11rem; max-width: none; }
-  .shelf-desc { font-size: 1.5rem; }
+  .shelf-desc { font-size: calc(1.5rem * var(--fs)); }
   .dock { margin-top: 3rem; }
   .icons { flex-wrap: wrap; gap: 1.4rem 1.2rem; }
   .icon { width: calc((100% - 2.4rem) / 3); }
@@ -397,16 +423,16 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .pane { padding: 1.6rem max(16px, env(safe-area-inset-right, 0px)) 1.6rem max(16px, env(safe-area-inset-left, 0px)); }
   .pane-grid { grid-template-columns: 1fr; gap: 1.6rem; }
   .pane-art { display: none; }
-  .pane-title { font-size: 2.2rem; }
+  .pane-title { font-size: calc(2.2rem * var(--fs)); }
   .pane.side { inset: auto 0 0 0; width: auto; max-height: 88%; border-radius: 1.6rem 1.6rem 0 0; transform: translateY(105%); overflow-y: auto; }
   .remote-grid { grid-template-columns: 1fr; justify-items: center; }
   .qr-screen { grid-template-columns: 1fr; justify-items: center; gap: 2rem; }
   .qr-big { width: min(80vw, 22rem); }
-  .qr-title { font-size: 2.2rem; }
-  .qr-url { font-size: 1.8rem; }
-  .boot-word { font-size: 3rem; }
+  .qr-title { font-size: calc(2.2rem * var(--fs)); }
+  .qr-url { font-size: calc(1.8rem * var(--fs)); }
+  .boot-word { font-size: calc(3rem * var(--fs)); }
   .boot .mark { width: 6rem; height: 6rem; }
-  .saver-time { font-size: 6rem; }
+  .saver-time { font-size: calc(6rem * var(--fs)); }
   .toast { right: 16px; left: 16px; max-width: none; }
   .phone { top: auto; bottom: 0; left: 0; right: 0; width: auto; transform: none; border-radius: 1.6rem 1.6rem 0 0; padding-bottom: max(1.4rem, env(safe-area-inset-bottom, 0px)); animation: none; }
   .dpad { width: 10rem; height: 10rem; }
@@ -432,7 +458,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         <span class="st" id="st-audio" data-icon="headphones" hidden></span>
         <span class="st" id="st-phone" title="Téléphone connecté" data-icon="phone" hidden></span>
         <span class="st dim" id="st-pad" title="Aucune manette" data-icon="gamepad"></span>
-        <span class="st" title="Wi-Fi" data-icon="wifi"></span>
+        <span class="st" id="st-wifi" title="Wi-Fi" data-icon="wifi"></span>
         <span class="clock" id="clock">--:--</span>
       </div>
     </header>
@@ -563,6 +589,14 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     chevron: '<path d="M9 5l7 7-7 7"/>',
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
+    lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+    text: '<path d="M4 7V5h16v2M12 5v14M9 19h6"/>',
+    apps: '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
+    download: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
+    eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+    backspace: '<path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/>',
+    shift: '<path d="M12 4l8 8h-4.5v7h-7v-7H4z"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
     qr: '<rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h2.5v2.5H14zM18.5 18.5H21V21h-2.5zM14 19.5V21M19.5 14H21"/>'
   };
   const icon = (n, cls = 'ic') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
@@ -627,8 +661,17 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     installed: {}, pad: null, padSupport: false, phones: 0, phoneDemo: false,
     remoteUrl: 'http://scaros.local:8421/remote', qr: false, wifi: null, ip: null, info: null,
     audio: { mode: 'auto', target: 'pc', device: 'les haut-parleurs du PC' },
-    bt: { devices: [], scanning: false }, btSel: null
+    bt: { devices: [], scanning: false }, btSel: null,
+    wifiList: [
+      { ssid: 'Freebox-3A2C1F', signal: 82, secure: true, known: true, active: true },
+      { ssid: 'Livebox-9F10', signal: 61, secure: true, known: false, active: false },
+      { ssid: 'Wifi invités', signal: 47, secure: false, known: false, active: false },
+      { ssid: 'Bbox-55AA12', signal: 38, secure: true, known: false, active: false }
+    ],
+    wifiScanning: false, wifiSel: null, pw: '', pwShow: false, kbMode: 'abc', kbShift: false,
+    prefs: { textScale: 'normal', autoSleep: 0 }, appsUpdating: false
   };
+  let lastInputAt = Date.now();
   let audioReady = false, displayToastAt = 0, lastOut = 'pc';
   const computeOutput = () => state.mode === 'pc' ? 'pc' : (state.hdmi ? 'tv' : 'pc');
 
@@ -654,9 +697,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       phones: s.remote ? s.remote.phones : 0, remoteUrl: s.remote ? s.remote.url : state.remoteUrl,
       qr: !!(s.remote && s.remote.qr), wifi: s.wifi, ip: s.ip, info: s.info || null,
       audio: s.audio && s.audio.target ? s.audio : state.audio, bt: s.bt || state.bt,
+      wifiList: s.wifiList || [], prefs: { ...state.prefs, ...(s.prefs || {}) },
       installed: Object.fromEntries(Object.entries(s.apps || {}).map(([k, v]) => [k, v.installed]))
     });
     lastOut = state.output;
+    applyPrefs();
   }
   async function connect() {
     if (location.protocol === 'file:') return false;
@@ -694,6 +739,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       rerenderPane();
     } else if (m.type === 'volume') {
       if (m.level != null) showVol(m.level);
+      if (state.panel === 'sound') rerenderPane();
     } else if (m.type === 'remote') {
       const more = m.phones > state.phones;
       state.phones = m.phones;
@@ -707,6 +753,22 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       rerenderPane();
     } else if (m.type === 'btmsg') {
       btToast(m.state, m.name);
+      // échec sur un appareil : on ouvre sa fiche (réessayer, oublier)
+      if (['failed', 'unreachable', 'repair'].includes(m.state) && m.mac && state.panel === 'bluetooth') { state.btSel = m.mac; openPanel('btdevice'); }
+    } else if (m.type === 'wifi') {
+      Object.assign(state, { wifiList: m.networks || [], wifiScanning: !!m.scanning, wifi: m.current, ip: m.ip || state.ip });
+      renderStatus();
+      rerenderPane();
+    } else if (m.type === 'wifimsg') {
+      wifiToast(m.state, m.ssid);
+    } else if (m.type === 'appsmsg') {
+      state.appsUpdating = m.state === 'updating';
+      toast(m.state === 'failed' ? 'alert' : 'download', { updating: 'Mise à jour des applis… ça peut prendre quelques minutes.', done: 'Applis à jour.', failed: 'La mise à jour des applis a échoué.' }[m.state], m.state === 'updating' ? 20000 : 4000);
+      api('/api/state').then(s => { applyState(s); renderTiles(); rerenderPane(); }).catch(() => {});
+    } else if (m.type === 'prefs') {
+      state.prefs = { ...state.prefs, ...(m.prefs || {}) };
+      applyPrefs();
+      rerenderPane();
     } else if (m.type === 'pair') {
       const msg = {
         scanning: ['gamepad', 'Recherche de la manette… Maintiens son bouton d’appairage 3 secondes.', 30000],
@@ -756,6 +818,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const sa = $('#st-audio');
     sa.hidden = state.audio.target !== 'bt';
     sa.title = `Son sur ${state.audio.device}`;
+    const sw = $('#st-wifi'), cur = wifiCurrent();
+    sw.classList.toggle('dim', !cur);
+    sw.title = cur ? `Wi-Fi : ${cur}` : 'Pas de Wi-Fi';
     $('#ver').textContent = state.live ? `Scaros OS ${state.version}${state.dry ? ' · test' : ''}` : 'Scaros OS · maquette';
   }
   function renderTiles() {
@@ -786,10 +851,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (portrait()) el.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
     if (changed || !$('#sh-desc').textContent) renderShelf();
   }
-  function nearest(from, dir) {
+  function nearest(from, dir, list = tiles) {
     const a = from.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
     let best = null, score = Infinity;
-    for (const el of tiles) {
+    for (const el of list) {
       if (el === from) continue;
       const b = el.getBoundingClientRect(), dx = b.left + b.width / 2 - ax, dy = b.top + b.height / 2 - ay;
       let main, cross;
@@ -855,17 +920,80 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     return h ? `${h} h ${String(m).padStart(2, '0')}` : `${m} min`;
   }
 
+  const wifiCurrent = () => state.live ? state.wifi : (state.wifiList.find(n => n.active) || {}).ssid;
+  const phonesCount = () => state.live ? state.phones : (state.phoneDemo ? 1 : 0);
+  const TEXT_LABEL = { normal: 'Texte normal', large: 'Texte grand', xlarge: 'Texte très grand' };
+  const sigBars = v => `<span class="signal" aria-label="Signal ${v} %">${[1, 35, 55, 75].map(t => `<i class="${v >= t ? 'on' : ''}"></i>`).join('')}</span>`;
+  function appsSummary() {
+    const n = APPS.filter(a => !(state.live && state.installed[a.id] === false)).length;
+    return `${n} installée${n > 1 ? 's' : ''}`;
+  }
+  // clavier à l'écran : AZERTY, chiffres, symboles
+  const KB = {
+    abc: [['a', 'z', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['q', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm'],
+          ['⇧', 'w', 'x', 'c', 'v', 'b', 'n', "'", '-', '⌫'], ['123', ' ', '@', '.', 'OK']],
+    num: [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['!', '?', '#', '$', '%', '&', '*', '(', ')', '='],
+          ['#+=', '_', '/', ':', ';', ',', '"', '+', '⌫'], ['abc', ' ', '@', '.', 'OK']],
+    sym: [['[', ']', '{', '}', '<', '>', '~', '|', '\\', '^'], ['é', 'è', 'à', 'ç', 'ù', 'ê', 'â', 'ô', 'î', 'ë'],
+          ['123', '€', '£', '°', '§', '`', '«', '»', '⌫'], ['abc', ' ', '@', '.', 'OK']]
+  };
+  function keyboardHTML() {
+    return `<div class="kb">${KB[state.kbMode].map((r, ri) => `<div class="kb-row">${r.map((k, ci) => {
+      const act = `kb:${ri}:${ci}`;
+      if (k === '⇧') return `<button type="button" class="kb-key alt w2 ${state.kbShift ? 'on' : ''}" data-act="${act}" aria-label="Majuscule">${icon('shift')}</button>`;
+      if (k === '⌫') return `<button type="button" class="kb-key alt w2" data-act="${act}" aria-label="Effacer">${icon('backspace')}</button>`;
+      if (k === '123' || k === 'abc' || k === '#+=') return `<button type="button" class="kb-key alt w2" data-act="${act}">${k}</button>`;
+      if (k === ' ') return `<button type="button" class="kb-key alt w5" data-act="${act}">espace</button>`;
+      if (k === 'OK') return `<button type="button" class="kb-key go w3" data-act="${act}">Se connecter</button>`;
+      return `<button type="button" class="kb-key" data-act="${act}">${esc(state.kbShift ? k.toUpperCase() : k)}</button>`;
+    }).join('')}</div>`).join('')}</div>`;
+  }
+  function typeChar(ch) {
+    state.pw = (state.pw + ch).slice(0, 63);
+    if (state.kbShift) state.kbShift = false;
+  }
+  function submitPassword() {
+    const net = state.wifiList.find(n => n.ssid === state.wifiSel);
+    if (net && net.secure && state.pw.length < 8) return toast('lock', 'Un mot de passe Wi-Fi fait au moins 8 caractères.');
+    const ssid = state.wifiSel, pw = state.pw;
+    state.pw = ''; state.pwShow = false;
+    backPanel();
+    wifiConnect(ssid, pw);
+  }
+  function pressKey(r, c) {
+    const k = KB[state.kbMode][r] && KB[state.kbMode][r][c];
+    if (k === undefined) return;
+    if (k === '⇧') state.kbShift = !state.kbShift;
+    else if (k === '⌫') state.pw = state.pw.slice(0, -1);
+    else if (k === '123') { state.kbMode = 'num'; state.kbShift = false; }
+    else if (k === 'abc') state.kbMode = 'abc';
+    else if (k === '#+=') state.kbMode = 'sym';
+    else if (k === 'OK') return submitPassword();
+    else typeChar(state.kbShift ? k.toUpperCase() : k);
+    renderPanel(`kb:${r}:${c}`);
+  }
+  function pwShown() {
+    const p = state.pwShow ? state.pw : '•'.repeat(state.pw.length);
+    return p.length > 30 ? '…' + p.slice(-30) : p;
+  }
+
   // each page: title, art (left illustration), lead, body
   const PAGES = {
     settings: () => ({
       title: 'Réglages', art: 'settings', pa: '#a7adb8', pb: '#5d636e', caption: 'Tout se règle à la manette.',
-      body: `<div class="opts">
+      body: `${group('Connexions')}<div class="opts">
+          ${row('panel:wifi', 'wifi', 'Wi-Fi', '', esc(wifiCurrent() || 'Non connecté'))}
+          ${row('panel:bluetooth', 'bluetooth', 'Bluetooth', '', btSummary())}
+          ${row('panel:remote', 'phone', 'Télécommande', '', phonesCount() ? 'Connectée' : '')}
+        </div>
+        ${group('Image et son')}<div class="opts">
           ${row('panel:display', 'display', 'Écran', '', outputLabel())}
           ${row('panel:sound', 'speaker', 'Son', '', esc(shortAudio()))}
-          ${row('panel:bluetooth', 'bluetooth', 'Bluetooth', '', btSummary())}
+          ${row('panel:general', 'text', 'Affichage et veille', '', TEXT_LABEL[state.prefs.textScale] || '')}
+        </div>
+        ${group('Appareil')}<div class="opts">
           ${row('panel:controller', 'gamepad', 'Manette', '', state.pad ? 'Connectée' : 'Non connectée')}
-          ${row('panel:remote', 'phone', 'Télécommande', '', (state.live ? state.phones > 0 : state.phoneDemo) ? 'Connectée' : '')}
-          ${row('panel:network', 'wifi', 'Réseau', '', state.live ? esc(state.wifi || 'Non connecté') : '')}
+          ${row('panel:apps', 'apps', 'Applis', '', appsSummary())}
           ${row('panel:power', 'power', 'Alimentation', '')}
           ${row('panel:about', 'info', 'À propos', '')}
         </div>`
@@ -885,8 +1013,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       const btDev = btAudioDevice();
       return {
         title: 'Son', icon: 'speaker', pa: '#ff5f7e', pb: '#8c1d3d', caption: `Le son sort sur ${esc(state.audio.device)}.`,
-        lead: 'Choisis où sort le son.',
-        body: `<div class="opts" role="radiogroup" aria-label="Sortie du son">
+        lead: 'Règle le volume et choisis où sort le son.',
+        body: `<div class="opts"><button type="button" class="opt" data-act="vol" data-adjust="vol">${icon('speaker')}<span class="opt-main"><span class="opt-title">Volume</span><span class="opt-desc">Gauche et droite pour régler</span></span><span class="meter"><i style="width:${state.volume ?? 0}%"></i></span><span class="opt-val">${state.volume ?? '—'} %</span></button></div>
+          ${group('Sortie')}
+          <div class="opts" role="radiogroup" aria-label="Sortie du son">
             ${radio('audio:auto', 'Auto', 'Sur le casque ou l’enceinte Bluetooth dès qu’il est connecté, sinon sur l’écran utilisé.', state.audio.mode === 'auto')}
             ${radio('audio:tv', 'Télé (HDMI)', state.hdmi ? 'Par la télé, même si l’image est sur le PC.' : 'Branche le câble HDMI pour la choisir.', state.audio.mode === 'tv', !state.hdmi)}
             ${radio('audio:pc', 'Haut-parleurs du PC', 'Même quand l’image est sur la télé.', state.audio.mode === 'pc')}
@@ -900,11 +1030,12 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     },
     bluetooth: () => {
       const mine = state.bt.devices.filter(d => d.paired), found = state.bt.devices.filter(d => !d.paired);
-      const devRow = d => row(d.paired ? `btdev:${d.mac}` : `btconnect:${d.mac}`, BT_ICON[d.kind] || 'bluetooth', esc(d.name),
-        BT_KIND[d.kind] || 'Appareil Bluetooth', d.paired ? (d.connected ? 'Connecté' : 'Non connecté') : 'Appairer');
+      // un appareil déjà appairé se reconnecte d'un seul appui, sans repasser en mode appairage
+      const devRow = d => row(d.paired && d.connected ? `btdev:${d.mac}` : `btconnect:${d.mac}`, BT_ICON[d.kind] || 'bluetooth', esc(d.name),
+        BT_KIND[d.kind] || 'Appareil Bluetooth', d.paired ? (d.connected ? 'Connecté' : 'Se connecter') : 'Appairer');
       return {
         title: 'Bluetooth', icon: 'bluetooth', pa: '#3d8bff', pb: '#173f9c', caption: 'Casques, enceintes et manettes.',
-        lead: 'Mets ton appareil en mode appairage, puis lance la recherche.',
+        lead: 'Un appareil déjà appairé se reconnecte d’un appui. Pour un nouveau, mets-le en mode appairage puis lance la recherche.',
         body: `<div class="opts">
             ${row('btscan', 'search', state.bt.scanning ? 'Recherche en cours…' : 'Rechercher des appareils',
               state.bt.scanning ? 'Les appareils trouvés apparaissent ci-dessous.' : '', state.bt.scanning ? '<span class="spin"></span>' : '')}
@@ -919,10 +1050,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       return {
         title: esc(d.name), icon: BT_ICON[d.kind] || 'bluetooth', pa: '#3d8bff', pb: '#173f9c', caption: `${BT_KIND[d.kind] || 'Appareil Bluetooth'} · ${d.connected ? 'connecté' : 'non connecté'}`,
         body: `<div class="opts">
-            ${d.connected ? row(`btdisconnect:${d.mac}`, 'close', 'Déconnecter', '') : row(`btconnect:${d.mac}`, 'bluetooth', 'Connecter', 'Allume l’appareil avant.')}
+            ${d.connected ? row(`btdisconnect:${d.mac}`, 'close', 'Déconnecter', '') : row(`btconnect:${d.mac}`, 'replay', 'Réessayer la connexion', 'Allume l’appareil avant.')}
             ${d.kind === 'audio' && d.connected ? row(`audiouse:${d.mac}`, 'headphones', 'Utiliser pour le son', 'Le son passe sur cet appareil.') : ''}
             ${row(`btremove:${d.mac}`, 'alert', 'Oublier cet appareil', 'Il faudra l’appairer à nouveau pour le réutiliser.')}
-          </div>`
+          </div>
+          ${d.kind === 'audio' && !d.connected ? `<p class="note" style="margin-top:1.2rem">AirPods : ouvre le boîtier près du PC. S’ils sont connectés à ton téléphone, déconnecte-les d’abord, ou choisis-les ici pendant qu’ils sont libres.</p>` : ''}`
       };
     },
     controller: () => ({
@@ -963,11 +1095,59 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
           </div>`
       };
     },
-    network: () => ({
-      title: 'Réseau', icon: 'wifi', pa: '#4c8dff', pb: '#1d3b8a', caption: 'Scaros a besoin du Wi-Fi pour les applis et la télécommande.',
-      body: `<div class="card"><span class="sdot ${state.wifi || !state.live ? 'on' : ''}"></span><div><div class="card-title">${state.live ? esc(state.wifi || 'Pas de Wi-Fi') : 'Wi-Fi de la maison'}</div><div class="card-sub">${state.live && state.ip ? `Adresse : ${esc(state.ip)}` : 'Connecté'}</div></div></div>
-        ${group('Changer de réseau')}
-        <p class="note">Branche un clavier, appuie sur <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>F2</kbd>, connecte-toi, puis tape <kbd>su -</kbd> et <kbd>nmtui</kbd>. <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>F1</kbd> pour revenir ici.</p>`
+    wifi: () => {
+      const cur = state.wifiList.find(n => n.active);
+      const netRow = n => `<button type="button" class="opt" data-act="wifinet:${state.wifiList.indexOf(n)}">${sigBars(n.signal)}<span class="opt-main"><span class="opt-title">${esc(n.ssid)}</span><span class="opt-desc">${n.active ? 'Connecté' : n.known ? 'Enregistré' : n.secure ? 'Protégé par un mot de passe' : 'Réseau ouvert'}</span></span>${n.secure ? icon('lock', 'chev') : ''}</button>`;
+      return {
+        title: 'Wi-Fi', icon: 'wifi', pa: '#4c8dff', pb: '#1d3b8a', caption: 'Choisis un réseau, puis tape son mot de passe avec le clavier à l’écran.',
+        body: `<div class="card"><span class="sdot ${cur ? 'on' : ''}"></span><div><div class="card-title">${cur ? esc(cur.ssid) : 'Pas de Wi-Fi'}</div><div class="card-sub">${cur ? (state.ip ? `Adresse : ${esc(state.ip)}` : 'Connecté') : 'Choisis un réseau ci-dessous.'}</div></div></div>
+          <div class="opts">${row('wifiscan', 'search', state.wifiScanning ? 'Recherche en cours…' : 'Actualiser la liste', '', state.wifiScanning ? '<span class="spin"></span>' : '')}</div>
+          ${group('Réseaux')}
+          <div class="opts">${state.wifiList.length ? state.wifiList.map(netRow).join('') : '<p class="opt-empty">Aucun réseau trouvé. Actualise la liste.</p>'}</div>`
+      };
+    },
+    wifinetwork: () => {
+      const n = state.wifiList.find(x => x.ssid === state.wifiSel) || { ssid: state.wifiSel, signal: 0 };
+      return {
+        title: esc(n.ssid), icon: 'wifi', pa: '#4c8dff', pb: '#1d3b8a', caption: n.active ? 'Connecté' : 'Réseau enregistré',
+        body: `<div class="opts">
+            ${n.active ? '' : row('wificonnect', 'wifi', 'Se connecter', '')}
+            ${n.secure !== false ? row('wifipass', 'lock', 'Changer le mot de passe', '') : ''}
+            ${row('wififorget', 'close', 'Oublier ce réseau', 'Il faudra retaper le mot de passe pour y revenir.')}
+          </div>`
+      };
+    },
+    wifipass: () => ({
+      title: 'Mot de passe', icon: 'lock', pa: '#4c8dff', pb: '#1d3b8a', wide: true, caption: esc(state.wifiSel),
+      lead: `Réseau « ${esc(state.wifiSel)} ». Tu peux aussi taper avec un clavier, ou depuis la télécommande du téléphone.`,
+      body: `<div class="pw-field">${state.pw ? esc(pwShown()) : '<span class="ph">Mot de passe</span>'}<span class="caret"></span></div>
+        ${keyboardHTML()}
+        <div class="opts">${row('pwshow', 'eye', state.pwShow ? 'Masquer le mot de passe' : 'Afficher le mot de passe', '')}</div>`
+    }),
+    general: () => {
+      const ts = state.prefs.textScale, as = Number(state.prefs.autoSleep) || 0;
+      return {
+        title: 'Affichage et veille', icon: 'text', pa: '#8b6cff', pb: '#3b2a8a', caption: 'Pour bien lire depuis le canapé.',
+        body: `${group('Taille du texte')}<div class="opts" role="radiogroup" aria-label="Taille du texte">
+            ${radio('pref:textScale:normal', 'Normale', '', ts === 'normal')}
+            ${radio('pref:textScale:large', 'Grande', '', ts === 'large')}
+            ${radio('pref:textScale:xlarge', 'Très grande', '', ts === 'xlarge')}
+          </div>
+          ${group('Veille automatique du menu')}<div class="opts" role="radiogroup" aria-label="Veille automatique">
+            ${radio('pref:autoSleep:0', 'Jamais', '', as === 0)}
+            ${radio('pref:autoSleep:15', 'Après 15 minutes', '', as === 15)}
+            ${radio('pref:autoSleep:30', 'Après 30 minutes', '', as === 30)}
+            ${radio('pref:autoSleep:60', 'Après 1 heure', '', as === 60)}
+          </div>
+          <p class="note" style="margin-top:1rem">La veille ne coupe jamais une appli ouverte : elle ne compte que le temps passé sur le menu sans y toucher.</p>`
+      };
+    },
+    apps: () => ({
+      title: 'Applis', icon: 'apps', pa: '#ff9f43', pb: '#8a4a12', caption: 'Les applis viennent de Flathub.',
+      body: `<div class="opts">${row('appsupdate', 'download', state.appsUpdating ? 'Mise à jour en cours…' : 'Mettre à jour les applis',
+          state.appsUpdating ? 'Ça peut prendre quelques minutes.' : 'Télécharge les dernières versions de YouTube, Jellyfin, Plex et Steam Link.', state.appsUpdating ? '<span class="spin"></span>' : '')}</div>
+        ${group('Applis du menu')}
+        <dl class="facts">${APPS.map(a => `<dt>${a.name}</dt><dd>${state.live && state.installed[a.id] === false ? 'À installer : lance scaros-update' : 'Installée'}</dd>`).join('')}</dl>`
     }),
     power: () => ({
       title: 'Alimentation', icon: 'power', pa: '#ff6a4d', pb: '#8a2416', caption: 'Le PC peut rester fermé quand il est branché à la télé.',
@@ -990,7 +1170,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
             ${fact('Allumé depuis', i.uptime ? fmtUptime(i.uptime) : '')}
             ${fact('Adresse', state.ip ? `${state.ip} · ${i.hostname || 'scaros'}.local` : '')}
           </dl>
-          <div class="opts">${row('replay', 'replay', 'Revoir l’animation de démarrage', '')}</div>`
+          <div class="opts">
+            ${row('replay', 'replay', 'Revoir l’animation de démarrage', '')}
+            ${row('reload', 'replay', 'Recharger le menu', 'Utile si l’affichage se fige.')}
+          </div>`
       };
     },
     control: () => {
@@ -1014,7 +1197,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     }
   };
   const PAGE_NAME = { settings: 'Réglages', display: 'Écran', sound: 'Son', bluetooth: 'Bluetooth', btdevice: 'Appareil', controller: 'Manette',
-    remote: 'Télécommande', network: 'Réseau', power: 'Alimentation', about: 'À propos', control: 'Centre de contrôle' };
+    remote: 'Télécommande', wifi: 'Wi-Fi', wifinetwork: 'Réseau', wifipass: 'Mot de passe', general: 'Affichage et veille', apps: 'Applis',
+    power: 'Alimentation', about: 'À propos', control: 'Centre de contrôle' };
 
   const currentAct = () => state.pItems[state.pIdx] && state.pItems[state.pIdx].dataset.act;
   function renderPanel(keepAct) {
@@ -1030,7 +1214,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       const trail = [...state.panelStack.map(s => s.id), state.panel].filter(id => id !== 'control').map(id => PAGE_NAME[id]);
       const art = p.mark ? `<svg class="mark" viewBox="0 0 64 64" aria-hidden="true">${markSVG()}</svg>` : p.art ? ART[p.art]() : icon(p.icon);
       pane.innerHTML = `<p class="crumbs">${trail.slice(0, -1).map(t => `${t} › `).join('')}<b>${trail[trail.length - 1]}</b></p>
-        <div class="pane-grid">
+        <div class="pane-grid${p.wide ? ' wide' : ''}">
           <div class="pane-art"><div class="art-tile" style="--pa:${p.pa};--pb:${p.pb}${p.mark ? ';background:none;box-shadow:none' : ''}">${art}</div><p class="art-caption">${p.caption || ''}</p></div>
           <div class="pane-main"><h2 class="pane-title">${p.title}</h2>${p.lead ? `<p class="pane-lead">${p.lead}</p>` : '<div style="height:2rem"></div>'}${p.body}</div>
         </div>`;
@@ -1114,6 +1298,38 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else { state.audio.mode = mode; demoAudio(); }
     }
     else if (k === 'btscan') { if (state.live) api('/api/bt/scan', {}).catch(fail); else demoScan(); }
+    else if (k === 'kb') { const [r, c] = v.split(':').map(Number); pressKey(r, c); }
+    else if (k === 'pwshow') { state.pwShow = !state.pwShow; renderPanel(act); }
+    else if (k === 'wifiscan') {
+      if (state.live) api('/api/wifi/scan', {}).catch(fail);
+      else { state.wifiScanning = true; rerenderPane(); setTimeout(() => { state.wifiScanning = false; rerenderPane(); }, 1500); }
+    }
+    else if (k === 'wifinet') {
+      const n = state.wifiList[Number(v)];
+      if (!n) return;
+      state.wifiSel = n.ssid;
+      if (n.active || n.known) openPanel('wifinetwork');
+      else if (n.secure) openPassword();
+      else wifiConnect(n.ssid);
+    }
+    else if (k === 'wificonnect') { backPanel(); wifiConnect(state.wifiSel); }
+    else if (k === 'wifipass') openPassword();
+    else if (k === 'wififorget') {
+      const ssid = state.wifiSel;
+      backPanel();
+      if (state.live) api('/api/wifi/forget', { ssid }).catch(fail);
+      else { const n = state.wifiList.find(x => x.ssid === ssid); if (n) { n.known = false; n.active = false; } wifiToast('forgotten', ssid); rerenderPane(); renderStatus(); }
+    }
+    else if (k === 'pref') {
+      const [key, raw] = v.split(':'), value = key === 'autoSleep' ? Number(raw) : raw;
+      if (state.live) api('/api/prefs', { key, value }).catch(fail);
+      else { state.prefs[key] = value; savePrefsLocal(); applyPrefs(); renderPanel(act); }
+    }
+    else if (k === 'appsupdate') {
+      if (state.live) api('/api/apps/update', {}).catch(fail);
+      else toast('download', 'Sur le PC, Scaros télécharge ici les dernières versions des applis.');
+    }
+    else if (k === 'reload') location.reload();
     else if (k === 'btdev') { state.btSel = v; openPanel('btdevice'); }
     else if (k === 'btconnect' || k === 'btdisconnect' || k === 'btremove') {
       const action = k.slice(2);
@@ -1122,6 +1338,57 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       if (action === 'remove') backPanel();
     }
   }
+
+  // ---------- Wi-Fi ----------
+  function openPassword() {
+    state.pw = ''; state.pwShow = false; state.kbMode = 'abc'; state.kbShift = false;
+    openPanel('wifipass');
+  }
+  function wifiConnect(ssid, password) {
+    if (state.live) { api('/api/wifi/connect', { ssid, password }).catch(() => toast('alert', 'Scaros ne répond pas.')); return; }
+    wifiToast('connecting', ssid);
+    setTimeout(() => {
+      const n = state.wifiList.find(x => x.ssid === ssid);
+      if (!n) return;
+      if (n.secure && !n.known && (!password || password.length < 8)) return wifiToast('badpass', ssid);
+      state.wifiList.forEach(x => { x.active = x === n; });
+      n.known = true;
+      state.wifiList.sort((a, b) => (b.active - a.active) || (b.known - a.known) || (b.signal - a.signal));
+      wifiToast('connected', ssid);
+      renderStatus(); rerenderPane();
+    }, 1500);
+  }
+  function wifiToast(st, ssid) {
+    const msg = {
+      connecting: ['wifi', `Connexion à ${ssid}…`, 30000],
+      connected: ['wifi', `Connecté à ${ssid}.`],
+      badpass: ['lock', `Mot de passe incorrect pour ${ssid}.`, 5000],
+      needpass: ['lock', `${ssid} demande son mot de passe.`, 5000],
+      failed: ['alert', `Impossible de se connecter à ${ssid}.`, 5000],
+      forgotten: ['wifi', `${ssid} est oublié.`]
+    }[st];
+    if (msg) toast(...msg);
+    if ((st === 'badpass' || st === 'needpass') && state.panel !== 'wifipass') {
+      state.wifiSel = ssid;
+      if (!state.panel) openPanel('settings');
+      openPassword();
+    }
+  }
+
+  // ---------- préférences : taille du texte, veille automatique ----------
+  function applyPrefs() {
+    const ts = state.prefs.textScale;
+    if (ts && ts !== 'normal') document.documentElement.dataset.text = ts;
+    else delete document.documentElement.dataset.text;
+  }
+  function savePrefsLocal() { try { localStorage.setItem('scaros-prefs', JSON.stringify(state.prefs)); } catch (e) {} }
+  try { Object.assign(state.prefs, JSON.parse(localStorage.getItem('scaros-prefs') || '{}')); } catch (e) {}
+  applyPrefs();
+  setInterval(() => {
+    const min = Number(state.prefs.autoSleep) || 0;
+    if (!min || state.launched || state.power || state.booting) return;
+    if (Date.now() - lastInputAt > min * 60000) { closePanel(); sleep(); }
+  }, 20000);
 
   // ---------- écran ----------
   function applyOutput(silent) {
@@ -1177,6 +1444,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       connected: ['bluetooth', `${name} est connecté.`],
       failed: ['alert', `Impossible de joindre ${name}. Vérifie qu’il est allumé et en mode appairage.`, 5200],
       noaudio: ['alert', `${name} ne peut pas recevoir le son : le module son Bluetooth manque. Lance scaros-update.`, 8000],
+      unreachable: ['alert', `${name} est introuvable. Ouvre le boîtier près du PC, ou déconnecte-les de ton téléphone, puis réessaie.`, 8000],
+      repair: ['alert', `${name} ne reconnaît plus Scaros. Choisis « Oublier cet appareil », puis appaire-le à nouveau.`, 8000],
       disconnected: ['bluetooth', `${name} est déconnecté.`],
       removed: ['bluetooth', `${name} est oublié.`]
     }[st];
@@ -1331,6 +1600,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   function vol(d) {
     if (state.live) { api('/api/input', { action: d > 0 ? 'volup' : 'voldown' }).catch(() => {}); return; }
     showVol(Math.max(0, Math.min(100, state.volume + d)));
+    if (state.panel === 'sound') rerenderPane();
   }
 
   // ---------- télécommande de démo (maquette) ----------
@@ -1356,6 +1626,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   // ---------- une seule entrée pour toutes les commandes ----------
   function act(a) {
+    lastInputAt = Date.now();
     if (state.booting) { endBoot(); return; }
     if (state.power === 'busy') return;
     if (state.power) { if (!(state.live && state.power === 'off')) wake(); return; }
@@ -1369,8 +1640,14 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       return;
     }
     if (state.panel) {
-      if (a === 'up' || a === 'left') setPIdx(Math.max(0, state.pIdx - 1));
-      else if (a === 'down' || a === 'right') setPIdx(Math.min(state.pItems.length - 1, state.pIdx + 1));
+      const cur = state.pItems[state.pIdx];
+      if ((a === 'left' || a === 'right') && cur && cur.dataset.adjust === 'vol') vol(a === 'left' ? -5 : 5);
+      else if (a === 'up' || a === 'down' || a === 'left' || a === 'right') {
+        const next = cur && nearest(cur, a, state.pItems);
+        if (next) setPIdx(state.pItems.indexOf(next));
+        else if (a === 'up' && state.pIdx > 0) setPIdx(state.pIdx - 1);
+        else if (a === 'down' && state.pIdx < state.pItems.length - 1) setPIdx(state.pIdx + 1);
+      }
       else if (a === 'ok') { const el = state.pItems[state.pIdx]; if (el) activate(el.dataset.act); }
       else if (a === 'back') backPanel();
       else if (a === 'home') closePanel();
@@ -1391,6 +1668,15 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (state.panel === 'wifipass' && (e.key.length === 1 || e.key === 'Backspace')) {
+      e.preventDefault();
+      lastInputAt = Date.now();
+      if (e.key === 'Backspace') state.pw = state.pw.slice(0, -1); else typeChar(e.key);
+      // après une frappe au clavier ou au téléphone, Entrée valide directement
+      const okKey = state.pItems.find(el => el.classList.contains('go'));
+      renderPanel(okKey ? okKey.dataset.act : currentAct());
+      return;
+    }
     if ((e.key === 'h' || e.key === 'H') && !state.booting && !state.power) {
       toggleHdmi();
       if (state.panel === 'display' && !state.live) renderPanel(currentAct());
@@ -1415,6 +1701,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     });
     el.addEventListener('focus', () => { if (state.focus !== el.dataset.id) setFocus(el.dataset.id, false); });
   });
+  addEventListener('pointerdown', () => { lastInputAt = Date.now(); }, { passive: true });
   pane.addEventListener('click', e => {
     const el = e.target.closest('[data-act]');
     if (!el || el.disabled) return;

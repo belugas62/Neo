@@ -51,6 +51,24 @@ flatpak list --runtime --columns=application,branch 2>/dev/null | awk '$1=="org.
     flatpak install -y --noninteractive flathub "org.freedesktop.Platform.VAAPI.Intel//$branch" >/dev/null 2>&1 || true
   done
 
+write_polkit_rule() {
+  # le compte de la box gère Wi-Fi, Bluetooth, alimentation et mises à jour d'applis sans mot de passe
+  mkdir -p /etc/polkit-1/rules.d
+  cat > /etc/polkit-1/rules.d/50-scaros.rules <<EOF
+// Scaros OS : le compte « $1 » pilote le Wi-Fi, l'alimentation et les applis depuis le menu.
+polkit.addRule(function (action, subject) {
+  if (subject.user == "$1" &&
+      (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
+       action.id.indexOf("org.freedesktop.login1.") == 0 ||
+       action.id.indexOf("org.freedesktop.Flatpak.") == 0)) {
+    return polkit.Result.YES;
+  }
+});
+EOF
+}
+USER_NAME="$(getent passwd 1000 | cut -d: -f1 || true)"
+[ -n "$USER_NAME" ] && write_polkit_rule "$USER_NAME"
+
 # Spotify n'est plus dans Scaros
 rm -f /usr/local/bin/spotifyd
 

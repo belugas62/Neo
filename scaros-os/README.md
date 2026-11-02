@@ -125,6 +125,8 @@ une seconde.
 
 **Casque ou enceinte Bluetooth :** **Réglages > Bluetooth > Rechercher des appareils**, mets
 l'appareil en mode appairage, puis choisis-le dans la liste. Le son passe dessus tout seul.
+Les fois suivantes, plus besoin du mode appairage : choisis-le dans **Mes appareils** et il se reconnecte.
+Pour des AirPods, ouvre le boîtier près du PC ; s'ils sont pris par ton téléphone, déconnecte-les de celui-ci.
 Dans **Réglages > Son**, tu choisis où sort le son : **Auto** (l'appareil Bluetooth s'il est
 connecté, sinon l'écran utilisé), **Télé**, **Haut-parleurs du PC** ou **Appareil Bluetooth**.
 
@@ -139,9 +141,10 @@ dans **Réglages > Écran**.
   et un fichier par appli, par exemple `youtube.log`). Envoie-les si tu demandes de l'aide.
 - **Démarrer sans Scaros** (pour réparer) : `touch ~/.scaros-off` puis `reboot`.
   Pour le remettre : `rm ~/.scaros-off`.
-- **Changer de Wi-Fi :** sur la console de secours, `su -` puis `nmtui`.
+- **Changer de Wi-Fi :** **Réglages > Wi-Fi**, choisis le réseau et tape le mot de passe avec le clavier à l'écran
+  (ou un vrai clavier, ou la télécommande du téléphone). En secours : console, `su -` puis `nmtui`.
 - **Vérifier le décodage vidéo :** `vainfo` doit lister VP9 et HEVC.
-- **Mettre à jour les applis :** `su -` puis `flatpak update`.
+- **Mettre à jour les applis :** **Réglages > Applis > Mettre à jour les applis**.
 - **Mettre à jour Scaros :** `su -` puis `scaros-update` (récupère la dernière version du menu et relance l'écran).
   Pour tout réinstaller (paquets, applis), retélécharge l'archive (étape 4) et relance `install.sh`.
 
