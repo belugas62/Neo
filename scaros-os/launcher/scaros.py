@@ -28,6 +28,8 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import urllib.parse
+import urllib.request
 from urllib.parse import urlparse
 
 try:
@@ -42,7 +44,7 @@ try:
 except ImportError:
     qrcode = None
 
-VERSION = "0.3"
+VERSION = "0.4"
 ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "scaros"
@@ -54,6 +56,10 @@ KEYS = {"up": "Up", "down": "Down", "left": "Left", "right": "Right",
 ACTIONS = set(KEYS) | {"home", "menu", "volup", "voldown", "mute"} | {f"ch{n}" for n in range(1, 10)}
 MOVES = {"up", "down", "left", "right"}
 TV_RES = {"1080": (1920, 1080), "720": (1280, 720), "max": None}   # définition de l'image sur la télé
+AIRPLAY_NAME = "Scaros"         # nom affiché dans la liste AirPlay de l'iPhone (et titre de la fenêtre vidéo)
+UPDATE_API = "https://api.github.com/repos/belugas62/Neo/commits/scaros-os"
+INSTALLED_COMMIT = Path("/opt/scaros/commit")              # écrit par scaros-update
+UPDATE_STATUS = Path("/var/lib/scaros/update-status.json")  # progression écrite par scaros-update
 PHONE_TTL = 40                # un téléphone qui ne donne plus signe de vie depuis 40 s est parti
 AUDIO_MODES = ("auto", "tv", "pc", "bluetooth")
 AUDIO_NAMES = {"tv": "la télé (HDMI)", "pc": "les haut-parleurs du PC"}
@@ -122,6 +128,48 @@ def lan_ip():
         s.close()
 
 
+WEATHER_CODES = {
+    0: ("clear", "Ciel dégagé"), 1: ("clear", "Plutôt dégagé"), 2: ("partly", "Partiellement nuageux"),
+    3: ("cloudy", "Couvert"), 45: ("fog", "Brouillard"), 48: ("fog", "Brouillard givrant"),
+    51: ("rain", "Bruine légère"), 53: ("rain", "Bruine"), 55: ("rain", "Bruine forte"),
+    56: ("rain", "Bruine verglaçante"), 57: ("rain", "Bruine verglaçante"),
+    61: ("rain", "Pluie faible"), 63: ("rain", "Pluie"), 65: ("rain", "Forte pluie"),
+    66: ("rain", "Pluie verglaçante"), 67: ("rain", "Pluie verglaçante"),
+    71: ("snow", "Neige faible"), 73: ("snow", "Neige"), 75: ("snow", "Forte neige"), 77: ("snow", "Grains de neige"),
+    80: ("rain", "Averses"), 81: ("rain", "Averses"), 82: ("rain", "Fortes averses"),
+    85: ("snow", "Averses de neige"), 86: ("snow", "Averses de neige"),
+    95: ("storm", "Orage"), 96: ("storm", "Orage et grêle"), 99: ("storm", "Orage et grêle"),
+}
+DRY_WEATHER = [  # --dry-run : réponses d'Open-Meteo simulées
+    {"current": {"temperature_2m": 14.2, "weather_code": 63, "is_day": 1},
+     "daily": {"temperature_2m_max": [16.1], "temperature_2m_min": [9.4]}},
+    {"current": {"temperature_2m": 21.0, "weather_code": 0, "is_day": 1},
+     "daily": {"temperature_2m_max": [24.0], "temperature_2m_min": [12.0]}},
+    {"current": {"temperature_2m": -1.5, "weather_code": 73, "is_day": 1},
+     "daily": {"temperature_2m_max": [1.0], "temperature_2m_min": [-4.0]}},
+    {"current": {"temperature_2m": 9.0, "weather_code": 2, "is_day": 0},
+     "daily": {"temperature_2m_max": [13.0], "temperature_2m_min": [6.0]}},
+    {"current": {"temperature_2m": 18.0, "weather_code": 95, "is_day": 1},
+     "daily": {"temperature_2m_max": [22.0], "temperature_2m_min": [15.0]}},
+    {"current": {"temperature_2m": 7.0, "weather_code": 45, "is_day": 1},
+     "daily": {"temperature_2m_max": [9.0], "temperature_2m_min": [4.0]}},
+    {"current": {"temperature_2m": 11.0, "weather_code": 3, "is_day": 1},
+     "daily": {"temperature_2m_max": [12.0], "temperature_2m_min": [7.0]}},
+]
+
+
+def parse_weather(data, city):
+    """Réponse d'Open-Meteo -> ce qu'affiche le menu."""
+    cur = data["current"]
+    code = int(cur["weather_code"])
+    kind, label = WEATHER_CODES.get(code, ("cloudy", "Nuageux"))
+    daily = data.get("daily") or {}
+    tmax, tmin = (daily.get("temperature_2m_max") or [None])[0], (daily.get("temperature_2m_min") or [None])[0]
+    return {"city": city, "temp": round(float(cur["temperature_2m"])), "code": code, "kind": kind, "label": label,
+            "day": bool(cur.get("is_day", 1)), "max": None if tmax is None else round(tmax),
+            "min": None if tmin is None else round(tmin), "at": int(time.time())}
+
+
 class Bus:
     """Diffuse les événements vers les pages ouvertes (Server-Sent Events)."""
 
@@ -164,6 +212,59 @@ class Bus:
                     pass
 
 
+class Osd:
+    """Volume et notifications par-dessus les applis (osd.py, une petite fenêtre toujours devant).
+
+    Le menu est caché quand une appli est ouverte : sans ça, le volume changé à la manette
+    ne s'afficherait nulle part.
+    """
+
+    def __init__(self):
+        self.proc = None
+        self.failed_at = 0.0
+        self.lock = threading.Lock()
+
+    def available(self):
+        return not DRY and bool(os.environ.get("DISPLAY")) and (ROOT / "osd.py").is_file()
+
+    def _spawn(self):
+        try:
+            STATE_DIR.mkdir(parents=True, exist_ok=True)
+            err = open(STATE_DIR / "osd.log", "ab")
+            self.proc = subprocess.Popen(["/usr/bin/python3", str(ROOT / "osd.py")], stdin=subprocess.PIPE,
+                                         stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)
+            err.close()
+        except OSError as e:
+            log.warning("affichage par-dessus les applis impossible : %s", e)
+            self.proc, self.failed_at = None, time.monotonic()
+
+    def start(self):
+        """Démarré à l'avance : le premier affichage est immédiat."""
+        if self.available():
+            with self.lock:
+                self._spawn()
+
+    def send(self, **msg):
+        if DRY:
+            log.info("[dry-run] par-dessus l'appli : %s", msg)
+            return
+        if not self.available():
+            return
+        with self.lock:
+            if self.proc is None or self.proc.poll() is not None:
+                if time.monotonic() - self.failed_at < 30:
+                    return  # il vient de planter (paquet manquant ?) : on ne relance pas en boucle
+                self.failed_at = time.monotonic()
+                self._spawn()
+            if self.proc is None:
+                return
+            try:
+                self.proc.stdin.write((json.dumps(msg, ensure_ascii=False) + "\n").encode())
+                self.proc.stdin.flush()
+            except (BrokenPipeError, OSError):
+                self.proc = None
+
+
 class Scaros:
     def __init__(self, apps, port):
         self.apps = apps
@@ -195,6 +296,17 @@ class Scaros:
         self.resolution = None       # définition actuelle de l'écran utilisé, ex. « 1920×1080 »
         self.cache = {}              # nom -> (moment, valeur) : listes Wi-Fi et Bluetooth
         self.retrying = None         # appli relancée après une fermeture immédiate
+        self.osd = Osd()
+        self.airplay = "idle"        # idle | connected | mirroring
+        self.airplay_device = None
+        self.airplay_proc = None
+        self.airplay_win = None
+        self.airplay_watch_until = 0.0
+        self.mirroring = False
+        self.update = {"checking": False, "running": False, "available": None, "step": None}
+        self.weather = None
+        self.weather_lock = threading.Lock()
+        self.dry_weather = 0
         self.bt_busy = set()
         self.wifi_busy = False
         self.audio_mode = self.settings.get("audio_mode", "auto")
@@ -291,6 +403,7 @@ class Scaros:
                          for k, v in self.apps.items()},
                 "prefs": self.settings.get("ui", {}),
                 "audio": {"mode": self.audio_mode, "target": self.audio_target, "device": self.audio_device},
+                "airplay": self.airplay_state(),
             }
         if lite:  # la télécommande n'a besoin que de ça : réponse immédiate
             return s
@@ -301,6 +414,8 @@ class Scaros:
                        "qr": qrcode is not None},
             "wifi": self.wifi(nets), "wifiList": nets, "ip": ip, "info": system_info(),
             "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning, "audio": bt_audio_available()},
+            "weather": self.weather, "place": self.settings.get("weather_place"),
+            "update": self.update, "justUpdated": self.just_updated(),
         })
         return s
 
@@ -348,6 +463,8 @@ class Scaros:
         if not self.installed.get(app_id, True):
             self.bus.emit("app", id=app_id, state="missing")
             return False
+        if self.mirroring:
+            self.stop_airplay()
         self.close_app(focus=False)
         if DRY:
             cmd = ["sleep", "8"]
@@ -406,6 +523,7 @@ class Scaros:
             self.overlay = False
         if not cur:
             return
+        self.osd.send(t="hide")
         app_id, p = cur
         self.windows = []
         flatpak_id = self.apps[app_id].get("flatpak")
@@ -457,6 +575,8 @@ class Scaros:
                 if not self.shown:
                     self.shown = True
                     self.bus.emit("app", id=app_id, state="shown")
+                    if self.apps[app_id].get("controller") == "native":
+                        self.notify("gamepad", "La manette sert au jeu. Maintiens le bouton Xbox pour revenir au menu.", 6000)
             time.sleep(0.7)
 
     def _app_window(self):
@@ -469,7 +589,7 @@ class Scaros:
 
     def ensure_app_focus(self):
         """Avant d'envoyer une touche : si le menu a repris le focus, le rend à l'appli."""
-        if DRY or self.current is None or self.overlay or not self.windows:
+        if DRY or self.current is None or self.overlay or self.mirroring or not self.windows:
             return
         now = time.monotonic()
         if now - self.focus_checked < 1.5:
@@ -488,10 +608,11 @@ class Scaros:
     def show_overlay(self):
         """Centre de contrôle pendant une appli : le menu passe devant, l'appli reste ouverte derrière."""
         with self.lock:
-            if self.current is None or self.overlay:
+            if (self.current is None and not self.mirroring) or self.overlay:
                 return
             self.overlay = True
-        log.info("centre de contrôle par-dessus %s", self.current[0] if self.current else "?")
+        log.info("centre de contrôle par-dessus %s", "la recopie AirPlay" if self.mirroring else self.current[0])
+        self.osd.send(t="hide")
         self.focus_launcher()
 
     def resume_app(self):
@@ -501,6 +622,10 @@ class Scaros:
                 return
             self.overlay = False
             cur = self.current
+        if self.mirroring and self.airplay_win:
+            run(["xdotool", "windowactivate", self.airplay_win], timeout=3, quiet=True)
+            log.info("retour dans la recopie AirPlay")
+            return
         if cur is None:
             return
         win = self._app_window()
@@ -532,8 +657,14 @@ class Scaros:
                 log.exception("action %s %s", kind, args)
 
     def handle(self, action):
+        if self.mirroring and not self.overlay and action in ("back", "home"):
+            self.stop_airplay()
+            if action == "home":
+                self.close_app()
+                self.bus.emit("home")
+            return
         if action == "menu":
-            if self.current:
+            if self.current or self.mirroring:
                 self.show_overlay()
             self.bus.emit("menu")
         elif action == "home":
@@ -569,7 +700,7 @@ class Scaros:
         Pas pendant que le centre de contrôle est ouvert par-dessus : la manette sert alors au menu.
         """
         cur = self.current
-        return bool(cur and not self.overlay and self.apps[cur[0]].get("controller") == "native")
+        return bool(cur and not self.overlay and not self.mirroring and self.apps[cur[0]].get("controller") == "native")
 
     def set_pad(self, name):
         with self.lock:
@@ -578,6 +709,7 @@ class Scaros:
             self.pad = name
         log.info("manette : %s", name or "aucune")
         self.bus.emit("pad", name=name)
+        self.notify("gamepad", "Manette connectée." if name else "Manette déconnectée.")
 
     def hello(self, ip):
         with self.lock:
@@ -598,6 +730,8 @@ class Scaros:
     def _emit_volume(self, quiet=False):
         """quiet : simple mise à jour (sortie changée), sans afficher le volume à l'écran."""
         self.bus.emit("volume", level=self.volume, muted=self.muted, quiet=quiet)
+        if not quiet and self.covered():  # une appli cache le menu : le volume s'affiche par-dessus
+            self.osd.send(t="volume", level=self.volume or 0, muted=self.muted)
 
     def change_volume(self, delta):
         if DRY:
@@ -695,12 +829,15 @@ class Scaros:
         if not DRY and shutil.which("pactl"):
             self._set_sink(target, bt)
         changed = (target, device) != (self.audio_target, self.audio_device)
+        first = self.audio_target is None
         self.audio_target, self.audio_device = target, device
         if changed:
             log.info("son -> %s (réglage %s)", device, mode)
             if not DRY:  # chaque sortie a son propre volume : on affiche le bon
                 self.volume, self.muted = self.read_volume()
             self._emit_volume(quiet=True)
+            if not first:
+                self.notify("headphones" if target == "bt" else "speaker", f"Le son passe sur {device}.")
         self.bus.emit("audio", mode=mode, target=target, device=device, changed=changed)
 
     def _set_sink(self, target, bt):
@@ -1057,7 +1194,8 @@ class Scaros:
 
     # ---------- réglages de l'interface (apparence, taille du texte, veille auto) ----------
     PREFS = {"textScale": ("normal", "large", "xlarge"), "autoSleep": (0, 15, 30, 60),
-             "theme": ("dark", "light", "auto")}
+             "theme": ("dark", "light", "auto"),
+             "bg": ("weather", "stars", "aurora", "rain", "snow", "none")}
 
     def set_pref(self, key, value):
         if key not in self.PREFS or value not in self.PREFS[key]:
@@ -1254,6 +1392,316 @@ class Scaros:
         finally:
             self.pairing = False
 
+    # ---------- par-dessus les applis ----------
+    def covered(self):
+        """Le menu est-il caché par une appli ou par une recopie AirPlay ?"""
+        return (self.current is not None and not self.overlay) or self.mirroring
+
+    def notify(self, icon, text, ms=3500):
+        if self.covered():
+            self.osd.send(t="note", icon=icon, text=text, ms=ms)
+
+    # ---------- AirPlay (UxPlay) : recopie d'écran et vidéos depuis un iPhone ----------
+    def airplay_state(self):
+        return {"enabled": self.settings.get("airplay", True), "available": DRY or shutil.which("uxplay") is not None,
+                "state": self.airplay, "device": self.airplay_device, "name": AIRPLAY_NAME}
+
+    def _airplay_changed(self):
+        self.bus.emit("airplay", **self.airplay_state())
+
+    def _airplay_loop(self):
+        """Garde UxPlay prêt : Scaros apparaît alors dans la liste AirPlay de l'iPhone."""
+        fails = 0
+        if not DRY:  # un UxPlay resté d'une session précédente (écran redémarré) ferait doublon
+            run(["pkill", "-x", "-u", str(os.getuid()), "uxplay"], timeout=5, quiet=True)
+        while True:
+            if DRY or not self.settings.get("airplay", True) or not shutil.which("uxplay") \
+                    or not os.environ.get("DISPLAY"):
+                time.sleep(5)
+                continue
+            started = time.monotonic()
+            try:
+                STATE_DIR.mkdir(parents=True, exist_ok=True)
+                logf = open(STATE_DIR / "airplay.log", "w")
+                p = subprocess.Popen(["uxplay", "-n", AIRPLAY_NAME, "-nh", "-fs", "-nohold", "-reset", "15"],
+                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                     text=True, errors="replace", start_new_session=True)
+            except OSError as e:
+                log.warning("AirPlay impossible : %s", e)
+                time.sleep(30)
+                continue
+            self.airplay_proc = p
+            log.info("AirPlay prêt (« %s » sur l'iPhone)", AIRPLAY_NAME)
+            written = 0
+            for line in p.stdout:
+                if written < 2_000_000:  # journal limité : UxPlay peut être bavard
+                    logf.write(line)
+                    logf.flush()
+                    written += len(line)
+                m = re.search(r"connection request from (.+?) \(([^)]*)\) with deviceID", line)
+                if m:
+                    self.airplay_device = m.group(1).strip()
+                    self.airplay_watch_until = time.monotonic() + 90
+                    if self.airplay == "idle":
+                        self.airplay = "connected"
+                        self._airplay_changed()
+                    log.info("AirPlay : connexion de %s", self.airplay_device)
+            p.wait()
+            logf.close()
+            self.airplay_proc = None
+            self._airplay_ended()
+            fails = fails + 1 if time.monotonic() - started < 10 else 0
+            time.sleep(min(60, 2 * 2 ** min(fails, 5)))  # UxPlay qui plante en boucle : on espace
+
+    def _watch_airplay_window(self):
+        """La recopie commence quand la fenêtre vidéo d'UxPlay (nommée « Scaros ») s'affiche,
+        et s'arrête quand elle se ferme (l'iPhone a arrêté la recopie)."""
+        while True:
+            time.sleep(1)
+            if DRY or not (self.mirroring or time.monotonic() < self.airplay_watch_until):
+                continue
+            wins = run(["xdotool", "search", "--onlyvisible", "--name", f"^{AIRPLAY_NAME}$"], timeout=3, quiet=True)[1].split()
+            if not wins and not self.mirroring and self.airplay == "connected" \
+                    and time.monotonic() > self.airplay_watch_until - 1.5:
+                self.airplay = "idle"  # musique seule ou connexion abandonnée : pas de fenêtre vidéo
+                self._airplay_changed()
+                continue
+            if wins and not self.mirroring:
+                self.airplay_win = wins[-1]
+                self._mirroring_started()
+            elif not wins and self.mirroring:
+                self._airplay_ended()
+
+    def _mirroring_started(self):
+        with self.lock:
+            self.mirroring = True
+            self.overlay = False
+        self.airplay = "mirroring"
+        log.info("AirPlay : recopie de %s", self.airplay_device or "un appareil")
+        if self.airplay_win:
+            run(["xdotool", "windowactivate", self.airplay_win], timeout=3, quiet=True)
+        self._airplay_changed()
+        self.notify("airplay", f"Recopie d'écran : {self.airplay_device or 'iPhone'}. B pour l'arrêter.", 5000)
+
+    def _airplay_ended(self):
+        was = self.mirroring
+        with self.lock:
+            self.mirroring = False
+        self.airplay_win = None
+        if self.airplay != "idle":
+            self.airplay = "idle"
+            self._airplay_changed()
+        if was:
+            log.info("AirPlay : recopie terminée")
+            win = self._app_window() if self.current else None
+            if win:
+                run(["xdotool", "windowactivate", win], timeout=3, quiet=True)
+            else:
+                self.focus_launcher()
+
+    def stop_airplay(self):
+        """Coupe la recopie (UxPlay redémarre aussitôt, prêt pour la prochaine)."""
+        p = self.airplay_proc
+        if DRY:
+            self._airplay_ended()
+            return
+        if p and p.poll() is None:
+            try:
+                os.killpg(p.pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+        self._airplay_ended()
+
+    def set_airplay(self, on):
+        self.settings["airplay"] = bool(on)
+        self._save_settings()
+        if not on:
+            self.stop_airplay()
+        self._airplay_changed()
+        return True
+
+    def dry_airplay(self):
+        """--dry-run : simule un iPhone qui commence puis arrête la recopie."""
+        if self.mirroring:
+            self._airplay_ended()
+        else:
+            self.airplay_device = "iPhone d'Oscar"
+            self._mirroring_started()
+
+    # ---------- mise à jour de Scaros depuis le menu ----------
+    def installed_commit(self):
+        try:
+            return INSTALLED_COMMIT.read_text().strip() or None
+        except OSError:
+            return None
+
+    def _update_status_file(self):
+        try:
+            return json.loads(UPDATE_STATUS.read_text())
+        except (OSError, ValueError):
+            return {}
+
+    def check_update(self):
+        """Compare la version installée à la dernière sur GitHub (sans rien installer)."""
+        if self.update.get("checking"):
+            return
+        self.update["checking"] = True
+        self.bus.emit("update", **self.update)
+        try:
+            if DRY:
+                time.sleep(1)
+                latest = {"sha": "dry0002", "message": "Nouvelle version de test", "date": "2026-11-02T12:00:00Z"}
+            else:
+                req = urllib.request.Request(UPDATE_API, headers={"User-Agent": "Scaros-OS",
+                                                                 "Accept": "application/vnd.github+json"})
+                with urllib.request.urlopen(req, timeout=10) as r:
+                    data = json.load(r)
+                latest = {"sha": data["sha"], "message": data["commit"]["message"].splitlines()[0][:140],
+                          "date": data["commit"]["committer"]["date"]}
+            installed = "dry0001" if DRY else self.installed_commit()
+            self.update.update(latest=latest["sha"], message=latest["message"], date=latest["date"],
+                               available=None if not installed else installed != latest["sha"],
+                               installed=installed, error=None, checked=time.time())
+        except (OSError, ValueError, KeyError) as e:
+            log.info("vérification de mise à jour impossible : %s", e)
+            self.update.update(error="offline", checked=time.time())
+        finally:
+            self.update["checking"] = False
+            self.bus.emit("update", **self.update)
+
+    def _watch_updates(self):
+        time.sleep(90)
+        while True:
+            self.check_update()
+            time.sleep(12 * 3600)
+
+    def start_update(self):
+        if self.update.get("running"):
+            return False
+        # gardé pour l'annoncer après le redémarrage de l'écran
+        self.settings["update_message"] = self.update.get("message") or ""
+        self._save_settings()
+        self.update.update(running=True, step="start", error=None)
+        self.bus.emit("update", **self.update)
+        threading.Thread(target=self._run_update, daemon=True).start()
+        return True
+
+    def _run_update(self):
+        if DRY:
+            for step in ("download", "install", "done"):
+                time.sleep(1.2)
+                self.update["step"] = step
+                self.bus.emit("update", **self.update)
+            self.update.update(running=False, available=False, installed=self.update.get("latest"))
+            self.bus.emit("update", **self.update)
+            return
+        # scaros-update tourne en root, dans un service à part : il continue même quand l'écran redémarre
+        code, out = run(["systemctl", "start", "--no-block", "scaros-update.service"], timeout=20)
+        if code != 0:
+            self.update.update(running=False, step="failed", error="service")
+            self.bus.emit("update", **self.update)
+            return
+        started = time.time()
+        seen = None
+        while time.time() - started < 1800:
+            time.sleep(1)
+            st = self._update_status_file()
+            if st.get("step") and st != seen:
+                seen = st
+                self.update["step"] = st["step"]
+                self.bus.emit("update", **self.update)
+                if st["step"] in ("done", "failed"):
+                    break
+            active = run(["systemctl", "is-active", "scaros-update.service"], timeout=5, quiet=True)[1].strip()
+            if active in ("inactive", "failed") and time.time() - started > 15:
+                if (self._update_status_file().get("step") or "") not in ("done",):
+                    self.update.update(step="failed")
+                break
+        failed = self.update.get("step") == "failed"
+        self.update.update(running=False, error="failed" if failed else None)
+        self.bus.emit("update", **self.update)
+
+    def just_updated(self):
+        """Après une mise à jour, l'écran a redémarré : on le dit une fois."""
+        st = self._update_status_file()
+        at = st.get("at", 0)
+        if st.get("step") == "done" and time.time() - at < 900 and self.settings.get("update_seen") != at:
+            return self.settings.get("update_message") or "Scaros est à jour."
+        return None
+
+    def ack_update(self):
+        self.settings["update_seen"] = self._update_status_file().get("at", 0)
+        self._save_settings()
+
+    # ---------- météo (Open-Meteo, sans compte) ----------
+    @staticmethod
+    def _http_json(url, timeout=10):
+        req = urllib.request.Request(url, headers={"User-Agent": "Scaros-OS"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.load(r)
+
+    def _locate(self):
+        """Ville devinée grâce à l'adresse internet de la box (modifiable dans les réglages)."""
+        if DRY:
+            return {"city": "Lille", "lat": 50.63, "lon": 3.06, "auto": True}
+        for url, conv in (("https://ipapi.co/json/", lambda d: (d.get("city"), d.get("latitude"), d.get("longitude"))),
+                          ("http://ip-api.com/json/?fields=status,city,lat,lon", lambda d: (d.get("city"), d.get("lat"), d.get("lon")))):
+            try:
+                city, lat, lon = conv(self._http_json(url, timeout=8))
+                if city and lat is not None and lon is not None:
+                    return {"city": city, "lat": float(lat), "lon": float(lon), "auto": True}
+            except (OSError, ValueError, TypeError):
+                continue
+        return None
+
+    def refresh_weather(self):
+        with self.weather_lock:
+            place = self.settings.get("weather_place")
+            if not place:
+                place = self._locate()
+                if not place:
+                    log.info("météo : ville introuvable (pas d'internet ?)")
+                    return
+                self.settings["weather_place"] = place
+                self._save_settings()
+            try:
+                if DRY:
+                    data = DRY_WEATHER[self.dry_weather % len(DRY_WEATHER)]
+                else:
+                    data = self._http_json(
+                        "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode({
+                            "latitude": place["lat"], "longitude": place["lon"], "timezone": "auto", "forecast_days": 1,
+                            "current": "temperature_2m,weather_code,is_day",
+                            "daily": "temperature_2m_max,temperature_2m_min"}))
+                self.weather = parse_weather(data, place["city"])
+            except (OSError, ValueError, KeyError, TypeError, IndexError) as e:
+                log.info("météo indisponible : %s", e)
+                return
+        self.bus.emit("weather", weather=self.weather, place=self.settings.get("weather_place"))
+
+    def _watch_weather(self):
+        while True:
+            self.refresh_weather()
+            time.sleep(20 * 60)
+
+    def search_city(self, query):
+        if DRY:
+            q = query.strip().title()
+            return [{"name": q, "admin": "Hauts-de-France", "country": "France", "lat": 50.63, "lon": 3.06},
+                    {"name": q, "admin": "Québec", "country": "Canada", "lat": 46.81, "lon": -71.21}]
+        data = self._http_json("https://geocoding-api.open-meteo.com/v1/search?" + urllib.parse.urlencode(
+            {"name": query, "count": 6, "language": "fr", "format": "json"}))
+        return [{"name": r["name"], "admin": r.get("admin1") or "", "country": r.get("country") or "",
+                 "lat": r["latitude"], "lon": r["longitude"]} for r in data.get("results") or []]
+
+    def set_city(self, place):
+        if place is None:  # retour à la détection automatique
+            self.settings.pop("weather_place", None)
+        else:
+            self.settings["weather_place"] = place
+        self._save_settings()
+        threading.Thread(target=self.refresh_weather, daemon=True).start()
+
     # ---------- démarrage ----------
     def start(self):
         self.hdmi = self.hdmi_connected()
@@ -1264,6 +1712,11 @@ class Scaros:
         threading.Thread(target=self.apply_output, daemon=True).start()
         threading.Thread(target=self._watch_hdmi, daemon=True).start()
         threading.Thread(target=self._watch_audio, daemon=True).start()
+        threading.Thread(target=self._airplay_loop, daemon=True).start()
+        threading.Thread(target=self._watch_airplay_window, daemon=True).start()
+        threading.Thread(target=self._watch_weather, daemon=True).start()
+        threading.Thread(target=self._watch_updates, daemon=True).start()
+        threading.Thread(target=self.osd.start, daemon=True).start()
         if evdev is not None:
             threading.Thread(target=Pad(self).run, daemon=True).start()
         else:
@@ -1465,6 +1918,15 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, json.dumps({"ok": True, "name": socket.gethostname()}).encode(), cors=True)
         if path == "/api/events":
             return self.events()
+        if path == "/api/weather/search":
+            q = urllib.parse.parse_qs(url.query).get("q", [""])[0].strip()[:60]
+            if len(q) < 2:
+                return self.json({"results": []})
+            try:
+                return self.json({"results": self.app.search_city(q)})
+            except (OSError, ValueError, KeyError) as e:
+                log.info("recherche de ville impossible : %s", e)
+                return self.json({"error": "offline", "results": []}, 502)
         if path == "/api/qr.svg":
             return self.qr()
         if path in ("/remote", "/remote/"):
@@ -1578,6 +2040,40 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/apps/update":
             threading.Thread(target=a.update_apps, daemon=True).start()
             return self.json({"ok": True})
+        if path == "/api/airplay":
+            if "enabled" in body:
+                return self.json({"ok": a.set_airplay(bool(body.get("enabled")))})
+            if body.get("action") == "stop":
+                with a.lock:
+                    a.overlay = False  # le menu était devant : on arrête puis on revient au menu
+                threading.Thread(target=a.stop_airplay, daemon=True).start()
+                return self.json({"ok": True})
+            return self.json({"error": "action inconnue"}, 400)
+        if path == "/api/update/check":
+            threading.Thread(target=a.check_update, daemon=True).start()
+            return self.json({"ok": True})
+        if path == "/api/update/start":
+            if not self.is_local():
+                return self.json({"error": "réservé au PC"}, 403)
+            return self.json({"ok": a.start_update()})
+        if path == "/api/update/ack":
+            a.ack_update()
+            return self.json({"ok": True})
+        if path == "/api/weather/city":
+            if body.get("auto"):
+                a.set_city(None)
+                return self.json({"ok": True})
+            try:
+                place = {"city": str(body["name"])[:80], "lat": float(body["lat"]), "lon": float(body["lon"]), "auto": False}
+            except (KeyError, TypeError, ValueError):
+                return self.json({"error": "ville invalide"}, 400)
+            if not (-90 <= place["lat"] <= 90 and -180 <= place["lon"] <= 180):
+                return self.json({"error": "ville invalide"}, 400)
+            a.set_city(place)
+            return self.json({"ok": True})
+        if path == "/api/weather/refresh":
+            threading.Thread(target=a.refresh_weather, daemon=True).start()
+            return self.json({"ok": True})
         if path == "/api/prefs":
             ok = a.set_pref(str(body.get("key")), body.get("value"))
             return self.json({"ok": ok}, 200 if ok else 400)
@@ -1605,6 +2101,13 @@ class Handler(BaseHTTPRequestHandler):
             if action not in ("off", "restart"):
                 return self.json({"error": "action inconnue"}, 400)
             threading.Thread(target=a.power, args=(action,), daemon=True).start()
+            return self.json({"ok": True})
+        if DRY and path == "/api/dev/airplay":
+            threading.Thread(target=a.dry_airplay, daemon=True).start()
+            return self.json({"ok": True})
+        if DRY and path == "/api/dev/weather":
+            a.dry_weather += 1
+            threading.Thread(target=a.refresh_weather, daemon=True).start()
             return self.json({"ok": True})
         if DRY and path == "/api/dev/hdmi":
             threading.Thread(target=a.set_hdmi, args=(not a.hdmi,), daemon=True).start()
@@ -1644,6 +2147,12 @@ def main():
         pass
     finally:
         app.close_app(focus=False)
+        p = app.airplay_proc
+        if p and p.poll() is None:
+            try:
+                os.killpg(p.pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
 
 
 if __name__ == "__main__":

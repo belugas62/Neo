@@ -31,15 +31,19 @@ export DEBIAN_FRONTEND=noninteractive
 apt_install() { apt-get install -y --no-install-recommends "$@"; }
 
 write_polkit_rule() {
-  # le compte de la box gère Wi-Fi, Bluetooth, alimentation et mises à jour d'applis sans mot de passe
+  # le compte de la box gère Wi-Fi, Bluetooth, alimentation, applis et mises à jour sans mot de passe
   mkdir -p /etc/polkit-1/rules.d
   cat > /etc/polkit-1/rules.d/50-scaros.rules <<EOF
-// Scaros OS : le compte « $1 » pilote le Wi-Fi, l'alimentation et les applis depuis le menu.
+// Scaros OS : le compte « $1 » pilote le Wi-Fi, l'alimentation, les applis et les mises à jour depuis le menu.
 polkit.addRule(function (action, subject) {
-  if (subject.user == "$1" &&
-      (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
-       action.id.indexOf("org.freedesktop.login1.") == 0 ||
-       action.id.indexOf("org.freedesktop.Flatpak.") == 0)) {
+  if (subject.user != "$1") return;
+  if (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
+      action.id.indexOf("org.freedesktop.login1.") == 0 ||
+      action.id.indexOf("org.freedesktop.Flatpak.") == 0) {
+    return polkit.Result.YES;
+  }
+  if (action.id == "org.freedesktop.systemd1.manage-units" &&
+      action.lookup("unit") == "scaros-update.service" && action.lookup("verb") == "start") {
     return polkit.Result.YES;
   }
 });
@@ -56,6 +60,9 @@ apt_install \
   intel-media-va-driver i965-va-driver vainfo \
   bluez dbus-user-session polkitd \
   python3 python3-evdev python3-qrcode \
+  python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-rsvg-2.0 fontconfig \
+  uxplay gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav \
+  gstreamer1.0-x gstreamer1.0-gl gstreamer1.0-pulseaudio \
   curl ca-certificates wget flatpak plymouth avahi-daemon zram-tools wireless-tools iw openssh-server
 
 # micrologiciels (son Intel SOF, Wi-Fi) : présents si la section non-free-firmware est activée
@@ -97,7 +104,7 @@ for dev in /sys/class/net/wl*; do
 done
 
 # ---------------------------------------------------------------------------
-step "3/9 Applis YouTube, Jellyfin, Plex et Steam Link (Flathub)"
+step "3/9 Applis YouTube, Jellyfin, Plex et Steam Link (Flathub ; Twitch n'a besoin de rien)"
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 for app in "${FLATPAKS[@]}"; do
   if flatpak info "$app" >/dev/null 2>&1; then
@@ -118,8 +125,24 @@ step "4/9 Fichiers de Scaros dans $DEST"
 mkdir -p "$DEST"
 rm -rf "$DEST/launcher" "$DEST/system"
 cp -r "$HERE/launcher" "$HERE/system" "$DEST/"
-chmod 755 "$DEST/system/session.sh" "$DEST/launcher/scaros.py"
+chmod 755 "$DEST/system/session.sh" "$DEST/launcher/scaros.py" "$DEST/launcher/osd.py"
 install -m 755 "$HERE/update.sh" /usr/local/bin/scaros-update
+mkdir -p /var/lib/scaros
+# mise à jour lancée depuis le menu (Réglages > À propos), en root, dans un service à part
+cat > /etc/systemd/system/scaros-update.service <<'EOF'
+[Unit]
+Description=Mise à jour de Scaros OS
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/scaros-update
+TimeoutStartSec=1800
+EOF
+systemctl daemon-reload
+# polices du menu, aussi pour l'affichage par-dessus les applis
+mkdir -p /usr/local/share/fonts/scaros
+cp "$HERE"/launcher/ui/fonts/*.woff2 /usr/local/share/fonts/scaros/ 2>/dev/null && fc-cache -f >/dev/null 2>&1 || true
 mkdir -p /etc/chromium/policies/managed
 cat > /etc/chromium/policies/managed/scaros.json <<'EOF'
 {

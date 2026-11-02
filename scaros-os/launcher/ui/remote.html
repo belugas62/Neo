@@ -204,7 +204,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
 
   let apps = { youtube: { name: 'YouTube' }, jellyfin: { name: 'Jellyfin' }, plex: { name: 'Plex' }, steamlink: { name: 'Steam Link' }, twitch: { name: 'Twitch' } };
   const SHORT = { steamlink: 'Steam' };  // 5 chaînes sur une ligne : noms courts
-  let current = null, shown = false, volume = null, muted = false;
+  let current = null, shown = false, volume = null, muted = false, airplay = null;
 
   let toastTimer;
   function toast(text) {
@@ -263,6 +263,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
       }
       else if (m.type === 'home') { current = null; renderNow(); }
       else if (m.type === 'volume') { muted = !!m.muted; renderVol(m.level); }
+      else if (m.type === 'airplay') { airplay = m.state === 'mirroring' ? (m.device || 'iPhone') : null; renderNow(); }
     };
   }
   function closeStream() {
@@ -272,6 +273,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
     // état léger : la réponse arrive tout de suite, même pendant une recherche Wi-Fi ou Bluetooth
     fetch('/api/state?lite=1', { cache: 'no-store' }).then(r => r.json()).then(s => {
       apps = s.apps; current = s.app; shown = !!s.shown; muted = !!s.muted;
+      airplay = s.airplay && s.airplay.state === 'mirroring' ? (s.airplay.device || 'iPhone') : null;
       renderChannels(); renderNow(); renderVol(s.volume); setOnline(true);
     }).catch(() => setOnline(false));
   }
@@ -292,7 +294,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   }
   function renderNow() {
     const name = current ? (apps[current] || {}).name || current : null;
-    $('#now-app').textContent = !name ? 'le menu' : shown ? name : `ouverture de ${name}…`;
+    $('#now-app').textContent = airplay ? `recopie de ${airplay}` : !name ? 'le menu' : shown ? name : `ouverture de ${name}…`;
   }
   function renderVol(level) {
     if (level != null) volume = level;

@@ -140,6 +140,19 @@ Pour des AirPods, ouvre le boîtier près du PC ; s'ils sont pris par ton télé
 Dans **Réglages > Son**, tu choisis où sort le son : **Auto** (l'appareil Bluetooth s'il est
 connecté, sinon l'écran utilisé), **Télé**, **Haut-parleurs du PC** ou **Appareil Bluetooth**.
 
+**AirPlay (iPhone, iPad, Mac) :** sur l'iPhone, ouvre le **Centre de contrôle**, touche **Recopie de l'écran**
+puis choisis **Scaros** (même Wi-Fi). Le bouton AirPlay d'une appli (vidéo, photos, musique) marche aussi.
+**B** ou le **bouton Xbox** arrête la recopie ; **≡** ouvre le centre de contrôle par-dessus. Réglages > AirPlay
+pour le désactiver.
+
+**Volume par-dessus les applis :** pendant une vidéo, le volume, le son coupé, la manette ou les AirPods qui se
+connectent s'affichent en haut de l'écran, sans interrompre l'appli.
+
+**Fond et météo :** la météo de ta ville s'affiche à côté de l'heure, et le fond de l'accueil s'anime selon le
+temps qu'il fait : soleil, nuages, pluie, neige, orage, nuit étoilée. Dans **Réglages > Fond et météo**, choisis un
+autre fond (ciel étoilé, aurore, pluie, neige, aucun) ou change de ville. La ville est devinée au premier
+démarrage grâce à l'adresse internet de la box ; la météo vient d'Open-Meteo (gratuit, sans compte).
+
 **Apparence :** dans **Réglages > Affichage et veille**, choisis **Sombre**, **Clair**, ou **Automatique**
 (clair de 7 h à 19 h, sombre le soir). La taille du texte et la veille automatique se règlent au même endroit.
 
@@ -151,8 +164,8 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
 ## Si quelque chose coince
 
 - **Console de secours :** Ctrl+Alt+F2, puis connecte-toi. Ctrl+Alt+F1 pour revenir à Scaros.
-- **Journaux :** dans `~/.local/state/scaros/` (`scaros.log`, `chromium.log`,
-  et un fichier par appli, par exemple `youtube.log`). Envoie-les si tu demandes de l'aide.
+- **Journaux :** dans `~/.local/state/scaros/` (`scaros.log`, `chromium.log`, `airplay.log`, `osd.log`,
+  et un fichier par appli, par exemple `youtube.log`). Mise à jour lancée du menu : `journalctl -u scaros-update`. Envoie-les si tu demandes de l'aide.
 - **Démarrer sans Scaros** (pour réparer) : `touch ~/.scaros-off` puis `reboot`.
   Pour le remettre : `rm ~/.scaros-off`.
 - **Changer de Wi-Fi :** **Réglages > Wi-Fi**, choisis le réseau et tape le mot de passe avec le clavier à l'écran
@@ -161,7 +174,10 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
 - **Une appli met du temps à s'ouvrir :** la première ouverture peut prendre jusqu'à une minute sur ce PC.
   Si elle se ferme aussitôt, Scaros la relance une fois tout seul.
 - **Mettre à jour les applis :** **Réglages > Applis > Mettre à jour les applis**.
-- **Mettre à jour Scaros :** `su -` puis `scaros-update` (récupère la dernière version du menu et relance l'écran).
+- **Mettre à jour Scaros :** **Réglages > Mise à jour de Scaros > Mettre à jour Scaros**, à la manette. Scaros
+  télécharge la dernière version, l'installe et redémarre l'écran (environ une minute). Les applis et réglages sont gardés.
+  À la main : `su -` puis `scaros-update`. **La toute première fois**, fais-le à la main : c'est cette mise à jour
+  qui installe AirPlay, l'affichage par-dessus les applis et le bouton de mise à jour du menu.
   Pour tout réinstaller (paquets, applis), retélécharge l'archive (étape 4) et relance `install.sh`.
 
 ## Ce qui reste à vérifier sur le vrai portable
@@ -171,6 +187,9 @@ mais pas encore sur ta machine. À surveiller au premier essai :
 
 - la bascule HDMI (les noms des sorties vidéo varient d'un PC à l'autre) et le passage en 1080p ;
 - le centre de contrôle par-dessus une appli, puis le retour dans l'appli ;
+- AirPlay : la fluidité de la recopie et le son ;
+- le volume affiché par-dessus YouTube, Jellyfin ou Steam Link ;
+- la mise à jour lancée depuis le menu ;
 - le son sur la télé ;
 - l'appairage Bluetooth de la manette ;
 - la fluidité de YouTube avec le décodage matériel activé, et celle de Twitch.
@@ -181,7 +200,8 @@ mais pas encore sur ta machine. À surveiller au premier essai :
 scaros-os/
 ├── install.sh              installe tout sur un Debian 13 minimal
 ├── launcher/
-│   ├── scaros.py           serveur local : applis, écrans, son, Bluetooth, manette, télécommande
+│   ├── scaros.py           serveur local : applis, écrans, son, Bluetooth, manette, télécommande, AirPlay, météo
+│   ├── osd.py              volume et notifications affichés par-dessus les applis
 │   ├── apps.json           les applis du menu et la commande qui les lance
 │   └── ui/
 │       ├── index.html      le menu (marche aussi seul, en maquette)

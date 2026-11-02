@@ -1,40 +1,64 @@
 #!/usr/bin/env bash
-# Met à jour le menu et le serveur de Scaros sans tout réinstaller, puis relance l'écran.
-#   su -
-#   scaros-update
+# Met à jour Scaros sans tout réinstaller, puis relance l'écran.
+#   depuis le menu : Réglages > À propos > Mettre à jour Scaros
+#   ou à la main :   su -   puis   scaros-update
 set -euo pipefail
 
 ARCHIVE="https://github.com/belugas62/Neo/archive/scaros-os.tar.gz"
+STATUS_DIR=/var/lib/scaros
 [ "$(id -u)" -eq 0 ] || { echo "Lance la mise à jour en root : tape « su - » puis « scaros-update »."; exit 1; }
+
+# étape en cours, lue par le menu (download, install, done, failed)
+status() {
+  mkdir -p "$STATUS_DIR"
+  printf '{"step": "%s", "at": %s}\n' "$1" "$(date +%s)" > "$STATUS_DIR/update-status.json.tmp"
+  chmod 644 "$STATUS_DIR/update-status.json.tmp"
+  mv -f "$STATUS_DIR/update-status.json.tmp" "$STATUS_DIR/update-status.json"
+}
 
 # 1) télécharge la dernière version, puis laisse SA copie de ce script faire la suite :
 #    ainsi une mise à jour applique toujours les dernières étapes (nouveaux paquets…)
 if [ -z "${SCAROS_SRC:-}" ]; then
+  status "download"
   tmp="$(mktemp -d)"
   echo "Téléchargement de la dernière version…"
   if ! wget -q -O "$tmp/scaros.tar.gz" "$ARCHIVE" || ! tar -xzf "$tmp/scaros.tar.gz" -C "$tmp"; then
-    rm -rf "$tmp"; echo "Téléchargement raté : vérifie la connexion. Rien n'a été modifié."; exit 1
+    rm -rf "$tmp"; status "failed"; echo "Téléchargement raté : vérifie la connexion. Rien n'a été modifié."; exit 1
   fi
   src="$tmp/Neo-scaros-os/scaros-os"
   if [ ! -f "$src/update.sh" ] || [ ! -f "$src/launcher/scaros.py" ]; then
-    rm -rf "$tmp"; echo "Archive inattendue : rien n'a été modifié."; exit 1
+    rm -rf "$tmp"; status "failed"; echo "Archive inattendue : rien n'a été modifié."; exit 1
   fi
   SCAROS_SRC="$src" SCAROS_TMP="$tmp" exec bash "$src/update.sh"
 fi
 src="$SCAROS_SRC"
-trap 'rm -rf "$SCAROS_TMP"' EXIT
+on_exit() {
+  local rc=$?
+  [ "$rc" -eq 0 ] || status "failed"
+  rm -rf "$SCAROS_TMP"
+}
+trap on_exit EXIT
+status "install"
 
 # 2) paquets ajoutés depuis l'installation
-NEW_PACKAGES=(libspa-0.2-bluetooth)
+NEW_PACKAGES=(
+  libspa-0.2-bluetooth
+  # AirPlay : recopie d'écran depuis un iPhone (UxPlay et le décodage vidéo GStreamer)
+  uxplay gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
+  gstreamer1.0-x gstreamer1.0-gl gstreamer1.0-pulseaudio
+  # volume et notifications affichés par-dessus les applis
+  python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-rsvg-2.0 fontconfig
+)
 missing=()
 for pkg in "${NEW_PACKAGES[@]}"; do
   dpkg -s "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
 done
 if [ "${#missing[@]}" -gt 0 ]; then
   echo "Installation de : ${missing[*]}…"
+  export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
   apt-get install -y --no-install-recommends "${missing[@]}"
-  need_reboot=1
+  [[ " ${missing[*]} " == *" libspa-0.2-bluetooth "* ]] && need_reboot=1
 fi
 
 # applis ajoutées depuis l'installation
@@ -52,15 +76,19 @@ flatpak list --runtime --columns=application,branch 2>/dev/null | awk '$1=="org.
   done
 
 write_polkit_rule() {
-  # le compte de la box gère Wi-Fi, Bluetooth, alimentation et mises à jour d'applis sans mot de passe
+  # le compte de la box gère Wi-Fi, Bluetooth, alimentation, applis et mises à jour sans mot de passe
   mkdir -p /etc/polkit-1/rules.d
   cat > /etc/polkit-1/rules.d/50-scaros.rules <<EOF
-// Scaros OS : le compte « $1 » pilote le Wi-Fi, l'alimentation et les applis depuis le menu.
+// Scaros OS : le compte « $1 » pilote le Wi-Fi, l'alimentation, les applis et les mises à jour depuis le menu.
 polkit.addRule(function (action, subject) {
-  if (subject.user == "$1" &&
-      (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
-       action.id.indexOf("org.freedesktop.login1.") == 0 ||
-       action.id.indexOf("org.freedesktop.Flatpak.") == 0)) {
+  if (subject.user != "$1") return;
+  if (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
+      action.id.indexOf("org.freedesktop.login1.") == 0 ||
+      action.id.indexOf("org.freedesktop.Flatpak.") == 0) {
+    return polkit.Result.YES;
+  }
+  if (action.id == "org.freedesktop.systemd1.manage-units" &&
+      action.lookup("unit") == "scaros-update.service" && action.lookup("verb") == "start") {
     return polkit.Result.YES;
   }
 });
@@ -69,6 +97,19 @@ EOF
 USER_NAME="$(getent passwd 1000 | cut -d: -f1 || true)"
 [ -n "$USER_NAME" ] && write_polkit_rule "$USER_NAME"
 
+# service lancé par le menu (Réglages > À propos > Mettre à jour Scaros)
+cat > /etc/systemd/system/scaros-update.service <<'EOF'
+[Unit]
+Description=Mise à jour de Scaros OS
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/scaros-update
+TimeoutStartSec=1800
+EOF
+systemctl daemon-reload
+
 # Spotify n'est plus dans Scaros
 rm -f /usr/local/bin/spotifyd
 
@@ -76,8 +117,14 @@ rm -f /usr/local/bin/spotifyd
 mkdir -p /opt/scaros
 rm -rf /opt/scaros/launcher /opt/scaros/system
 cp -r "$src/launcher" "$src/system" /opt/scaros/
-chmod 755 /opt/scaros/system/session.sh /opt/scaros/launcher/scaros.py
+chmod 755 /opt/scaros/system/session.sh /opt/scaros/launcher/scaros.py /opt/scaros/launcher/osd.py
 install -m 755 "$src/update.sh" /usr/local/bin/scaros-update
+# version installée (numéro de la version GitHub, lu dans l'archive), comparée par le menu
+python3 -I -c 'import sys, tarfile; print(tarfile.open(sys.argv[1]).pax_headers.get("comment", ""))' \
+  "$SCAROS_TMP/scaros.tar.gz" > /opt/scaros/commit 2>/dev/null || rm -f /opt/scaros/commit
+# polices du menu, aussi pour l'affichage par-dessus les applis
+mkdir -p /usr/local/share/fonts/scaros
+cp "$src"/launcher/ui/fonts/*.woff2 /usr/local/share/fonts/scaros/ 2>/dev/null && fc-cache -f >/dev/null 2>&1 || true
 
 # écran de démarrage (logo) : mis à jour s'il a changé
 theme=/usr/share/plymouth/themes/scaros
@@ -87,6 +134,7 @@ if [ -d "$theme" ] && ! cmp -s "$src/system/plymouth/scaros/logo.png" "$theme/lo
   update-initramfs -u >/dev/null 2>&1 || true
 fi
 
+status "done"
 if [ -n "${need_reboot:-}" ]; then
   echo "Scaros est à jour. Le PC redémarre pour activer les nouveautés…"
   systemctl reboot
