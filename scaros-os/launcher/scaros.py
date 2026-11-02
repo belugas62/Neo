@@ -42,7 +42,7 @@ try:
 except ImportError:
     qrcode = None
 
-VERSION = "0.1"
+VERSION = "0.2"
 ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "scaros"
@@ -50,7 +50,7 @@ LAUNCHER_CLASS = "ScarosLauncher"
 INTERNAL = re.compile(r"^(eDP|LVDS|DSI)", re.I)
 KEYS = {"up": "Up", "down": "Down", "left": "Left", "right": "Right",
         "ok": "Return", "back": "Escape", "playpause": "space"}
-ACTIONS = set(KEYS) | {"home", "volup", "voldown", "ch1", "ch2", "ch3", "ch4"}
+ACTIONS = set(KEYS) | {"home", "menu", "volup", "voldown", "ch1", "ch2", "ch3", "ch4"}
 AUDIO_MODES = ("auto", "tv", "pc", "bluetooth")
 AUDIO_NAMES = {"tv": "la télé (HDMI)", "pc": "les haut-parleurs du PC"}
 MAC = re.compile(r"(?:[0-9A-F]{2}:){5}[0-9A-F]{2}", re.I)
@@ -84,6 +84,28 @@ def bt_audio_available():
     return DRY or bool(glob.glob("/usr/lib/*/spa-0.2/bluez5/libspa-bluez5.so"))
 
 
+def system_info():
+    """Processeur, mémoire, stockage et durée d'allumage, pour Réglages > À propos."""
+    info = {"hostname": socket.gethostname()}
+    try:
+        for line in Path("/proc/cpuinfo").read_text().splitlines():
+            if line.startswith("model name"):
+                info["cpu"] = re.sub(r"\(R\)|\(TM\)|CPU", "", line.split(":", 1)[1]).replace("  ", " ").strip()
+                break
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            if line.startswith("MemTotal:"):
+                info["ram"] = f"{int(line.split()[1]) / 1024 / 1024:.1f} Go".replace(".", ",")
+        info["uptime"] = int(float(Path("/proc/uptime").read_text().split()[0]))
+    except (OSError, ValueError, IndexError):
+        pass
+    try:
+        du = shutil.disk_usage("/")
+        info["disk"] = f"{du.free / 1e9:.0f} Go sur {du.total / 1e9:.0f} Go"
+    except OSError:
+        pass
+    return info
+
+
 def lan_ip():
     """Adresse du PC sur le Wi-Fi (aucun paquet n'est envoyé)."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -99,19 +121,34 @@ def lan_ip():
 class Bus:
     """Diffuse les événements vers les pages ouvertes (Server-Sent Events)."""
 
+    CLOSE = object()
+    PER_CLIENT = 2
+
     def __init__(self):
-        self.clients = set()
+        self.clients = {}            # file -> adresse du client
         self.lock = threading.Lock()
 
-    def subscribe(self):
+    def subscribe(self, addr):
+        """Ouvre un flux ; au-delà de PER_CLIENT flux pour une même adresse, ferme les plus anciens.
+
+        Un téléphone qui se met en veille ou rouvre la page laisse souvent des flux fantômes ;
+        le navigateur limite le nombre de connexions par site, et les boutons finiraient bloqués.
+        """
         q = queue.Queue(maxsize=200)
         with self.lock:
-            self.clients.add(q)
+            same = [c for c, a in self.clients.items() if a == addr]
+            for old in same[:max(0, len(same) - self.PER_CLIENT + 1)]:
+                del self.clients[old]
+                try:
+                    old.put_nowait(self.CLOSE)
+                except queue.Full:
+                    pass
+            self.clients[q] = addr
         return q
 
     def unsubscribe(self, q):
         with self.lock:
-            self.clients.discard(q)
+            self.clients.pop(q, None)
 
     def emit(self, kind, **data):
         msg = json.dumps({"type": kind, **data}, ensure_ascii=False)
@@ -193,7 +230,7 @@ class Scaros:
                          for k, v in self.apps.items()},
                 "remote": {"url": f"http://{ip}:{self.port}/remote", "phones": self.phone_count(),
                            "qr": qrcode is not None},
-                "wifi": self.wifi(), "ip": ip,
+                "wifi": self.wifi(), "ip": ip, "info": system_info(),
                 "audio": {"mode": self.audio_mode, "target": self.audio_target, "device": self.audio_device},
                 "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning, "audio": bt_audio_available()},
             }
@@ -321,7 +358,12 @@ class Scaros:
 
     # ---------- entrées (manette, téléphone) ----------
     def handle(self, action):
-        if action == "home":
+        if action == "menu":
+            if self.current:
+                self.close_app()
+                self.bus.emit("home")
+            self.bus.emit("menu")
+        elif action == "home":
             self.close_app()
             self.bus.emit("home")
         elif action in ("volup", "voldown"):
@@ -784,7 +826,7 @@ class Pad:
     if evdev is not None:
         BUTTONS = {E.BTN_SOUTH: "ok", E.BTN_EAST: "back", E.BTN_MODE: "home", E.KEY_HOMEPAGE: "home",
                    E.KEY_BACK: "back", E.BTN_TL: "voldown", E.BTN_TR: "volup",
-                   E.BTN_NORTH: "playpause", E.BTN_WEST: "playpause"}
+                   E.BTN_NORTH: "playpause", E.BTN_WEST: "playpause", E.BTN_START: "menu"}
         DPAD = {E.BTN_DPAD_UP: "up", E.BTN_DPAD_DOWN: "down", E.BTN_DPAD_LEFT: "left", E.BTN_DPAD_RIGHT: "right"}
 
     def __init__(self, app):
@@ -979,15 +1021,19 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        q = self.app.bus.subscribe()
+        q = self.app.bus.subscribe(self.client_address[0])
         if not self.is_local():
             self.app.hello(self.client_address[0])
+        # un téléphone parti sans prévenir ne doit pas bloquer ce fil indéfiniment
+        self.connection.settimeout(20)
         try:
             self.wfile.write(b"retry: 2000\n\n")
             self.wfile.flush()
             while True:
                 try:
                     msg = q.get(timeout=15)
+                    if msg is Bus.CLOSE:
+                        break
                     self.wfile.write(f"data: {msg}\n\n".encode())
                 except queue.Empty:
                     self.wfile.write(b": ping\n\n")

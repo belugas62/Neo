@@ -10,7 +10,7 @@ done
 
 # l'écran ne se met jamais en veille tout seul
 xset s off -dpms s noblank
-xsetroot -solid "#06080c"
+xsetroot -solid "#000000"
 
 openbox --config-file "$SCAROS/system/openbox/rc.xml" &
 unclutter --timeout 2 --jitter 4 --ignore-scrolling &

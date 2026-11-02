@@ -61,6 +61,14 @@ cp -r "$src/launcher" "$src/system" /opt/scaros/
 chmod 755 /opt/scaros/system/session.sh /opt/scaros/launcher/scaros.py
 install -m 755 "$src/update.sh" /usr/local/bin/scaros-update
 
+# écran de démarrage (logo) : mis à jour s'il a changé
+theme=/usr/share/plymouth/themes/scaros
+if [ -d "$theme" ] && ! cmp -s "$src/system/plymouth/scaros/logo.png" "$theme/logo.png"; then
+  echo "Nouvel écran de démarrage…"
+  cp -r "$src/system/plymouth/scaros/." "$theme/"
+  update-initramfs -u >/dev/null 2>&1 || true
+fi
+
 if [ -n "${need_reboot:-}" ]; then
   echo "Scaros est à jour. Le PC redémarre pour activer les nouveautés…"
   systemctl reboot

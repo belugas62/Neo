@@ -37,8 +37,8 @@ main {
   padding: max(18px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
 }
 header { display: flex; align-items: center; gap: 10px; }
-.mark { width: 30px; height: auto; }
-.word { font-family: var(--font-display); font-weight: 500; font-size: 14px; letter-spacing: .3em; }
+.mark { width: 32px; height: 32px; }
+.word { font-family: var(--font-display); font-weight: 500; font-size: 17px; letter-spacing: -.01em; }
 .conn { margin-left: auto; display: flex; align-items: center; gap: 7px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: var(--text-2); border: 1px solid var(--line); border-radius: 99px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .online .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
@@ -69,7 +69,9 @@ header { display: flex; align-items: center; gap: 10px; }
 .down { background: #ffffff26 !important; transform: scale(.95); }
 .dpad button, .key { transition: transform .08s ease, background .08s ease; }
 
-.row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.key b { font-size: 22px; line-height: 22px; color: var(--text); }
+.offline { margin: -6px 0 0; padding: 12px 14px; font-size: 14px; color: var(--text); background: #3a1c1f; border: 1px solid #ff6b6b40; border-radius: 14px; }
 .key {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   min-height: 68px; padding: 10px 6px; border: 1px solid var(--line); border-radius: 16px;
@@ -105,15 +107,18 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
 
 <main>
   <header>
-    <svg class="mark" viewBox="0 0 48 44" fill="none" aria-hidden="true">
-      <rect x="2" y="2" width="44" height="31" rx="9" stroke="currentColor" stroke-width="3"/>
-      <path d="M12 17.5h24" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>
-      <circle cx="24" cy="40" r="2.4" fill="var(--led)"/>
+    <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+      <defs><linearGradient id="mb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#343945"/><stop offset="1" stop-color="#0d0f14"/></linearGradient></defs>
+      <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#mb)"/>
+      <rect x="2.5" y="2.5" width="59" height="59" rx="14.5" fill="none" stroke="#fff" stroke-opacity=".12"/>
+      <path d="M42.5 21.5C40.2 17.8 36.4 16 31.9 16 25.8 16 21.4 19.4 21.4 24.6c0 5.8 5.5 7 10.6 8 5.3 1 10.6 2.5 10.6 8.3 0 5.2-4.6 7.7-10.7 7.7-4.8 0-8.8-2-11-5.6" fill="none" stroke="#fff" stroke-width="6.4" stroke-linecap="round"/>
+      <circle cx="32" cy="56.2" r="2" fill="#ff3b30"/>
     </svg>
-    <span class="word">SCAROS</span>
+    <span class="word">scaros</span>
     <span class="conn" id="conn"><span class="dot"></span><span id="conn-text">Connexion…</span></span>
   </header>
   <p class="now" id="now">À l’écran : <b id="now-app">le menu</b></p>
+  <p class="offline" id="offline" hidden>Connexion perdue. Vérifie que ton téléphone est sur le même Wi-Fi. Si le PC a changé d’adresse, rescanne le QR code dans Réglages › Télécommande.</p>
 
   <form class="type" id="type">
     <input id="text" type="text" enterkeyhint="send" autocomplete="off" placeholder="Taper une recherche…" aria-label="Texte à envoyer à l’écran">
@@ -131,6 +136,7 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
   <div class="row">
     <button type="button" class="key" data-a="back" data-icon="back">Retour</button>
     <button type="button" class="key" data-a="home" data-icon="home">Accueil</button>
+    <button type="button" class="key" data-a="menu" aria-label="Centre de contrôle"><b>≡</b>Menu</button>
     <button type="button" class="key" data-a="playpause" data-icon="playpause">Lecture</button>
   </div>
 
@@ -176,19 +182,70 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
     t.textContent = text; t.classList.add('on');
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2400);
   }
+  // Connexion : un seul flux d'événements, fermé quand la page passe en arrière-plan
+  // (téléphone verrouillé, autre appli) et rouvert au retour. Sinon le navigateur garde des
+  // connexions fantômes et finit par bloquer les boutons.
   function setOnline(on) {
     $('#conn').classList.toggle('online', on);
     $('#conn-text').textContent = on ? 'Connecté' : 'Hors ligne';
+    $('#offline').hidden = on;
   }
-  function post(path, body) {
-    return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+  function post(path, body, quiet) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 4000);
+    return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store', signal: ctl.signal })
       .then(r => { if (!r.ok) throw new Error(r.status); setOnline(true); return r.json(); })
-      .catch(e => { setOnline(false); toast('Scaros ne répond pas. Vérifie que ton téléphone est sur le même Wi-Fi.'); throw e; });
+      .catch(e => {
+        setOnline(false);
+        if (!quiet) toast('Scaros ne répond pas.');
+        openStream();
+        throw e;
+      })
+      .finally(() => clearTimeout(timer));
   }
   function send(action) {
     if (navigator.vibrate) navigator.vibrate(12);
     post('/api/input', { action }).catch(() => {});
   }
+
+  let es = null, retry = 0, retryTimer = null;
+  const visible = () => document.visibilityState === 'visible';
+  function openStream() {
+    if (es || !visible()) return;
+    clearTimeout(retryTimer);
+    es = new EventSource('/api/events');
+    es.onopen = () => { retry = 0; setOnline(true); refresh(); };
+    es.onerror = () => {
+      closeStream();
+      setOnline(false);
+      retryTimer = setTimeout(openStream, Math.min(10000, 700 * 2 ** retry++));
+    };
+    es.onmessage = e => {
+      let m; try { m = JSON.parse(e.data); } catch (err) { return; }
+      if (m.type === 'app') { current = m.state === 'running' ? m.id : (current === m.id ? null : current); renderNow(); }
+      else if (m.type === 'home') { current = null; renderNow(); }
+      else if (m.type === 'volume') renderVol(m.level);
+    };
+  }
+  function closeStream() {
+    if (es) { es.close(); es = null; }
+  }
+  function refresh() {
+    fetch('/api/state', { cache: 'no-store' }).then(r => r.json()).then(s => {
+      apps = s.apps; current = s.app;
+      renderChannels(); renderNow(); renderVol(s.volume); setOnline(true);
+    }).catch(() => setOnline(false));
+  }
+  function wakeUp() {
+    if (!visible()) return;
+    openStream();
+    post('/api/hello', {}, true).catch(() => {});
+  }
+  document.addEventListener('visibilitychange', () => { if (visible()) wakeUp(); else closeStream(); });
+  addEventListener('pagehide', closeStream);
+  addEventListener('pageshow', wakeUp);
+  addEventListener('online', wakeUp);
+  setInterval(() => { if (visible()) post('/api/hello', {}, true).catch(() => {}); }, 15000);
 
   function renderChannels() {
     $('#channels').innerHTML = Object.entries(apps).map(([id, a], i) =>
@@ -231,22 +288,9 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
     post('/api/text', { text }).then(() => { input.value = ''; toast('Envoyé à l’écran'); }).catch(() => {});
   });
 
-  fetch('/api/state', { cache: 'no-store' }).then(r => r.json()).then(s => {
-    apps = s.apps; current = s.app;
-    renderChannels(); renderNow(); renderVol(s.volume); setOnline(true);
-  }).catch(() => { renderChannels(); setOnline(false); });
-
-  const es = new EventSource('/api/events');
-  es.onopen = () => setOnline(true);
-  es.onerror = () => setOnline(false);
-  es.onmessage = e => {
-    let m; try { m = JSON.parse(e.data); } catch (err) { return; }
-    if (m.type === 'app') { current = m.state === 'running' ? m.id : (current === m.id ? null : current); renderNow(); }
-    else if (m.type === 'home') { current = null; renderNow(); }
-    else if (m.type === 'volume') renderVol(m.level);
-  };
   renderChannels();
-  setInterval(() => post('/api/hello').catch(() => {}), 60000);
+  refresh();
+  openStream();
 })();
 </script>
 </html>

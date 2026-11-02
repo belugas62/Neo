@@ -83,9 +83,9 @@ reboot
 ## 5. À faire une seule fois au premier démarrage
 
 - **Manette Xbox** : si tu ne l'as pas appairée pendant l'installation, va dans
-  **Paramètres > Manette**, puis maintiens le petit bouton d'appairage (sur le dessus,
+  **Réglages > Manette**, puis maintiens le petit bouton d'appairage (sur le dessus,
   à côté du port USB) jusqu'à ce que le logo Xbox clignote vite.
-- **Télécommande téléphone** : tuile **Télécommande**, scanne le QR code (même Wi-Fi).
+- **Télécommande téléphone** : **Réglages > Télécommande**, scanne le QR code (même Wi-Fi).
 - **YouTube** : à la première ouverture, branche un clavier et appuie sur **Ctrl+O**
   pour ouvrir les réglages de l'appli :
   - active **Hardware Decoding** (la puce Intel décode la vidéo, le processeur respire) ;
@@ -113,22 +113,23 @@ reboot
 | Bouton Xbox | retour au menu (ferme l'appli en cours) |
 | LB / RB | volume − / + |
 | Y | lecture / pause |
+| ≡ (Menu) | centre de contrôle : veille, éteindre, son, écran, Bluetooth |
 
-Au clavier : flèches, Entrée, Échap ; la **touche Windows** ramène au menu ;
+Au clavier : flèches, Entrée, Échap ; la **touche Windows** ramène au menu ; **M** ouvre le centre de contrôle ;
 **1 à 4** ouvrent directement YouTube, Jellyfin, Plex et Steam Link ; **+ / −** pour le volume.
 
 **Dans Steam Link**, la manette sert au jeu : tous ses boutons vont au jeu, et un appui court sur
 le bouton Xbox ouvre le menu de Steam. Pour revenir au menu Scaros, **maintiens le bouton Xbox**
 une seconde.
 
-**Casque ou enceinte Bluetooth :** **Paramètres > Bluetooth > Rechercher des appareils**, mets
+**Casque ou enceinte Bluetooth :** **Réglages > Bluetooth > Rechercher des appareils**, mets
 l'appareil en mode appairage, puis choisis-le dans la liste. Le son passe dessus tout seul.
-Dans **Paramètres > Son**, tu choisis où sort le son : **Auto** (l'appareil Bluetooth s'il est
+Dans **Réglages > Son**, tu choisis où sort le son : **Auto** (l'appareil Bluetooth s'il est
 connecté, sinon l'écran utilisé), **Télé**, **Haut-parleurs du PC** ou **Appareil Bluetooth**.
 
 **Télé :** branche le câble HDMI, l'image et le son passent sur la télé. Tu peux fermer
 l'écran du portable, il ne se met pas en veille. Le choix Auto / Écran du PC / Télé est
-dans la tuile **Écran**.
+dans **Réglages > Écran**.
 
 ## Si quelque chose coince
 
