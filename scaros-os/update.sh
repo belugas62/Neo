@@ -38,6 +38,7 @@ if [ "${#missing[@]}" -gt 0 ]; then
 fi
 
 # 3) fichiers de Scaros
+mkdir -p /opt/scaros
 rm -rf /opt/scaros/launcher /opt/scaros/system
 cp -r "$src/launcher" "$src/system" /opt/scaros/
 chmod 755 /opt/scaros/system/session.sh /opt/scaros/launcher/scaros.py
