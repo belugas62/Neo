@@ -3,106 +3,131 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#06080c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scaros">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
 <title>Télécommande Scaros</title>
 <style>
 @font-face { font-family: "Figtree"; src: url("/fonts/figtree.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: "Unbounded"; src: url("/fonts/unbounded.woff2") format("woff2"); font-weight: 300 600; font-display: swap; }
-/* Layout: one thumb-reachable column — status, text box, d-pad, actions, channels. */
+/* Layout: one screen, no scrolling — header, search, a big touch pad (swipe to move,
+   tap to select), action keys, volume, channels. Sized on the screen height. */
 :root {
   --ink: #06080c;
-  --ink-raised: #10141c;
-  --key: #171c26;
-  --line: #dfe6ff1f;
-  --text: #eef1f6;
-  --text-2: #c9cfdb;
-  --muted: #8a92a4;
+  --raised: #10141c;
+  --key: #161b25;
+  --key-2: #1d2330;
+  --line: #ffffff1a;
+  --text: #f1f3f8;
+  --text-2: #c7cdd8;
+  --muted: #8a91a1;
   --ok: #6cc04a;
   --led: #ff3b30;
-  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
-  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --brand: "Unbounded", "Figtree", system-ui, sans-serif;
+  --font: "Figtree", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --gap: clamp(8px, 1.5dvh, 14px);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html { background: var(--ink); }
+html { height: 100%; background: var(--ink); }
 body {
-  margin: 0; min-height: 100vh; background: radial-gradient(120% 60% at 50% 0%, #141b2b 0%, var(--ink) 60%); color: var(--text);
-  font-family: var(--font-body); font-size: 16px; line-height: 1.4; -webkit-font-smoothing: antialiased;
-  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  margin: 0; min-height: 100%; color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.3;
+  background: radial-gradient(120% 50% at 50% 0%, #151c2c 0%, var(--ink) 65%);
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation; overscroll-behavior: none;
 }
 [hidden] { display: none !important; }
 button { font: inherit; color: inherit; }
 .ic { display: block; width: 22px; height: 22px; }
+
 main {
-  display: flex; flex-direction: column; gap: 18px; max-width: 420px; margin: 0 auto;
-  padding: max(18px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  display: flex; flex-direction: column; gap: var(--gap);
+  height: 100vh; height: 100dvh; max-width: 440px; margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 12px) max(16px, env(safe-area-inset-left, 0px));
 }
-header { display: flex; align-items: center; gap: 10px; }
-.mark { width: 32px; height: 32px; }
-.word { font-family: var(--font-display); font-weight: 500; font-size: 17px; letter-spacing: -.01em; }
-.conn { margin-left: auto; display: flex; align-items: center; gap: 7px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: var(--text-2); border: 1px solid var(--line); border-radius: 99px; }
+main > * { flex: none; }
+header { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.mark { flex: none; width: 34px; height: 34px; }
+.htext { display: flex; flex-direction: column; min-width: 0; }
+.word { font-family: var(--brand); font-weight: 500; font-size: 16px; letter-spacing: -.01em; line-height: 1.1; }
+.now { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12.5px; color: var(--muted); }
+.now b { color: var(--text-2); font-weight: 600; }
+.conn { margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 11px; font-size: 12.5px; font-weight: 600; color: var(--text-2); border: 1px solid var(--line); border-radius: 99px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .online .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-.now { margin: -6px 0 0; font-size: 14px; color: var(--muted); }
-.now b { color: var(--text); font-weight: 600; }
+
+.banner, .offline { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; font-size: 13.5px; line-height: 1.35; border-radius: 14px; }
+.banner { background: #1b2740; border: 1px solid #4c8dff40; }
+.banner a { color: #9cc0ff; font-weight: 700; }
+.banner p { margin: 0; flex: 1; }
+.banner button { flex: none; width: 28px; height: 28px; margin: -3px -4px 0 0; padding: 0; border: 0; border-radius: 50%; background: #ffffff14; cursor: pointer; }
+.offline { background: #3a1c1f; border: 1px solid #ff6b6b40; }
 
 .type { display: flex; gap: 8px; }
 .type input {
-  flex: 1; min-width: 0; padding: 13px 14px; font: inherit; color: var(--text); user-select: text; -webkit-user-select: text;
-  background: var(--key); border: 1px solid var(--line); border-radius: 14px;
+  flex: 1; min-width: 0; height: 44px; padding: 0 14px; font: inherit; font-size: 16px; color: var(--text);
+  background: var(--key); border: 1px solid var(--line); border-radius: 13px; user-select: text; -webkit-user-select: text;
 }
-.type input:focus { outline: 2px solid #ffffff70; outline-offset: 1px; }
-.type button { flex: none; display: grid; place-items: center; width: 50px; border: 0; border-radius: 14px; background: var(--text); color: var(--ink); cursor: pointer; }
+.type input::placeholder { color: var(--muted); }
+.type input:focus { outline: 2px solid #ffffff60; outline-offset: 1px; }
+.type button { flex: none; display: grid; place-items: center; width: 48px; height: 44px; padding: 0; border: 0; border-radius: 13px; background: var(--text); color: var(--ink); cursor: pointer; }
 
+/* the touch pad: swipe anywhere to move, tap the centre (or an arrow) */
+main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
 .dpad {
-  position: relative; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
-  width: min(78vw, 290px); aspect-ratio: 1; margin: 6px auto;
-  border-radius: 50%; background: radial-gradient(circle at 50% 40%, #1d2330, #121620); border: 1px solid var(--line);
-  box-shadow: inset 0 2px 0 #ffffff0d, 0 18px 40px -18px #000;
+  position: relative; flex: 1 1 auto; min-height: 0; max-height: min(86vw, 330px); aspect-ratio: 1; border-radius: 50%; touch-action: none;
+  background: radial-gradient(circle at 50% 35%, #232a38, #12161f 70%); border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 #ffffff12, 0 20px 40px -20px #000;
 }
-.dpad button { display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-2); cursor: pointer; }
+.dpad button { position: absolute; display: grid; place-items: center; padding: 0; border: 0; background: none; color: var(--text-2); border-radius: 50%; pointer-events: none; }
 .dpad .ic { width: 30px; height: 30px; }
-.dpad [data-a="up"] { grid-area: 1 / 2; }
-.dpad [data-a="left"] { grid-area: 2 / 1; }
-.dpad [data-a="right"] { grid-area: 2 / 3; }
-.dpad [data-a="down"] { grid-area: 3 / 2; }
-.dpad [data-a="ok"] { grid-area: 2 / 2; margin: 8px; background: #262d3b; border: 1px solid var(--line); font-weight: 700; font-size: 18px; color: var(--text); }
-.down { background: #ffffff26 !important; transform: scale(.95); }
-.dpad button, .key { transition: transform .08s ease, background .08s ease; }
+.dpad [data-a="up"] { left: 35%; top: 4%; width: 30%; height: 24%; }
+.dpad [data-a="down"] { left: 35%; bottom: 4%; width: 30%; height: 24%; }
+.dpad [data-a="left"] { top: 35%; left: 4%; width: 24%; height: 30%; }
+.dpad [data-a="right"] { top: 35%; right: 4%; width: 24%; height: 30%; }
+.dpad [data-a="ok"] { left: 32%; top: 32%; width: 36%; height: 36%; background: #2a3242; border: 1px solid var(--line); font-weight: 700; font-size: 19px; color: var(--text); }
+.dpad .hl { color: #fff; background: #ffffff1f; }
+.dpad [data-a="ok"].hl { background: #3a4458; }
+.swipe-hint { flex: none; margin: 0; font-size: 11.5px; color: var(--muted); }
 
-.row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.key b { font-size: 22px; line-height: 22px; color: var(--text); }
-.offline { margin: -6px 0 0; padding: 12px 14px; font-size: 14px; color: var(--text); background: #3a1c1f; border: 1px solid #ff6b6b40; border-radius: 14px; }
+.keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .key {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  min-height: 68px; padding: 10px 6px; border: 1px solid var(--line); border-radius: 16px;
-  background: var(--key); font-size: 13px; font-weight: 600; color: var(--text-2); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  height: clamp(50px, 7.2dvh, 62px); padding: 0; border: 1px solid var(--line); border-radius: 15px;
+  background: var(--key); font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer;
+  transition: transform .08s ease, background .08s ease;
 }
 .key .ic { color: var(--text); }
-.volrow { display: grid; grid-template-columns: 68px 1fr 68px; gap: 10px; align-items: center; }
-.volrow .key { min-height: 56px; font-size: 26px; font-weight: 500; color: var(--text); }
-.level { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-.track { width: 100%; height: 6px; overflow: hidden; border-radius: 9px; background: #ffffff1a; }
+.key b { font-size: 21px; line-height: 22px; color: var(--text); }
+.volrow { display: grid; grid-template-columns: 54px 1fr 54px; gap: 10px; align-items: center; }
+.volrow .key { height: 46px; font-size: 24px; font-weight: 500; color: var(--text); }
+.level { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); text-align: center; }
+.level b { color: var(--text-2); }
+.track { height: 6px; overflow: hidden; border-radius: 9px; background: #ffffff1a; }
 .track i { display: block; height: 100%; width: var(--v, 0%); background: var(--text); transition: width .2s ease; }
-
-h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
-.channels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.channels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .chan {
-  display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
-  border: 1px solid var(--line); border-radius: 16px; background: var(--key); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  height: clamp(56px, 8dvh, 68px); padding: 0 4px; border: 1px solid var(--line); border-radius: 15px; background: var(--key); cursor: pointer;
 }
-.chan .logo { height: 26px; width: auto; }
-.chan span { display: flex; flex-direction: column; min-width: 0; }
-.chan b { font-size: 15px; }
-.chan small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.chan[aria-disabled="true"] { opacity: .45; }
+.chan .logo { height: 22px; width: auto; max-width: 34px; }
+.chan span { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+.chan[aria-disabled="true"] { opacity: .4; }
+.down { background: var(--key-2) !important; transform: scale(.95); }
 
 .toast {
-  position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom, 0px)); width: max-content; max-width: calc(100% - 32px);
-  padding: 11px 18px; border-radius: 99px; background: var(--ink-raised); border: 1px solid var(--line);
-  font-size: 14px; font-weight: 600; transform: translate(-50%, 20px); opacity: 0; transition: .25s ease; pointer-events: none;
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); width: max-content; max-width: calc(100% - 32px);
+  padding: 10px 16px; border-radius: 99px; background: var(--raised); border: 1px solid var(--line);
+  font-size: 13.5px; font-weight: 600; transform: translate(-50%, 16px); opacity: 0; transition: .25s ease; pointer-events: none;
 }
 .toast.on { transform: translate(-50%, 0); opacity: 1; }
-.tip { margin: 4px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+
+/* very short screens (landscape, small phones): the page scrolls instead of squeezing */
+@media (max-height: 560px) { main { height: auto; min-height: 100dvh; } main > .pad-wrap { flex: none; height: 250px; } }
 </style>
 
 <main>
@@ -114,26 +139,30 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
       <path d="M42.5 21.5C40.2 17.8 36.4 16 31.9 16 25.8 16 21.4 19.4 21.4 24.6c0 5.8 5.5 7 10.6 8 5.3 1 10.6 2.5 10.6 8.3 0 5.2-4.6 7.7-10.7 7.7-4.8 0-8.8-2-11-5.6" fill="none" stroke="#fff" stroke-width="6.4" stroke-linecap="round"/>
       <circle cx="32" cy="56.2" r="2" fill="#ff3b30"/>
     </svg>
-    <span class="word">scaros</span>
+    <div class="htext"><span class="word">scaros</span><span class="now">À l’écran : <b id="now-app">le menu</b></span></div>
     <span class="conn" id="conn"><span class="dot"></span><span id="conn-text">Connexion…</span></span>
   </header>
-  <p class="now" id="now">À l’écran : <b id="now-app">le menu</b></p>
-  <p class="offline" id="offline" hidden>Connexion perdue. Vérifie que ton téléphone est sur le même Wi-Fi. Si le PC a changé d’adresse, rescanne le QR code dans Réglages › Télécommande.</p>
+
+  <div class="banner" id="install" hidden><p id="install-text"></p><button type="button" id="install-x" aria-label="Masquer">✕</button></div>
+  <p class="offline" id="offline" hidden>Connexion perdue. Vérifie que ton téléphone est sur le même Wi-Fi. Si le PC a changé d’adresse, rescanne le QR code (bouton ≡ puis Télécommande).</p>
 
   <form class="type" id="type">
-    <input id="text" type="text" enterkeyhint="send" autocomplete="off" placeholder="Taper une recherche…" aria-label="Texte à envoyer à l’écran">
+    <input id="text" type="text" enterkeyhint="send" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Taper du texte…" aria-label="Texte à envoyer à l’écran">
     <button type="submit" aria-label="Envoyer" data-icon="send"></button>
   </form>
 
-  <div class="dpad" role="group" aria-label="Flèches">
-    <button type="button" data-a="up" data-repeat aria-label="Haut" data-icon="up"></button>
-    <button type="button" data-a="left" data-repeat aria-label="Gauche" data-icon="left"></button>
-    <button type="button" data-a="ok" aria-label="Valider">OK</button>
-    <button type="button" data-a="right" data-repeat aria-label="Droite" data-icon="right"></button>
-    <button type="button" data-a="down" data-repeat aria-label="Bas" data-icon="down"></button>
+  <div class="pad-wrap">
+    <div class="dpad" id="dpad" role="group" aria-label="Pavé : glisse pour te déplacer, touche le centre pour valider">
+      <button type="button" data-a="up" aria-label="Haut" data-icon="up"></button>
+      <button type="button" data-a="left" aria-label="Gauche" data-icon="left"></button>
+      <button type="button" data-a="ok" aria-label="Valider">OK</button>
+      <button type="button" data-a="right" aria-label="Droite" data-icon="right"></button>
+      <button type="button" data-a="down" aria-label="Bas" data-icon="down"></button>
+    </div>
+    <p class="swipe-hint">Glisse pour te déplacer · touche OK pour valider</p>
   </div>
 
-  <div class="row">
+  <div class="keys">
     <button type="button" class="key" data-a="back" data-icon="back">Retour</button>
     <button type="button" class="key" data-a="home" data-icon="home">Accueil</button>
     <button type="button" class="key" data-a="menu" aria-label="Centre de contrôle"><b>≡</b>Menu</button>
@@ -146,10 +175,7 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
     <button type="button" class="key" data-a="volup" data-repeat aria-label="Monter le volume">+</button>
   </div>
 
-  <h2>Chaînes</h2>
   <div class="channels" id="channels"></div>
-
-  <p class="tip">Pour taper une recherche, ouvre d’abord le champ de recherche de l’appli, puis écris ici.</p>
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -182,6 +208,7 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
     t.textContent = text; t.classList.add('on');
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2400);
   }
+
   // Connexion : un seul flux d'événements, fermé quand la page passe en arrière-plan
   // (téléphone verrouillé, autre appli) et rouvert au retour. Sinon le navigateur garde des
   // connexions fantômes et finit par bloquer les boutons.
@@ -204,7 +231,7 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
       .finally(() => clearTimeout(timer));
   }
   function send(action) {
-    if (navigator.vibrate) navigator.vibrate(12);
+    if (navigator.vibrate) navigator.vibrate(10);
     post('/api/input', { action }).catch(() => {});
   }
 
@@ -249,21 +276,70 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
 
   function renderChannels() {
     $('#channels').innerHTML = Object.entries(apps).map(([id, a], i) =>
-      `<button type="button" class="chan" data-a="ch${i + 1}" aria-disabled="${a.installed === false}">${LOGOS[id] || ''}<span><b>${a.name}</b><small>Chaîne ${String(i + 1).padStart(2, '0')}</small></span></button>`).join('');
+      `<button type="button" class="chan" data-a="ch${i + 1}" aria-disabled="${a.installed === false}" aria-label="${a.name}">${LOGOS[id] || ''}<span>${a.name}</span></button>`).join('');
   }
   function renderNow() {
     $('#now-app').textContent = current ? (apps[current] || {}).name || current : 'le menu';
   }
   function renderVol(level) {
     if (level == null) return;
-    $('#vol-num').textContent = level;
+    $('#vol-num').textContent = level + ' %';
     $('#vol-bar').style.setProperty('--v', level + '%');
   }
 
-  // buttons: instant on touch, repeat while held for arrows and volume
+  // pavé tactile : glisser = flèches (un glissé long en fait plusieurs), toucher = la zone touchée
+  const pad = $('#dpad');
+  // un glissé = un déplacement ; il faut glisser plus loin pour en enchaîner d'autres
+  const FIRST_STEP = 28, NEXT_STEP = 110;
+  let g = null;
+  function zoneAt(x, y) {
+    const r = pad.getBoundingClientRect();
+    const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
+    if (Math.hypot(dx, dy) < r.width * 0.2) return 'ok';
+    return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  }
+  const clearHl = () => pad.querySelectorAll('.hl').forEach(b => b.classList.remove('hl'));
+  function flash(a) {
+    const b = pad.querySelector(`[data-a="${a}"]`);
+    if (!b) return;
+    b.classList.add('hl'); setTimeout(() => b.classList.remove('hl'), 140);
+  }
+  pad.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    pad.setPointerCapture(e.pointerId);
+    const zone = zoneAt(e.clientX, e.clientY);
+    g = { x: e.clientX, y: e.clientY, moved: false, steps: 0, zone, hold: null, rep: null };
+    const b = pad.querySelector(`[data-a="${zone}"]`);
+    if (b) b.classList.add('hl');
+    // rester appuyé sur une flèche : ça défile
+    if (zone !== 'ok') g.hold = setTimeout(() => { g.moved = true; send(zone); g.rep = setInterval(() => send(zone), 140); }, 450);
+  });
+  pad.addEventListener('pointermove', e => {
+    if (!g) return;
+    const dx = e.clientX - g.x, dy = e.clientY - g.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < (g.steps ? NEXT_STEP : FIRST_STEP)) return;
+    clearTimeout(g.hold); clearInterval(g.rep); clearHl();
+    const a = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+    g.moved = true; g.steps++; g.x = e.clientX; g.y = e.clientY;
+    send(a); flash(a);
+  });
+  pad.addEventListener('pointerup', () => {
+    if (!g) return;
+    clearTimeout(g.hold); clearInterval(g.rep);
+    if (!g.moved) send(g.zone);
+    clearHl();
+    g = null;
+  });
+  pad.addEventListener('pointercancel', () => {
+    if (!g) return;
+    clearTimeout(g.hold); clearInterval(g.rep); clearHl();
+    g = null;
+  });
+
+  // autres touches : réaction immédiate, répétition si on reste appuyé (volume)
   document.addEventListener('pointerdown', e => {
     const b = e.target.closest('[data-a]');
-    if (!b || b.closest('form')) return;
+    if (!b || b.closest('form') || b.closest('#dpad')) return;
     e.preventDefault();
     const a = b.dataset.a;
     b.classList.add('down');
@@ -285,7 +361,36 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
     e.preventDefault();
     const input = $('#text'), text = input.value.trim();
     if (!text) return;
-    post('/api/text', { text }).then(() => { input.value = ''; toast('Envoyé à l’écran'); }).catch(() => {});
+    post('/api/text', { text }).then(() => { input.value = ''; input.blur(); toast('Envoyé à l’écran'); }).catch(() => {});
+  });
+
+  // installer sur l'écran d'accueil (Safari : Partager › Sur l'écran d'accueil)
+  const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let dismissed = false;
+  try { dismissed = localStorage.getItem('scaros-install-hint') === 'off'; } catch (e) {}
+  if (!standalone && !dismissed && matchMedia('(pointer: coarse)').matches) {
+    $('#install-text').textContent = ios
+      ? 'Garde la télécommande sur ton iPhone : touche Partager, puis « Sur l’écran d’accueil ».'
+      : 'Garde la télécommande sur ton téléphone : menu du navigateur, puis « Ajouter à l’écran d’accueil ».';
+    $('#install').hidden = false;
+    // ouverte par son adresse IP ? si scaros.local répond, mieux vaut l'installer depuis ce nom, qui ne change pas
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(location.hostname)) {
+      const ctl = new AbortController();
+      setTimeout(() => ctl.abort(), 2500);
+      fetch(`http://scaros.local:${location.port || 80}/api/ping`, { signal: ctl.signal, cache: 'no-store' })
+        .then(r => r.json()).then(() => {
+          const p = $('#install-text');
+          const a = document.createElement('a');
+          a.href = `http://scaros.local:${location.port || 80}/remote`;
+          a.textContent = 'scaros.local';
+          p.append(' Avant, ouvre plutôt ', a, ' : l’appli marchera même si l’adresse du PC change.');
+        }).catch(() => {});
+    }
+  }
+  $('#install-x').addEventListener('click', () => {
+    $('#install').hidden = true;
+    try { localStorage.setItem('scaros-install-hint', 'off'); } catch (e) {}
   });
 
   renderChannels();

@@ -87,6 +87,9 @@ reboot
   à côté du port USB) jusqu'à ce que le logo Xbox clignote vite.
 - **Télécommande téléphone** : bouton **≡** de la manette puis **Télécommande** (ou touche **Q**) :
   un grand QR code s'affiche, scanne-le avec ton téléphone (même Wi-Fi).
+  **Sur iPhone, garde-la comme une appli :** ouvre-la de préférence par l'adresse `http://scaros.local:8421/remote`
+  (elle ne change pas, contrairement à l'adresse IP), puis dans Safari touche **Partager > Sur l'écran d'accueil**.
+  Elle s'ouvre alors en plein écran, sans barre Safari. Sur le pavé, glisse pour te déplacer et touche OK pour valider.
 - **YouTube** : à la première ouverture, branche un clavier et appuie sur **Ctrl+O**
   pour ouvrir les réglages de l'appli :
   - active **Hardware Decoding** (la puce Intel décode la vidéo, le processeur respire) ;

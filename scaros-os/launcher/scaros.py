@@ -1123,7 +1123,8 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "Scaros/" + VERSION
     TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",
              ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2",
-             ".json": "application/json", ".txt": "text/plain; charset=utf-8"}
+             ".json": "application/json", ".txt": "text/plain; charset=utf-8",
+             ".webmanifest": "application/manifest+json"}
 
     @property
     def app(self):
@@ -1132,9 +1133,11 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         log.debug("%s %s", self.address_string(), fmt % args)
 
-    def send(self, code, body=b"", ctype="application/json"):
+    def send(self, code, body=b"", ctype="application/json", cors=False):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
+        if cors:
+            self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
@@ -1150,6 +1153,9 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/state":
             return self.json(self.app.state())
+        if path == "/api/ping":
+            # la télécommande vérifie si scaros.local répond (nom stable pour l'écran d'accueil)
+            return self.send(200, json.dumps({"ok": True, "name": socket.gethostname()}).encode(), cors=True)
         if path == "/api/events":
             return self.events()
         if path == "/api/qr.svg":
