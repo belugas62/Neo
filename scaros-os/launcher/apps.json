@@ -13,5 +13,11 @@
     "name": "Plex",
     "cmd": ["flatpak", "run", "tv.plex.PlexHTPC"],
     "flatpak": "tv.plex.PlexHTPC"
+  },
+  "steamlink": {
+    "name": "Steam Link",
+    "cmd": ["flatpak", "run", "com.valvesoftware.SteamLink"],
+    "flatpak": "com.valvesoftware.SteamLink",
+    "controller": "native"
   }
 }

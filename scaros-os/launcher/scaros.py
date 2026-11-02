@@ -345,6 +345,11 @@ class Scaros:
         if text:
             run(["xdotool", "type", "--clearmodifiers", "--delay", "40", "--", text], timeout=20)
 
+    def native_controller(self):
+        """L'appli affichée lit-elle la manette elle-même (jeux) au lieu de recevoir des touches ?"""
+        cur = self.current
+        return bool(cur and self.apps[cur[0]].get("controller") == "native")
+
     def set_pad(self, name):
         with self.lock:
             if name == self.pad:
@@ -767,7 +772,13 @@ class Pad:
 
     La manette est réservée à Scaros (grab) : les applis reçoivent des flèches,
     Entrée et Échap, ce qui marche partout. Le bouton Xbox ramène au menu.
+
+    Exception : une appli marquée "controller": "native" dans apps.json (Steam Link)
+    lit la vraie manette pour les jeux. Scaros la lui laisse et ne surveille plus que
+    le bouton Xbox maintenu, qui ramène au menu (un appui court reste pour l'appli).
     """
+
+    HOLD_HOME = 0.8
 
     BUTTONS = {}
     if evdev is not None:
@@ -780,6 +791,9 @@ class Pad:
         self.app = app
         self.sources = {}            # (source, direction) -> appuyé
         self.next_fire = {}
+        self.grabbed = False
+        self.guide_down = None       # moment où le bouton Xbox a été enfoncé
+        self.guide_fired = False
 
     def find(self):
         main = None
@@ -811,11 +825,8 @@ class Pad:
                 time.sleep(2)
                 continue
             self.app.set_pad(main.name)
+            self.grabbed = False
             try:
-                try:
-                    main.grab()
-                except OSError as e:
-                    log.warning("manette non réservée : %s", e)
                 self.loop(main, group)
             except OSError:
                 pass  # manette éteinte ou déconnectée
@@ -839,16 +850,34 @@ class Pad:
                 pass
         fds = {d.fd: d for d in group}
         while True:
+            native = self.app.native_controller()
+            if native == self.grabbed:
+                self.set_grab(main, not native)
             ready, _, _ = select.select(list(fds), [], [], 0.04)
             for fd in ready:
                 for ev in fds[fd].read():
-                    self.event(ev, absinfo)
-            self.tick()
+                    self.event(ev, absinfo, native)
+            self.tick(native)
+
+    def set_grab(self, main, grab):
+        try:
+            main.grab() if grab else main.ungrab()
+        except OSError as e:
+            log.warning("manette : %s impossible (%s)", "réservation" if grab else "libération", e)
+        self.grabbed = grab
+        self.sources.clear()
+        self.next_fire.clear()
+        log.info("manette %s", "réservée à Scaros" if grab else "laissée à l'appli")
 
     def press(self, source, direction, on):
         self.sources[(source, direction)] = on
 
-    def event(self, ev, absinfo):
+    def event(self, ev, absinfo, native=False):
+        if native:
+            if ev.type == E.EV_KEY and ev.code in (E.BTN_MODE, E.KEY_HOMEPAGE):
+                self.guide_down = time.monotonic() if ev.value == 1 else None
+                self.guide_fired = False
+            return
         if ev.type == E.EV_KEY:
             if ev.code in self.DPAD:
                 self.press("dpad", self.DPAD[ev.code], ev.value != 0)
@@ -869,8 +898,13 @@ class Pad:
                     held = self.sources.get(("stick", d), False)
                     self.press("stick", d, val > (0.4 if held else 0.6))
 
-    def tick(self):
+    def tick(self, native=False):
         now = time.monotonic()
+        if native:
+            if self.guide_down and not self.guide_fired and now - self.guide_down >= self.HOLD_HOME:
+                self.guide_fired = True
+                self.app.handle("home")
+            return
         for d in ("up", "down", "left", "right"):
             on = any(v for (src, dd), v in self.sources.items() if dd == d)
             nxt = self.next_fire.get(d)

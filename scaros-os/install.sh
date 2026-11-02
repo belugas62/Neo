@@ -9,7 +9,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST=/opt/scaros
-FLATPAKS=(rocks.shy.VacuumTube org.jellyfin.JellyfinDesktop tv.plex.PlexHTPC)
+FLATPAKS=(rocks.shy.VacuumTube org.jellyfin.JellyfinDesktop tv.plex.PlexHTPC com.valvesoftware.SteamLink)
 
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; WARNINGS+=("$*"); }
@@ -81,7 +81,7 @@ for dev in /sys/class/net/wl*; do
 done
 
 # ---------------------------------------------------------------------------
-step "3/9 Applis YouTube, Jellyfin et Plex (Flathub)"
+step "3/9 Applis YouTube, Jellyfin, Plex et Steam Link (Flathub)"
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 for app in "${FLATPAKS[@]}"; do
   if flatpak info "$app" >/dev/null 2>&1; then

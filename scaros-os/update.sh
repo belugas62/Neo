@@ -37,6 +37,20 @@ if [ "${#missing[@]}" -gt 0 ]; then
   need_reboot=1
 fi
 
+# applis ajoutées depuis l'installation
+NEW_FLATPAKS=(com.valvesoftware.SteamLink)
+for app in "${NEW_FLATPAKS[@]}"; do
+  if ! flatpak info "$app" >/dev/null 2>&1; then
+    echo "Installation de $app (quelques minutes)…"
+    flatpak install -y --noninteractive flathub "$app" || echo "Installation de $app ratée : relance scaros-update plus tard."
+  fi
+done
+# décodage vidéo par la puce Intel pour les nouveaux runtimes
+flatpak list --runtime --columns=application,branch 2>/dev/null | awk '$1=="org.freedesktop.Platform" {print $2}' | sort -u |
+  while read -r branch; do
+    flatpak install -y --noninteractive flathub "org.freedesktop.Platform.VAAPI.Intel//$branch" >/dev/null 2>&1 || true
+  done
+
 # Spotify n'est plus dans Scaros
 rm -f /usr/local/bin/spotifyd
 

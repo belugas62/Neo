@@ -163,10 +163,11 @@ h2 { margin: 6px 0 -4px; font-size: 12px; font-weight: 700; letter-spacing: .2em
   const LOGOS = {
     youtube: '<svg class="logo" viewBox="0 0 28 20" style="aspect-ratio:28/20" aria-hidden="true"><rect width="28" height="20" rx="5.6" fill="#ff0033"/><path d="M11.2 5.6v8.8l7.6-4.4z" fill="#fff"/></svg>',
     jellyfin: '<svg class="logo" viewBox="20 18 483 483" style="aspect-ratio:1" aria-hidden="true"><defs><linearGradient id="jf" x1="110.25" y1="213.3" x2="496.14" y2="436.09" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aa5cc3"/><stop offset="1" stop-color="#00a4dc"/></linearGradient></defs><path fill="url(#jf)" d="M261.42 201.62c-20.44 0-86.24 119.29-76.2 139.43s142.48 19.92 152.4 0S281.86 201.63 261.42 201.62z"/><path fill="url(#jf)" d="M261.42 23.3C199.83 23.3 1.57 382.73 31.8 443.43s429.34 60 459.24 0S323 23.3 261.42 23.3zM411.9 390.76c-19.59 39.33-281.08 39.77-300.9 0S221.1 115.48 261.45 115.48 431.49 351.42 411.9 390.76z"/></svg>',
-    plex: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1f1f1f"/><path d="M6.6 3.8h5.4l6 8.2-6 8.2H6.6l6-8.2z" fill="#ebaf00"/></svg>'
+    plex: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1f1f1f"/><path d="M6.6 3.8h5.4l6 8.2-6 8.2H6.6l6-8.2z" fill="#ebaf00"/></svg>',
+    steamlink: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1b2838"/><circle cx="15" cy="9" r="3.7" fill="none" stroke="#fff" stroke-width="1.7"/><circle cx="15" cy="9" r="1.6" fill="#66c0f4"/><path d="M8.3 15.5l5-4.3" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/><circle cx="8.1" cy="15.7" r="2.3" fill="#fff"/></svg>'
   };
 
-  let apps = { youtube: { name: 'YouTube' }, jellyfin: { name: 'Jellyfin' }, plex: { name: 'Plex' } };
+  let apps = { youtube: { name: 'YouTube' }, jellyfin: { name: 'Jellyfin' }, plex: { name: 'Plex' }, steamlink: { name: 'Steam Link' } };
   let current = null;
 
   let toastTimer;

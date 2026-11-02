@@ -1,7 +1,8 @@
 # Scaros OS
 
 Transforme un vieux PC portable en box TV. Au démarrage, l'animation Scaros se lance, puis
-un menu plein écran façon console : YouTube (interface TV), Jellyfin et Plex.
+un menu plein écran façon console : YouTube (interface TV), Jellyfin, Plex et Steam Link
+pour jouer aux jeux de ton PC sur la télé.
 Tout se pilote à la manette Xbox ou depuis ton téléphone. Quand tu branches la télé en HDMI,
 l'image et le son passent dessus tout seuls.
 
@@ -97,6 +98,10 @@ reboot
 - **Jellyfin** : entre l'adresse de ton serveur, puis dans
   **Paramètres > Affichage > Mode d'affichage**, choisis **TV**.
 - **Plex** : connecte-toi avec le code affiché, sur <https://plex.tv/link>.
+- **Steam Link** : sur ton PC principal, ouvre Steam, puis **Paramètres > Remote Play** et active
+  Remote Play. Au premier lancement de Steam Link sur le portable, choisis ton PC : un code
+  s'affiche, entre-le dans Steam sur ton PC. Ton PC doit être allumé avec Steam ouvert.
+  Si l'image saccade, baisse la qualité en 720p dans les réglages de Steam Link.
 
 ## Utilisation
 
@@ -110,7 +115,11 @@ reboot
 | Y | lecture / pause |
 
 Au clavier : flèches, Entrée, Échap ; la **touche Windows** ramène au menu ;
-**1 à 3** ouvrent directement YouTube, Jellyfin et Plex ; **+ / −** pour le volume.
+**1 à 4** ouvrent directement YouTube, Jellyfin, Plex et Steam Link ; **+ / −** pour le volume.
+
+**Dans Steam Link**, la manette sert au jeu : tous ses boutons vont au jeu, et un appui court sur
+le bouton Xbox ouvre le menu de Steam. Pour revenir au menu Scaros, **maintiens le bouton Xbox**
+une seconde.
 
 **Casque ou enceinte Bluetooth :** **Paramètres > Bluetooth > Rechercher des appareils**, mets
 l'appareil en mode appairage, puis choisis-le dans la liste. Le son passe dessus tout seul.
@@ -165,7 +174,8 @@ scaros-os/
 Au démarrage : GRUB (masqué), écran Plymouth Scaros, connexion automatique sur le compte,
 puis `startx` lance `session.sh`. Le menu tourne dans Chromium en mode kiosque. Les applis sont des
 Flatpak de Flathub : VacuumTube (`rocks.shy.VacuumTube`) pour l'interface TV de YouTube,
-Jellyfin Desktop (`org.jellyfin.JellyfinDesktop`) et Plex HTPC (`tv.plex.PlexHTPC`).
+Jellyfin Desktop (`org.jellyfin.JellyfinDesktop`), Plex HTPC (`tv.plex.PlexHTPC`) et
+Steam Link (`com.valvesoftware.SteamLink`).
 
 `scaros.py` réserve la manette et la transforme en touches clavier, pour qu'elle marche pareil dans
 toutes les applis. Pour tester sans le portable : `python3 launcher/scaros.py --dry-run`, puis
