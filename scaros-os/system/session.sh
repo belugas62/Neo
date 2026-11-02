@@ -18,8 +18,10 @@ unclutter --timeout 2 --jitter 4 --ignore-scrolling &
 # serveur du menu, relancé s'il s'arrête
 ( while true; do python3 "$SCAROS/launcher/scaros.py" >>"$LOG/scaros.log" 2>&1; sleep 2; done ) &
 
+# attend que le serveur réponde (jusqu'à 60 s : le premier démarrage peut être lent).
+# S'il tarde encore, le menu s'ouvre quand même et attend le serveur tout seul.
 i=0
-while [ $i -lt 50 ] && ! curl -fs -o /dev/null http://127.0.0.1:8421/api/state; do
+while [ $i -lt 300 ] && ! curl -fs -m 2 -o /dev/null http://127.0.0.1:8421/api/ping; do
   sleep 0.2; i=$((i + 1))
 done
 

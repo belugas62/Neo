@@ -42,7 +42,7 @@ try:
 except ImportError:
     qrcode = None
 
-VERSION = "0.2"
+VERSION = "0.3"
 ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "scaros"
@@ -50,7 +50,10 @@ LAUNCHER_CLASS = "ScarosLauncher"
 INTERNAL = re.compile(r"^(eDP|LVDS|DSI)", re.I)
 KEYS = {"up": "Up", "down": "Down", "left": "Left", "right": "Right",
         "ok": "Return", "back": "Escape", "playpause": "space"}
-ACTIONS = set(KEYS) | {"home", "menu", "volup", "voldown", "ch1", "ch2", "ch3", "ch4"}
+ACTIONS = set(KEYS) | {"home", "menu", "volup", "voldown", "mute", "ch1", "ch2", "ch3", "ch4"}
+MOVES = {"up", "down", "left", "right"}
+TV_RES = {"1080": (1920, 1080), "720": (1280, 720), "max": None}   # définition de l'image sur la télé
+PHONE_TTL = 40                # un téléphone qui ne donne plus signe de vie depuis 40 s est parti
 AUDIO_MODES = ("auto", "tv", "pc", "bluetooth")
 AUDIO_NAMES = {"tv": "la télé (HDMI)", "pc": "les haut-parleurs du PC"}
 MAC = re.compile(r"(?:[0-9A-F]{2}:){5}[0-9A-F]{2}", re.I)
@@ -172,13 +175,27 @@ class Scaros:
         self.output = "pc"
         self.pad = None
         self.volume = 35 if DRY else None
+        self.muted = False
         self.current = None          # (id, Popen) de l'appli ouverte
+        self.shown = False           # la fenêtre de l'appli ouverte est-elle à l'écran ?
+        self.overlay = False         # centre de contrôle ouvert par-dessus l'appli (qui reste ouverte)
         self.installed = {}
-        self.phones = {}             # ip -> dernière visite
+        self.phones = {}             # ip -> dernier signe de vie
+        self.streams = {}            # ip -> flux d'événements ouverts (téléphones)
+        self.phones_seen = 0
         self.pairing = False
         self.windows = []            # fenêtres de l'appli ouverte
         self.launcher_ids = set()
         self.focus_checked = 0.0
+        self.inputs = queue.Queue()  # touches, textes et lancements, exécutés dans l'ordre d'arrivée
+        self.output_lock = threading.Lock()
+        self.audio_lock = threading.Lock()
+        self.tv_res = self.settings.get("tv_res", "1080")
+        self.resolution = None       # définition actuelle de l'écran utilisé, ex. « 1920×1080 »
+        self.cache = {}              # nom -> (moment, valeur) : listes Wi-Fi et Bluetooth
+        self.retrying = None         # appli relancée après une fermeture immédiate
+        self.bt_busy = set()
+        self.wifi_busy = False
         self.audio_mode = self.settings.get("audio_mode", "auto")
         self.audio_target = None
         self.audio_device = None
@@ -211,38 +228,80 @@ class Scaros:
     def channels(self):
         return list(self.apps)
 
-    def wifi(self):
-        if DRY:
-            return next((n["ssid"] for n in self.dry_wifi if n["active"]), None)
-        code, out = run(["nmcli", "-t", "-f", "ACTIVE,SSID", "dev", "wifi"], timeout=4, quiet=True)
-        for line in out.splitlines():
-            if line.startswith("yes:"):
-                return line[4:] or None
+    def cached(self, name, ttl, compute):
+        """Garde un résultat coûteux (nmcli, bluetoothctl) quelques secondes."""
+        hit = self.cache.get(name)
+        if hit and time.monotonic() - hit[0] < ttl:
+            return hit[1]
+        value = compute()
+        self.cache[name] = (time.monotonic(), value)
+        return value
+
+    def wifi(self, networks=None):
+        """Nom du Wi-Fi utilisé (lu dans la liste déjà connue, sans relancer de recherche)."""
+        nets = self.wifi_networks() if networks is None else networks
+        active = next((n["ssid"] for n in nets if n["active"]), None)
+        if active or DRY or shutil.which("nmcli"):
+            return active
         code, out = run(["iwgetid", "-r"], timeout=3, quiet=True)
         return out.strip() or None
 
+    # ---------- téléphones (télécommande) ----------
     def phone_count(self):
-        limit = time.time() - 300
-        return sum(1 for t in self.phones.values() if t > limit)
+        limit = time.time() - PHONE_TTL
+        with self.lock:
+            ips = {ip for ip, t in self.phones.items() if t > limit} | {ip for ip, n in self.streams.items() if n > 0}
+        return len(ips)
 
-    def state(self):
+    def _phones_changed(self):
+        n = self.phone_count()
+        if n != self.phones_seen:
+            self.phones_seen = n
+            self.bus.emit("remote", phones=n)
+
+    def stream_opened(self, ip):
+        with self.lock:
+            self.streams[ip] = self.streams.get(ip, 0) + 1
+            self.phones[ip] = time.time()
+        self._phones_changed()
+
+    def stream_closed(self, ip):
+        with self.lock:
+            self.streams[ip] = max(0, self.streams.get(ip, 0) - 1)
+            self.phones[ip] = time.time()
+
+    def _watch_phones(self):
+        """Fait disparaître l'icône du téléphone quand il est parti (veille, autre appli)."""
+        while True:
+            time.sleep(5)
+            self._phones_changed()
+
+    def state(self, lite=False):
         ip = lan_ip()
         with self.lock:
-            return {
+            s = {
                 "version": VERSION, "dry": DRY,
                 "mode": self.mode, "hdmi": self.hdmi, "output": self.output,
+                "res": self.resolution, "tvRes": self.tv_res,
                 "pad": self.pad, "padSupport": evdev is not None,
-                "volume": self.volume,
-                "app": self.current[0] if self.current else None,
+                "volume": self.volume, "muted": self.muted,
+                "app": self.current[0] if self.current else None, "shown": self.shown,
                 "apps": {k: {"name": v["name"], "installed": self.installed.get(k, True)}
                          for k, v in self.apps.items()},
-                "remote": {"url": f"http://{ip}:{self.port}/remote", "phones": self.phone_count(),
-                           "qr": qrcode is not None},
-                "wifi": self.wifi(), "wifiList": self.wifi_networks(), "ip": ip, "info": system_info(),
                 "prefs": self.settings.get("ui", {}),
                 "audio": {"mode": self.audio_mode, "target": self.audio_target, "device": self.audio_device},
-                "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning, "audio": bt_audio_available()},
             }
+        if lite:  # la télécommande n'a besoin que de ça : réponse immédiate
+            return s
+        # les appels lents (nmcli, bluetoothctl) se font hors du verrou, pour ne jamais retarder une touche
+        nets = self.wifi_networks()
+        s.update({
+            "remote": {"url": f"http://{ip}:{self.port}/remote", "phones": self.phone_count(),
+                       "qr": qrcode is not None},
+            "wifi": self.wifi(nets), "wifiList": nets, "ip": ip, "info": system_info(),
+            "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning, "audio": bt_audio_available()},
+        })
+        return s
 
     def refresh_installed(self):
         for k, v in self.apps.items():
@@ -257,7 +316,7 @@ class Scaros:
         log.info("applis installées : %s", self.installed)
 
     # ---------- applis ----------
-    def launch(self, app_id):
+    def launch(self, app_id, retry=True):
         conf = self.apps.get(app_id)
         if not conf:
             return False
@@ -267,7 +326,7 @@ class Scaros:
             self.bus.emit("app", id=app_id, state="missing")
             return False
         self.close_app(focus=False)
-        cmd = ["sleep", "6"] if DRY else conf["cmd"]
+        cmd = ["sleep", "8"] if DRY else conf["cmd"]
         before = set(self._visible_windows())
         try:
             STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -281,39 +340,53 @@ class Scaros:
             return False
         with self.lock:
             self.current = (app_id, p)
+            self.shown = False
+            self.overlay = False
+            self.windows = []
         log.info("lancé : %s (pid %s)", app_id, p.pid)
         self.bus.emit("app", id=app_id, state="running")
-        threading.Thread(target=self._watch, args=(app_id, p, time.time()), daemon=True).start()
+        threading.Thread(target=self._watch, args=(app_id, p, time.time(), retry), daemon=True).start()
         threading.Thread(target=self._track_windows, args=(app_id, p, before), daemon=True).start()
         return True
 
-    def _watch(self, app_id, p, started):
+    def _watch(self, app_id, p, started, retry):
         code = p.wait()
         with self.lock:
             mine = self.current is not None and self.current[1] is p
             if mine:
                 self.current = None
+                self.shown = False
+                self.overlay = False
         if not mine:
             return
         quick = time.time() - started < 4
-        log.info("%s s'est fermé (code %s)", app_id, code)
-        self.bus.emit("app", id=app_id, state="failed" if quick and code else "closed")
+        log.info("%s s'est fermé (code %s)%s", app_id, code, " aussitôt" if quick else "")
+        if quick and retry:
+            # souvent l'ancienne fenêtre de l'appli finissait de se fermer : on réessaie une fois
+            self.retrying = app_id
+            time.sleep(1.5)
+            if self.retrying == app_id and self.current is None:
+                self.submit("launch", app_id, False)
+            return
+        self.bus.emit("app", id=app_id, state="failed" if quick else "closed")
         self.focus_launcher()
 
     def close_app(self, focus=True):
         with self.lock:
             cur, self.current = self.current, None
+            self.shown = False
+            self.overlay = False
         if not cur:
             return
         app_id, p = cur
         self.windows = []
         flatpak_id = self.apps[app_id].get("flatpak")
-        if flatpak_id:
-            run(["flatpak", "kill", flatpak_id], quiet=True)
         try:
             os.killpg(p.pid, signal.SIGTERM)
         except (ProcessLookupError, PermissionError):
             pass
+        if flatpak_id:
+            run(["flatpak", "kill", flatpak_id], timeout=5, quiet=True)
         try:
             p.wait(timeout=3)
         except subprocess.TimeoutExpired:
@@ -329,27 +402,46 @@ class Scaros:
     def _visible_windows(self):
         return run(["xdotool", "search", "--onlyvisible", "--name", "."], timeout=3, quiet=True)[1].split()
 
+    def _is_current(self, p):
+        with self.lock:
+            return self.current is not None and self.current[1] is p
+
     def _track_windows(self, app_id, p, before):
         """Repère les fenêtres de l'appli et lui donne le focus dès qu'elles s'affichent.
 
         Sans ça, Openbox peut laisser le focus au menu : les touches de la manette
         partiraient alors vers le menu caché derrière l'appli.
         """
+        if DRY:  # pas de vraie fenêtre : on fait comme si elle s'affichait vite
+            time.sleep(1.5)
+            if self._is_current(p):
+                self.shown = True
+                self.bus.emit("app", id=app_id, state="shown")
+            return
         deadline = time.time() + 90
-        while time.time() < deadline and p.poll() is None:
-            with self.lock:
-                if self.current is None or self.current[1] is not p:
-                    return
+        while time.time() < deadline and p.poll() is None and self._is_current(p):
             new = [w for w in self._visible_windows() if w not in before]
             if new and new != self.windows:
                 self.windows = new
-                run(["xdotool", "windowactivate", new[-1]], timeout=3, quiet=True)
+                if not self.overlay:
+                    run(["xdotool", "windowactivate", new[-1]], timeout=3, quiet=True)
                 log.info("%s : fenêtre %s activée", app_id, new[-1])
+                if not self.shown:
+                    self.shown = True
+                    self.bus.emit("app", id=app_id, state="shown")
             time.sleep(0.7)
+
+    def _app_window(self):
+        """La fenêtre de l'appli ouverte (la dernière repérée, sinon la plus récente qui n'est pas le menu)."""
+        if self.windows:
+            return self.windows[-1]
+        launcher = set(run(["xdotool", "search", "--class", LAUNCHER_CLASS], timeout=3, quiet=True)[1].split())
+        others = [w for w in self._visible_windows() if w not in launcher]
+        return others[-1] if others else None
 
     def ensure_app_focus(self):
         """Avant d'envoyer une touche : si le menu a repris le focus, le rend à l'appli."""
-        if DRY or self.current is None or not self.windows:
+        if DRY or self.current is None or self.overlay or not self.windows:
             return
         now = time.monotonic()
         if now - self.focus_checked < 1.5:
@@ -365,18 +457,65 @@ class Scaros:
     def focus_launcher(self):
         run(["xdotool", "search", "--class", LAUNCHER_CLASS, "windowactivate"], timeout=3, quiet=True)
 
-    # ---------- entrées (manette, téléphone) ----------
+    def show_overlay(self):
+        """Centre de contrôle pendant une appli : le menu passe devant, l'appli reste ouverte derrière."""
+        with self.lock:
+            if self.current is None or self.overlay:
+                return
+            self.overlay = True
+        log.info("centre de contrôle par-dessus %s", self.current[0] if self.current else "?")
+        self.focus_launcher()
+
+    def resume_app(self):
+        """Ferme le centre de contrôle et rend l'écran à l'appli restée ouverte."""
+        with self.lock:
+            if not self.overlay:
+                return
+            self.overlay = False
+            cur = self.current
+        if cur is None:
+            return
+        win = self._app_window()
+        if win:
+            run(["xdotool", "windowactivate", win], timeout=3, quiet=True)
+        log.info("retour dans %s", cur[0])
+
+    # ---------- entrées (manette, téléphone) : une seule file, dans l'ordre ----------
+    def submit(self, kind, *args):
+        """Met une action dans la file. Les appuis restent dans l'ordre, même s'ils arrivent très vite."""
+        self.inputs.put((time.monotonic(), kind, args))
+
+    def _input_worker(self):
+        while True:
+            t, kind, args = self.inputs.get()
+            try:
+                if kind == "input":
+                    # une flèche restée en attente plus d'une seconde (appli qui se ferme…) est oubliée
+                    if args[0] in MOVES and time.monotonic() - t > 1.0:
+                        continue
+                    self.handle(args[0])
+                elif kind == "text":
+                    self.type_text(args[0])
+                elif kind == "launch":
+                    self.launch(*args)
+                elif kind == "resume":
+                    self.resume_app()
+            except Exception:  # une erreur ne doit jamais bloquer la manette
+                log.exception("action %s %s", kind, args)
+
     def handle(self, action):
         if action == "menu":
             if self.current:
-                self.close_app()
-                self.bus.emit("home")
+                self.show_overlay()
             self.bus.emit("menu")
         elif action == "home":
+            self.retrying = None
             self.close_app()
             self.bus.emit("home")
         elif action in ("volup", "voldown"):
             self.change_volume(5 if action == "volup" else -5)
+        elif action == "mute":
+            self.toggle_mute()
         elif action.startswith("ch"):
             ids = self.channels()
             n = int(action[2:]) - 1
@@ -385,7 +524,7 @@ class Scaros:
         elif action in KEYS:
             key = KEYS[action]
             cur = self.current
-            if cur:
+            if cur and not self.overlay:
                 # une appli peut demander une autre touche, ex. "keys": {"back": "BackSpace"} dans apps.json
                 key = self.apps[cur[0]].get("keys", {}).get(action, key)
                 self.ensure_app_focus()
@@ -397,9 +536,12 @@ class Scaros:
             run(["xdotool", "type", "--clearmodifiers", "--delay", "40", "--", text], timeout=20)
 
     def native_controller(self):
-        """L'appli affichée lit-elle la manette elle-même (jeux) au lieu de recevoir des touches ?"""
+        """L'appli affichée lit-elle la manette elle-même (jeux) au lieu de recevoir des touches ?
+
+        Pas pendant que le centre de contrôle est ouvert par-dessus : la manette sert alors au menu.
+        """
         cur = self.current
-        return bool(cur and self.apps[cur[0]].get("controller") == "native")
+        return bool(cur and not self.overlay and self.apps[cur[0]].get("controller") == "native")
 
     def set_pad(self, name):
         with self.lock:
@@ -410,29 +552,51 @@ class Scaros:
         self.bus.emit("pad", name=name)
 
     def hello(self, ip):
-        before = self.phone_count()
-        self.phones[ip] = time.time()
-        if self.phone_count() != before:
-            self.bus.emit("remote", phones=self.phone_count())
+        with self.lock:
+            self.phones[ip] = time.time()
+        self._phones_changed()
 
     # ---------- son ----------
     def read_volume(self):
+        """Volume (0-100) et sourdine de la sortie utilisée."""
         if DRY:
-            return self.volume
+            return self.volume, self.muted
         code, out = run(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"], timeout=3, quiet=True)
         m = re.search(r"([\d.]+)", out)
-        return round(float(m.group(1)) * 100) if code == 0 and m else None
+        if code != 0 or not m:
+            return None, False
+        return round(float(m.group(1)) * 100), "MUTED" in out
+
+    def _emit_volume(self, quiet=False):
+        """quiet : simple mise à jour (sortie changée), sans afficher le volume à l'écran."""
+        self.bus.emit("volume", level=self.volume, muted=self.muted, quiet=quiet)
 
     def change_volume(self, delta):
         if DRY:
             self.volume = max(0, min(100, (self.volume or 0) + delta))
+            self.muted = False
         elif shutil.which("wpctl"):
+            # monter ou baisser le son coupe la sourdine, comme sur une télé
+            run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "0"], timeout=3, quiet=True)
             run(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@",
                  f"{abs(delta)}%{'+' if delta > 0 else '-'}"], timeout=3)
-            self.volume = self.read_volume()
+            self.volume, self.muted = self.read_volume()
         else:
+            run(["pactl", "set-sink-mute", "@DEFAULT_SINK@", "0"], timeout=3, quiet=True)
             run(["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{delta:+d}%"], timeout=3)
-        self.bus.emit("volume", level=self.volume)
+        self._emit_volume()
+
+    def toggle_mute(self):
+        if DRY:
+            self.muted = not self.muted
+        elif shutil.which("wpctl"):
+            run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"], timeout=3)
+            self.volume, self.muted = self.read_volume()
+        else:
+            run(["pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle"], timeout=3)
+            self.muted = not self.muted
+        log.info("son %s", "coupé" if self.muted else "rétabli")
+        self._emit_volume()
 
     def _sinks(self):
         if DRY:
@@ -480,6 +644,10 @@ class Scaros:
                     return
 
     def apply_audio(self):
+        with self.audio_lock:  # écran, Bluetooth et réglages peuvent la demander en même temps
+            self._apply_audio()
+
+    def _apply_audio(self):
         """Choisit la sortie du son selon le réglage : auto, télé, PC ou appareil Bluetooth.
 
         En auto, le son va sur le casque ou l'enceinte Bluetooth connecté, sinon sur l'écran utilisé.
@@ -502,6 +670,9 @@ class Scaros:
         self.audio_target, self.audio_device = target, device
         if changed:
             log.info("son -> %s (réglage %s)", device, mode)
+            if not DRY:  # chaque sortie a son propre volume : on affiche le bon
+                self.volume, self.muted = self.read_volume()
+            self._emit_volume(quiet=True)
         self.bus.emit("audio", mode=mode, target=target, device=device, changed=changed)
 
     def _set_sink(self, target, bt):
@@ -542,7 +713,7 @@ class Scaros:
             current = sorted(s["name"] for s in self._sinks() if s["bt"])
             if last is not None and current != last:
                 self.apply_audio()
-                self.bus.emit("bt", devices=self.bt_devices(), scanning=self.bt_scanning)
+                self._bt_changed()
             last = current
             time.sleep(2)
 
@@ -567,8 +738,13 @@ class Scaros:
                 info["kind"] = "audio" if value.startswith("audio") else "input" if value.startswith("input") else "other"
         return info
 
-    def bt_devices(self):
+    def bt_devices(self, fresh=False):
         """Appareils appairés, plus les casques, enceintes et manettes repérés pendant une recherche."""
+        if fresh:
+            self.cache.pop("bt", None)
+        return self.cached("bt", 3, self._bt_list)
+
+    def _bt_list(self):
         if DRY:
             devices = [dict(d) for d in self.dry_bt]
         else:
@@ -595,7 +771,7 @@ class Scaros:
         return devices
 
     def _bt_changed(self):
-        self.bus.emit("bt", devices=self.bt_devices(), scanning=self.bt_scanning, audio=bt_audio_available())
+        self.bus.emit("bt", devices=self.bt_devices(fresh=True), scanning=self.bt_scanning, audio=bt_audio_available())
 
     def bt_scan(self, seconds=20):
         if self.bt_scanning or self.pairing:
@@ -618,7 +794,7 @@ class Scaros:
             deadline = time.time() + seconds
             last = None
             while time.time() < deadline:
-                devices = self.bt_devices()
+                devices = self.bt_devices(fresh=True)
                 if devices != last:
                     self.bus.emit("bt", devices=devices, scanning=True)
                     last = devices
@@ -630,6 +806,17 @@ class Scaros:
             self._bt_changed()
 
     def bt_connect(self, mac):
+        mac = mac.upper()
+        with self.lock:
+            if mac in self.bt_busy:  # déjà en cours : un deuxième appui ne relance rien
+                return
+            self.bt_busy.add(mac)
+        try:
+            self._bt_connect(mac)
+        finally:
+            self.bt_busy.discard(mac)
+
+    def _bt_connect(self, mac):
         info = self._bt_info(mac) or {"name": mac, "paired": False, "kind": "other"}
         self.bus.emit("btmsg", state="connecting", name=info["name"], mac=mac)
         out = ""
@@ -726,11 +913,18 @@ class Scaros:
                 names.add(":".join(parts[:-1]).replace("\\:", ":"))
         return names
 
-    def wifi_networks(self):
+    def wifi_networks(self, fresh=False):
         """Réseaux Wi-Fi visibles, du connecté au plus faible."""
+        if fresh:
+            self.cache.pop("wifi", None)
+        return self.cached("wifi", 5, self._wifi_list)
+
+    def _wifi_list(self):
         if DRY:
             return sorted((dict(n) for n in self.dry_wifi), key=lambda n: (not n["active"], not n["known"], -n["signal"]))
-        code, out = self._nm("-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", timeout=15)
+        # --rescan no : lit la dernière recherche. Une nouvelle recherche coupe le Wi-Fi
+        # quelques instants et peut faire saccader une vidéo ; elle n'a lieu que sur demande.
+        code, out = self._nm("-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "no", timeout=15)
         if code != 0:
             return []
         known = self._wifi_known()
@@ -748,7 +942,8 @@ class Scaros:
         return sorted(nets.values(), key=lambda n: (not n["active"], not n["known"], -n["signal"]))
 
     def _wifi_changed(self):
-        self.bus.emit("wifi", networks=self.wifi_networks(), scanning=self.wifi_scanning, current=self.wifi(), ip=lan_ip())
+        nets = self.wifi_networks(fresh=True)
+        self.bus.emit("wifi", networks=nets, scanning=self.wifi_scanning, current=self.wifi(nets), ip=lan_ip())
 
     def wifi_scan(self):
         if self.wifi_scanning:
@@ -766,6 +961,16 @@ class Scaros:
             self._wifi_changed()
 
     def wifi_connect(self, ssid, password=None):
+        with self.lock:
+            if self.wifi_busy:
+                return False
+            self.wifi_busy = True
+        try:
+            return self._wifi_connect(ssid, password)
+        finally:
+            self.wifi_busy = False
+
+    def _wifi_connect(self, ssid, password=None):
         self.bus.emit("wifimsg", state="connecting", ssid=ssid)
         if DRY:
             time.sleep(1.5)
@@ -849,39 +1054,96 @@ class Scaros:
         return False
 
     def _xrandr_outputs(self):
+        """Sorties vidéo : nom, branchée ?, interne ?, définitions possibles [(l, h, fréquences, préférée)]."""
+        if DRY:
+            outs = [{"name": "eDP-1", "connected": True, "internal": True, "modes": [(1366, 768, [60.0], True)]}]
+            outs.append({"name": "HDMI-1", "connected": self.hdmi, "internal": False,
+                         "modes": [(3840, 2160, [30.0, 25.0], True), (1920, 1080, [60.0, 50.0, 59.94], False),
+                                   (1280, 720, [60.0, 50.0], False)] if self.hdmi else []})
+            return outs
         code, out = run(["xrandr", "--query"], timeout=8, quiet=True)
-        internal, external = [], []
+        outs = []
         for line in out.splitlines():
             m = re.match(r"^(\S+) (connected|disconnected)", line)
             if m:
-                (internal if INTERNAL.match(m.group(1)) else external).append((m.group(1), m.group(2) == "connected"))
-        return internal, external
+                outs.append({"name": m.group(1), "connected": m.group(2) == "connected",
+                             "internal": bool(INTERNAL.match(m.group(1))), "modes": []})
+                continue
+            m = re.match(r"^\s+(\d+)x(\d+)(i?)\S*\s+(.*)$", line)
+            if m and outs and not m.group(3):  # on ignore les modes entrelacés (1080i)
+                rates = [float(r) for r in re.findall(r"\d+\.\d+", m.group(4))]
+                if rates:
+                    outs[-1]["modes"].append((int(m.group(1)), int(m.group(2)), rates, "+" in m.group(4)))
+        return outs
+
+    @staticmethod
+    def _pick_mode(modes, res):
+        """Définition à demander à la télé : 1080p par défaut (une télé 4K ferait ramer ce petit PC).
+
+        Renvoie (l, h, fréquence) ou None pour laisser la télé choisir (xrandr --auto).
+        """
+        limit = TV_RES.get(res)
+        if not limit or not modes:
+            return None
+        tw, th = limit
+        pref = next((m for m in modes if m[3]), modes[0])
+        if pref[0] <= tw and pref[1] <= th:
+            return None  # la définition native de la télé est déjà sous la limite
+        fits = [m for m in modes if m[0] <= tw and m[1] <= th]
+        if not fits:
+            return None
+        w, h, rates, _ = max(fits, key=lambda m: (m[0] * m[1], -abs(m[0] / m[1] - 16 / 9)))
+        rate = min(rates, key=lambda r: (abs(r - 60), -r))
+        return w, h, rate
 
     def apply_output(self):
+        with self.output_lock:  # branchement HDMI et réglages peuvent arriver en même temps
+            self._apply_output()
+        self.apply_audio()
+
+    def _apply_output(self):
         with self.lock:
             target = "tv" if self.mode in ("auto", "tv") and self.hdmi else "pc"
             if self.mode == "pc":
                 target = "pc"
-        internal, external = self._xrandr_outputs()
-        ext = next((n for n, c in external if c), None)
-        own = next((n for n, c in internal if c), internal[0][0] if internal else None)
-        if not DRY:
-            if target == "tv" and not ext:
-                target = "pc"
-            cmd = ["xrandr"]
-            if target == "tv":
-                cmd += ["--output", ext, "--auto", "--primary"] + (["--output", own, "--off"] if own else [])
+        outs = self._xrandr_outputs()
+        ext = next((o for o in outs if not o["internal"] and o["connected"]), None)
+        own = next((o for o in outs if o["internal"] and o["connected"]),
+                   next((o for o in outs if o["internal"]), None))
+        if target == "tv" and not ext:
+            target = "pc"
+        screen = ext if target == "tv" else own
+        pick = self._pick_mode(screen["modes"], self.tv_res) if target == "tv" and screen else None
+        cmd = ["xrandr"]
+        if target == "tv":
+            cmd += ["--output", ext["name"]]
+            cmd += ["--mode", f"{pick[0]}x{pick[1]}", "--rate", f"{pick[2]:.2f}"] if pick else ["--auto"]
+            cmd += ["--primary"] + (["--output", own["name"], "--off"] if own else [])
+        else:
+            cmd += (["--output", own["name"], "--auto", "--primary"] if own else [])
+            for o in outs:
+                if not o["internal"]:
+                    cmd += ["--output", o["name"], "--off"]
+        if len(cmd) > 1 and run(cmd, timeout=15)[0] != 0:
+            if pick:  # la télé refuse cette définition : on la laisse choisir
+                pick = None
+                cmd = ["xrandr", "--output", ext["name"], "--auto", "--primary"]
+                if run(cmd, timeout=15)[0] != 0:
+                    run(["xrandr", "--auto"], timeout=15)
             else:
-                cmd += (["--output", own, "--auto", "--primary"] if own else [])
-                for name, _ in external:
-                    cmd += ["--output", name, "--off"]
-            if len(cmd) > 1 and run(cmd, timeout=15)[0] != 0:
                 run(["xrandr", "--auto"], timeout=15)
+        size = None
+        if pick:
+            size = pick[:2]
+        elif screen and screen["modes"]:
+            m = next((m for m in screen["modes"] if m[3]), screen["modes"][0])
+            size = m[:2]
         with self.lock:
             self.output = target
-        log.info("écran : mode=%s hdmi=%s -> %s", self.mode, self.hdmi, target)
-        self.bus.emit("display", mode=self.mode, hdmi=self.hdmi, output=self.output)
-        self.apply_audio()
+            self.resolution = f"{size[0]}×{size[1]}" if size else None
+        log.info("écran : mode=%s hdmi=%s -> %s %s", self.mode, self.hdmi, target, self.resolution or "")
+        self.bus.emit("display", mode=self.mode, hdmi=self.hdmi, output=self.output,
+                      res=self.resolution, tvRes=self.tv_res)
 
     def set_mode(self, mode):
         if mode not in ("auto", "pc", "tv"):
@@ -891,6 +1153,15 @@ class Scaros:
         with self.lock:
             self.mode = mode
         self.settings["display_mode"] = "auto" if mode == "tv" else mode
+        self._save_settings()
+        self.apply_output()
+        return True
+
+    def set_tv_res(self, res):
+        if res not in TV_RES:
+            return False
+        self.tv_res = res
+        self.settings["tv_res"] = res
         self._save_settings()
         self.apply_output()
         return True
@@ -957,7 +1228,9 @@ class Scaros:
     # ---------- démarrage ----------
     def start(self):
         self.hdmi = self.hdmi_connected()
-        self.volume = self.read_volume()
+        self.volume, self.muted = self.read_volume()
+        threading.Thread(target=self._input_worker, daemon=True).start()
+        threading.Thread(target=self._watch_phones, daemon=True).start()
         threading.Thread(target=self.refresh_installed, daemon=True).start()
         threading.Thread(target=self.apply_output, daemon=True).start()
         threading.Thread(target=self._watch_hdmi, daemon=True).start()
@@ -1053,18 +1326,21 @@ class Pad:
         while True:
             native = self.app.native_controller()
             if native == self.grabbed:
-                self.set_grab(main, not native)
+                self.set_grab(group, not native)
             ready, _, _ = select.select(list(fds), [], [], 0.04)
             for fd in ready:
                 for ev in fds[fd].read():
                     self.event(ev, absinfo, native)
             self.tick(native)
 
-    def set_grab(self, main, grab):
-        try:
-            main.grab() if grab else main.ungrab()
-        except OSError as e:
-            log.warning("manette : %s impossible (%s)", "réservation" if grab else "libération", e)
+    def set_grab(self, group, grab):
+        """Réserve toute la manette (bouton Xbox compris, parfois sur un périphérique à part),
+        ou la rend à l'appli. Sans ça, le bouton Xbox arrivait aussi dans l'appli ouverte."""
+        for d in group:
+            try:
+                d.grab() if grab else d.ungrab()
+            except OSError as e:
+                log.warning("manette %s : %s impossible (%s)", d.name, "réservation" if grab else "libération", e)
         self.grabbed = grab
         self.sources.clear()
         self.next_fire.clear()
@@ -1083,7 +1359,7 @@ class Pad:
             if ev.code in self.DPAD:
                 self.press("dpad", self.DPAD[ev.code], ev.value != 0)
             elif ev.code in self.BUTTONS and ev.value == 1:
-                self.app.handle(self.BUTTONS[ev.code])
+                self.app.submit("input", self.BUTTONS[ev.code])
         elif ev.type == E.EV_ABS:
             if ev.code == E.ABS_HAT0X:
                 self.press("hat", "left", ev.value < 0)
@@ -1104,16 +1380,16 @@ class Pad:
         if native:
             if self.guide_down and not self.guide_fired and now - self.guide_down >= self.HOLD_HOME:
                 self.guide_fired = True
-                self.app.handle("home")
+                self.app.submit("input", "home")
             return
         for d in ("up", "down", "left", "right"):
             on = any(v for (src, dd), v in self.sources.items() if dd == d)
             nxt = self.next_fire.get(d)
             if on and nxt is None:
-                self.app.handle(d)
+                self.app.submit("input", d)
                 self.next_fire[d] = now + 0.4
             elif on and now >= nxt:
-                self.app.handle(d)
+                self.app.submit("input", d)
                 self.next_fire[d] = now + 0.13
             elif not on:
                 self.next_fire.pop(d, None)
@@ -1133,13 +1409,14 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         log.debug("%s %s", self.address_string(), fmt % args)
 
-    def send(self, code, body=b"", ctype="application/json", cors=False):
+    def send(self, code, body=b"", ctype="application/json", cors=False, cache=False):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         if cors:
             self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        # polices et icônes : gardées une semaine (la télécommande s'ouvre plus vite)
+        self.send_header("Cache-Control", "max-age=604800" if cache else "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -1150,9 +1427,10 @@ class Handler(BaseHTTPRequestHandler):
         return self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
 
     def do_GET(self):
-        path = urlparse(self.path).path
+        url = urlparse(self.path)
+        path = url.path
         if path == "/api/state":
-            return self.json(self.app.state())
+            return self.json(self.app.state(lite="lite" in url.query))
         if path == "/api/ping":
             # la télécommande vérifie si scaros.local répond (nom stable pour l'écran d'accueil)
             return self.send(200, json.dumps({"ok": True, "name": socket.gethostname()}).encode(), cors=True)
@@ -1170,7 +1448,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send(404, b"introuvable", "text/plain; charset=utf-8")
 
     def file(self, f):
-        self.send(200, f.read_bytes(), self.TYPES.get(f.suffix, "application/octet-stream"))
+        cache = f.suffix in (".woff2", ".png") and f.parent.name in ("fonts", "icons")
+        self.send(200, f.read_bytes(), self.TYPES.get(f.suffix, "application/octet-stream"), cache=cache)
 
     def qr(self):
         if qrcode is None:
@@ -1186,9 +1465,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        q = self.app.bus.subscribe(self.client_address[0])
-        if not self.is_local():
-            self.app.hello(self.client_address[0])
+        ip = self.client_address[0]
+        q = self.app.bus.subscribe(ip)
+        phone = not self.is_local()
+        if phone:
+            self.app.stream_opened(ip)
         # un téléphone parti sans prévenir ne doit pas bloquer ce fil indéfiniment
         self.connection.settimeout(20)
         try:
@@ -1207,6 +1488,8 @@ class Handler(BaseHTTPRequestHandler):
             pass
         finally:
             self.app.bus.unsubscribe(q)
+            if phone:
+                self.app.stream_closed(ip)
 
     def do_POST(self):
         path = urlparse(self.path).path
@@ -1221,22 +1504,33 @@ class Handler(BaseHTTPRequestHandler):
         if not self.is_local():
             a.hello(self.client_address[0])
 
+        # touches, textes et lancements passent par une seule file : ils s'exécutent dans l'ordre
         if path == "/api/launch":
-            return self.json({"ok": a.launch(str(body.get("id")))})
+            app_id = str(body.get("id"))
+            if app_id not in a.apps:
+                return self.json({"error": "appli inconnue"}, 404)
+            a.submit("launch", app_id)
+            return self.json({"ok": True})
         if path == "/api/close":
-            threading.Thread(target=a.close_app, daemon=True).start()
+            a.submit("input", "home")
+            return self.json({"ok": True})
+        if path == "/api/resume":
+            a.submit("resume")
             return self.json({"ok": True})
         if path == "/api/display":
-            ok = a.set_mode(str(body.get("mode")))
+            if "res" in body:
+                ok = a.set_tv_res(str(body.get("res")))
+            else:
+                ok = a.set_mode(str(body.get("mode")))
             return self.json({"ok": ok}, 200 if ok else 400)
         if path == "/api/input":
             action = str(body.get("action"))
             if action not in ACTIONS:
                 return self.json({"error": "action inconnue"}, 400)
-            threading.Thread(target=a.handle, args=(action,), daemon=True).start()
+            a.submit("input", action)
             return self.json({"ok": True})
         if path == "/api/text":
-            a.type_text(str(body.get("text", "")))
+            a.submit("text", str(body.get("text", "")))
             return self.json({"ok": True})
         if path == "/api/hello":
             return self.json({"ok": True})

@@ -117,10 +117,13 @@ reboot
 | Bouton Xbox | retour au menu (ferme l'appli en cours) |
 | LB / RB | volume − / + |
 | Y | lecture / pause |
-| ≡ (Menu) | centre de contrôle : veille, éteindre, son, écran, Bluetooth |
+| ≡ (Menu) | centre de contrôle : volume, son, écran, Bluetooth, veille. Pendant une vidéo, l'appli reste ouverte derrière : B pour y revenir |
 
 Au clavier : flèches, Entrée, Échap ; la **touche Windows** ramène au menu ; **M** ouvre le centre de contrôle ;
-**1 à 4** ouvrent directement YouTube, Jellyfin, Plex et Steam Link ; **+ / −** pour le volume.
+**1 à 4** ouvrent directement YouTube, Jellyfin, Plex et Steam Link ; **+ / −** pour le volume, **0** coupe le son.
+
+**Télécommande du téléphone :** glisse sur le pavé pour te déplacer, touche OK pour valider. Touche la barre
+de volume pour couper ou remettre le son. En haut, elle affiche ce qui est à l'écran.
 
 **Dans Steam Link**, la manette sert au jeu : tous ses boutons vont au jeu, et un appui court sur
 le bouton Xbox ouvre le menu de Steam. Pour revenir au menu Scaros, **maintiens le bouton Xbox**
@@ -135,7 +138,8 @@ connecté, sinon l'écran utilisé), **Télé**, **Haut-parleurs du PC** ou **Ap
 
 **Télé :** branche le câble HDMI, l'image et le son passent sur la télé. Tu peux fermer
 l'écran du portable, il ne se met pas en veille. Le choix Auto / Écran du PC / Télé est
-dans **Réglages > Écran**.
+dans **Réglages > Écran**. L'image est envoyée en **1080p**, même sur une télé 4K : ce petit PC
+resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même endroit.
 
 ## Si quelque chose coince
 
@@ -147,6 +151,8 @@ dans **Réglages > Écran**.
 - **Changer de Wi-Fi :** **Réglages > Wi-Fi**, choisis le réseau et tape le mot de passe avec le clavier à l'écran
   (ou un vrai clavier, ou la télécommande du téléphone). En secours : console, `su -` puis `nmtui`.
 - **Vérifier le décodage vidéo :** `vainfo` doit lister VP9 et HEVC.
+- **Une appli met du temps à s'ouvrir :** la première ouverture peut prendre jusqu'à une minute sur ce PC.
+  Si elle se ferme aussitôt, Scaros la relance une fois tout seul.
 - **Mettre à jour les applis :** **Réglages > Applis > Mettre à jour les applis**.
 - **Mettre à jour Scaros :** `su -` puis `scaros-update` (récupère la dernière version du menu et relance l'écran).
   Pour tout réinstaller (paquets, applis), retélécharge l'archive (étape 4) et relance `install.sh`.
@@ -156,7 +162,8 @@ dans **Réglages > Écran**.
 Le menu, la télécommande téléphone et la lecture de la manette ont été testés en simulation,
 mais pas encore sur ta machine. À surveiller au premier essai :
 
-- la bascule HDMI (les noms des sorties vidéo varient d'un PC à l'autre) ;
+- la bascule HDMI (les noms des sorties vidéo varient d'un PC à l'autre) et le passage en 1080p ;
+- le centre de contrôle par-dessus une appli, puis le retour dans l'appli ;
 - le son sur la télé ;
 - l'appairage Bluetooth de la manette ;
 - la fluidité de YouTube avec le décodage matériel activé.

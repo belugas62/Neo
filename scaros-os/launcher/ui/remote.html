@@ -105,9 +105,11 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
 .key b { font-size: 21px; line-height: 22px; color: var(--text); }
 .volrow { display: grid; grid-template-columns: 54px 1fr 54px; gap: 10px; align-items: center; }
 .volrow .key { height: 46px; font-size: 24px; font-weight: 500; color: var(--text); }
-.level { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); text-align: center; }
+.level { display: flex; flex-direction: column; justify-content: center; gap: 6px; height: 46px; padding: 0 12px; font: inherit; font-size: 12.5px; color: var(--muted); text-align: center; border: 1px solid transparent; border-radius: 15px; background: none; cursor: pointer; }
 .level b { color: var(--text-2); }
-.track { height: 6px; overflow: hidden; border-radius: 9px; background: #ffffff1a; }
+.level.muted b { color: #ff8a80; }
+.level.muted .track i { opacity: .3; }
+.track { display: block; height: 6px; overflow: hidden; border-radius: 9px; background: #ffffff1a; }
 .track i { display: block; height: 100%; width: var(--v, 0%); background: var(--text); transition: width .2s ease; }
 .channels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .chan {
@@ -171,7 +173,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
 
   <div class="volrow">
     <button type="button" class="key" data-a="voldown" data-repeat aria-label="Baisser le volume">−</button>
-    <div class="level"><span>Volume <b id="vol-num"></b></span><div class="track"><i id="vol-bar"></i></div></div>
+    <button type="button" class="level" id="level" data-a="mute" aria-label="Couper ou remettre le son"><span>Volume <b id="vol-num"></b></span><span class="track"><i id="vol-bar"></i></span></button>
     <button type="button" class="key" data-a="volup" data-repeat aria-label="Monter le volume">+</button>
   </div>
 
@@ -200,7 +202,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   };
 
   let apps = { youtube: { name: 'YouTube' }, jellyfin: { name: 'Jellyfin' }, plex: { name: 'Plex' }, steamlink: { name: 'Steam Link' } };
-  let current = null;
+  let current = null, shown = false, volume = null, muted = false;
 
   let toastTimer;
   function toast(text) {
@@ -249,17 +251,25 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
     };
     es.onmessage = e => {
       let m; try { m = JSON.parse(e.data); } catch (err) { return; }
-      if (m.type === 'app') { current = m.state === 'running' ? m.id : (current === m.id ? null : current); renderNow(); }
+      if (m.type === 'app') {
+        if (m.state === 'running') { current = m.id; shown = false; }
+        else if (m.state === 'shown') { if (current === m.id) shown = true; }
+        else if (current === m.id) current = null;
+        renderNow();
+        if (m.state === 'missing') toast(`${(apps[m.id] || {}).name || m.id} n’est pas installé.`);
+        else if (m.state === 'failed') toast(`${(apps[m.id] || {}).name || m.id} n’a pas pu démarrer.`);
+      }
       else if (m.type === 'home') { current = null; renderNow(); }
-      else if (m.type === 'volume') renderVol(m.level);
+      else if (m.type === 'volume') { muted = !!m.muted; renderVol(m.level); }
     };
   }
   function closeStream() {
     if (es) { es.close(); es = null; }
   }
   function refresh() {
-    fetch('/api/state', { cache: 'no-store' }).then(r => r.json()).then(s => {
-      apps = s.apps; current = s.app;
+    // état léger : la réponse arrive tout de suite, même pendant une recherche Wi-Fi ou Bluetooth
+    fetch('/api/state?lite=1', { cache: 'no-store' }).then(r => r.json()).then(s => {
+      apps = s.apps; current = s.app; shown = !!s.shown; muted = !!s.muted;
       renderChannels(); renderNow(); renderVol(s.volume); setOnline(true);
     }).catch(() => setOnline(false));
   }
@@ -279,12 +289,15 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
       `<button type="button" class="chan" data-a="ch${i + 1}" aria-disabled="${a.installed === false}" aria-label="${a.name}">${LOGOS[id] || ''}<span>${a.name}</span></button>`).join('');
   }
   function renderNow() {
-    $('#now-app').textContent = current ? (apps[current] || {}).name || current : 'le menu';
+    const name = current ? (apps[current] || {}).name || current : null;
+    $('#now-app').textContent = !name ? 'le menu' : shown ? name : `ouverture de ${name}…`;
   }
   function renderVol(level) {
-    if (level == null) return;
-    $('#vol-num').textContent = level + ' %';
-    $('#vol-bar').style.setProperty('--v', level + '%');
+    if (level != null) volume = level;
+    if (volume == null) return;
+    $('#vol-num').textContent = muted ? 'coupé' : volume + ' %';
+    $('#vol-bar').style.setProperty('--v', volume + '%');
+    $('#level').classList.toggle('muted', muted);
   }
 
   // pavé tactile : glisser = flèches (un glissé long en fait plusieurs), toucher = la zone touchée

@@ -124,7 +124,8 @@ button { font: inherit; color: inherit; }
 }
 .icon.is-focus .icon-art {
   transform: translateY(-.7rem) scale(1.12);
-  box-shadow: 0 2.6rem 3.4rem -1.2rem #000000d8, 0 0 0 .18rem #ffffffe0;
+  /* reflet coloré de l'appli sous l'icône, comme une lumière sur la table */
+  box-shadow: 0 2.6rem 3.4rem -1.2rem #000000d8, 0 0 0 .18rem #ffffffe0, 0 2.2rem 5rem -1.4rem color-mix(in oklab, var(--glow, #fff) 60%, transparent);
   animation: tilt 5s ease-in-out .4s infinite alternate;
 }
 .icon.is-focus .icon-art::after { animation: shine 1.1s ease .1s 1; }
@@ -167,17 +168,17 @@ button { font: inherit; color: inherit; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ---------- Réglages (plein écran) & centre de contrôle ---------- */
-.scrim { position: fixed; inset: 0; z-index: 20; background: #000; opacity: 0; transition: opacity .35s ease; }
+.scrim { position: fixed; inset: 0; z-index: 31; background: #000; opacity: 0; transition: opacity .35s ease; }
 .scrim.on { opacity: .62; }
 .pane {
-  position: fixed; z-index: 21; inset: 0; box-sizing: border-box; display: flex; flex-direction: column;
+  position: fixed; z-index: 32; inset: 0; box-sizing: border-box; display: flex; flex-direction: column;
   background: radial-gradient(70% 60% at 22% 40%, color-mix(in oklab, var(--pa, #6b7385) 22%, transparent), transparent 70%), var(--ink-2);
   padding: max(2.6rem, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px), 6rem) 2.4rem max(16px, env(safe-area-inset-left, 0px), 6rem);
   opacity: 0; transform: scale(1.03); transition: opacity .35s ease, transform .45s var(--ease);
 }
 .pane.on { opacity: 1; transform: none; }
 .pane.side {
-  inset: 1.6rem max(1.6rem, env(safe-area-inset-right, 0px)) 1.6rem auto; width: 46rem; overflow-y: auto; border-radius: 2rem;
+  inset: 1.6rem max(1.6rem, env(safe-area-inset-right, 0px)) 1.6rem auto; width: 46rem; overflow: hidden; border-radius: 2rem;
   padding: 2.4rem 2rem; background: #12161ef2; border: 1px solid var(--line); box-shadow: 0 2rem 5rem -1rem #000;
   transform: translateX(110%);
 }
@@ -283,12 +284,20 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .cc-head { margin-bottom: 1.6rem; }
 .cc-time { margin: 0; font-size: calc(5rem * var(--fs)); font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
 .cc-date { margin: .4rem 0 0; font-size: calc(1.7rem * var(--fs)); color: var(--text-2); }
-.quick { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; margin-bottom: 1.2rem; }
-.opt.q { flex-direction: column; justify-content: center; gap: .6rem; min-height: 7rem; padding: .9rem .6rem; text-align: center; }
+.quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; margin-bottom: 1.2rem; }
+.cc-app { display: flex; align-items: center; gap: 1.3rem; margin-bottom: .9rem; }
+.cc-app-art { flex: none; display: grid; place-items: center; width: 8.4rem; aspect-ratio: 5 / 3; border-radius: .9rem; background: var(--bg); box-shadow: inset 0 0 0 1px #ffffff14; }
+.cc-app-art svg { width: 46%; height: 52%; }
+.cc-app-k { margin: 0; font-size: calc(1.25rem * var(--fs)); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.cc-app-n { margin: .1rem 0 0; font-size: calc(2.2rem * var(--fs)); font-weight: 700; letter-spacing: -.02em; }
+.cc-app-rows { margin-bottom: 1.2rem; }
+.opt.q { flex-direction: column; justify-content: center; gap: .6rem; min-height: 7rem; padding: .9rem .4rem; text-align: center; }
 .opt.q > .ic { width: 2.6rem; height: 2.6rem; }
-.opt.q .opt-title { font-size: calc(1.6rem * var(--fs)); }
+.opt.q .opt-title { font-size: calc(1.5rem * var(--fs)); }
 .pane.side .opts { gap: .45rem; }
 .pane.side .opt { min-height: 5.2rem; }
+.pane.side .meter { flex-basis: 9rem; }
+.pane-main.cc-main { flex: 1; padding-bottom: 2rem; }
 
 /* ---------- ouverture d'une appli ---------- */
 .launch {
@@ -309,7 +318,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .launch-note { margin: 0; font-size: calc(1.8rem * var(--fs)); line-height: 1.5; opacity: .9; text-wrap: pretty; }
 .launch-fine { margin: 0; font-size: calc(1.45rem * var(--fs)); opacity: .65; }
 .launch.ready .launch-bar { display: none; }
-.launch:not(.ready) .launch-note, .launch:not(.ready) .launch-fine { display: none; }
+.launch:not(.ready):not(.slow) .launch-note, .launch:not(.ready):not(.slow) .launch-fine { display: none; }
+.launch-note:empty, .launch-fine:empty { display: none; }
 .l-back { display: inline-flex; align-items: center; gap: .7rem; margin-top: 1rem; padding: .9rem 1.7rem .9rem 1rem; font-size: calc(1.65rem * var(--fs)); border: 1px solid color-mix(in oklab, currentColor 30%, transparent); border-radius: 99px; background: color-mix(in oklab, currentColor 8%, transparent); font-weight: 600; cursor: pointer; }
 .l-back:focus-visible { outline: .18rem solid currentColor; outline-offset: .2rem; }
 
@@ -348,7 +358,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
 /* ---------- notifications & volume ---------- */
 .toast {
-  position: fixed; z-index: 60; top: max(5.4rem, calc(env(safe-area-inset-top, 0px) + 16px)); right: max(16px, env(safe-area-inset-right, 0px), 6rem);
+  position: fixed; z-index: 60; top: max(7rem, calc(env(safe-area-inset-top, 0px) + 16px)); right: max(16px, env(safe-area-inset-right, 0px), 6rem);
   display: flex; align-items: center; gap: 1.1rem; box-sizing: border-box; max-width: min(48rem, calc(100% - 32px));
   padding: 1rem 1.4rem; border-radius: 1.2rem; background: #161b24f2; border: 1px solid var(--line); box-shadow: 0 1.4rem 3rem -1rem #000;
   font-size: calc(1.6rem * var(--fs)); font-weight: 500; opacity: 0; transform: translateY(-.8rem); transition: opacity .3s ease, transform .35s var(--ease); pointer-events: none;
@@ -360,15 +370,17 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .toast-ic { flex: none; display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: .8rem; background: var(--glass-2); }
 .toast-ic .ic { width: 1.8rem; height: 1.8rem; }
 .vol {
-  position: fixed; top: 50%; right: max(3rem, calc(env(safe-area-inset-right, 0px) + 16px)); z-index: 55;
-  display: flex; flex-direction: column; align-items: center; gap: .8rem; padding: 1.2rem .8rem;
-  border: 1px solid var(--line); border-radius: 99px; background: #161b24f2;
-  opacity: 0; transform: translate(1rem, -50%); transition: opacity .25s ease, transform .25s var(--ease); pointer-events: none;
+  position: fixed; top: max(1.6rem, env(safe-area-inset-top, 0px)); left: 50%; z-index: 55;
+  display: flex; align-items: center; gap: 1.3rem; padding: 1rem 1.8rem 1rem 1.4rem;
+  border: 1px solid var(--line); border-radius: 99px; background: #161b24f2; box-shadow: 0 1.4rem 3rem -1rem #000;
+  opacity: 0; transform: translate(-50%, -1rem); transition: opacity .25s ease, transform .3s var(--ease); pointer-events: none;
 }
-.vol.on { opacity: 1; transform: translate(0, -50%); }
-.vol-track { position: relative; width: .5rem; height: 12rem; overflow: hidden; border-radius: 9px; background: #ffffff1f; }
-.vol-track i { position: absolute; inset: 0; background: var(--text); transform-origin: bottom; transform: scaleY(var(--v, .35)); transition: transform .15s ease; }
-.vol-num { font-size: calc(1.7rem * var(--fs)); font-weight: 700; font-variant-numeric: tabular-nums; }
+.vol.on { opacity: 1; transform: translate(-50%, 0); }
+.vol .ic { width: 2.4rem; height: 2.4rem; }
+.vol-track { position: relative; width: 22rem; height: .7rem; overflow: hidden; border-radius: 9px; background: #ffffff1f; }
+.vol-track i { position: absolute; inset: 0; background: var(--text); transform-origin: left; transform: scaleX(var(--v, .35)); transition: transform .15s ease; }
+.vol.muted .vol-track i { opacity: .25; }
+.vol-num { min-width: 4.6rem; text-align: right; font-size: calc(1.8rem * var(--fs)); font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ---------- télécommande de démo (maquette) ---------- */
 .phone {
@@ -418,6 +430,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .icons { flex-wrap: wrap; gap: 1.4rem 1.2rem; }
   .icon { width: calc((100% - 2.4rem) / 3); }
   .icon-name { display: none; }
+  .icon.is-focus .icon-art { transform: scale(1.05); animation: none; }
   .foot { margin-top: 2.6rem; }
   .hint-list { display: none; }
   .pane { padding: 1.6rem max(16px, env(safe-area-inset-right, 0px)) 1.6rem max(16px, env(safe-area-inset-left, 0px)); }
@@ -434,9 +447,16 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .boot .mark { width: 6rem; height: 6rem; }
   .saver-time { font-size: calc(6rem * var(--fs)); }
   .toast { right: 16px; left: 16px; max-width: none; }
+  .vol-track { width: 12rem; }
   .phone { top: auto; bottom: 0; left: 0; right: 0; width: auto; transform: none; border-radius: 1.6rem 1.6rem 0 0; padding-bottom: max(1.4rem, env(safe-area-inset-bottom, 0px)); animation: none; }
   .dpad { width: 10rem; height: 10rem; }
 }
+
+/* une appli est ouverte par-dessus : le menu caché derrière ne dessine plus rien */
+.tv.away .stage { visibility: hidden; }
+.tv.away .stage *, .tv.away .launch * { animation-play-state: paused !important; }
+/* personne n'a touché au menu depuis un moment : les animations décoratives se figent */
+.tv.idle .scene-art, .tv.idle .icon-art { animation-play-state: paused !important; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; }
@@ -455,6 +475,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       </div>
       <div class="status-right">
         <span class="st" id="st-out"></span>
+        <span class="st" id="st-mute" title="Son coupé" data-icon="mute" hidden></span>
         <span class="st" id="st-audio" data-icon="headphones" hidden></span>
         <span class="st" id="st-phone" title="Téléphone connecté" data-icon="phone" hidden></span>
         <span class="st dim" id="st-pad" title="Aucune manette" data-icon="gamepad"></span>
@@ -513,7 +534,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   </div>
 
   <div class="vol" id="vol" aria-hidden="true">
-    <span data-icon="speaker"></span>
+    <span id="vol-ic"></span>
     <div class="vol-track"><i></i></div>
     <span class="vol-num" id="vol-num">35</span>
   </div>
@@ -540,7 +561,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     </div>
     <div class="prow">
       <button type="button" class="pbtn" data-pact="voldown" aria-label="Baisser le volume">−</button>
-      <span class="plabel">Volume</span>
+      <button type="button" class="pbtn plabel" data-pact="mute" aria-label="Couper le son">Volume</button>
       <button type="button" class="pbtn" data-pact="volup" aria-label="Monter le volume">+</button>
     </div>
     <div class="prow">
@@ -572,6 +593,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     wifi: '<path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.6 16a5 5 0 0 1 6.8 0"/><circle cx="12" cy="19.3" r="1.1" fill="currentColor"/>',
     gamepad: '<path d="M7 7h10a4 4 0 0 1 4 4l.6 4.6a2.6 2.6 0 0 1-4.6 2L15 15H9l-2 2.6a2.6 2.6 0 0 1-4.6-2L3 11a4 4 0 0 1 4-4z"/><path d="M7.5 10v3M6 11.5h3"/><circle cx="15.5" cy="10.5" r=".9" fill="currentColor"/><circle cx="17.5" cy="12.8" r=".9" fill="currentColor"/>',
     speaker: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+    mute: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
+    play: '<path d="M7 5v14l11-7z"/>',
     home: '<path d="M4 11l8-7 8 7M6.5 9.5V20h11V9.5"/>',
     back: '<path d="M10 6l-6 6 6 6M4 12h16"/>',
     up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
@@ -657,7 +680,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const state = {
     live: false, dry: false, version: '0.2', lost: false,
     focus: 'youtube', panel: null, pItems: [], pIdx: 0, panelStack: [], launched: null,
-    mode: 'auto', hdmi: false, output: 'pc', volume: 35, booting: false, power: null,
+    mode: 'auto', hdmi: false, output: 'pc', volume: 35, muted: false, booting: false, power: null,
+    res: '1366×768', tvRes: '1080', shown: false,
     installed: {}, pad: null, padSupport: false, phones: 0, phoneDemo: false,
     remoteUrl: 'http://scaros.local:8421/remote', qr: false, wifi: null, ip: null, info: null,
     audio: { mode: 'auto', target: 'pc', device: 'les haut-parleurs du PC' },
@@ -671,11 +695,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     wifiScanning: false, wifiSel: null, pw: '', pwShow: false, kbMode: 'abc', kbShift: false,
     prefs: { textScale: 'normal', autoSleep: 0 }, appsUpdating: false
   };
-  let lastInputAt = Date.now();
+  let lastInputAt = Date.now(), lastWifiScan = 0;
   let audioReady = false, displayToastAt = 0, lastOut = 'pc';
   const computeOutput = () => state.mode === 'pc' ? 'pc' : (state.hdmi ? 'tv' : 'pc');
 
-  $('#icons').innerHTML = DOCK.map(t => `<button type="button" class="icon" role="listitem" id="t-${t.id}" data-id="${t.id}" tabindex="-1" aria-label="${t.name}">`
+  $('#icons').innerHTML = DOCK.map(t => `<button type="button" class="icon" role="listitem" id="t-${t.id}" data-id="${t.id}" tabindex="-1" aria-label="${t.name}" style="--glow:${t.a}">`
     + `<span class="icon-art" style="--bg:${t.bg}">${ART[t.id]()}<span class="badge" hidden>À installer</span></span>`
     + `<span class="icon-name">${t.name}</span></button>`).join('');
   $('#shelf').innerHTML = DOCK.map(t => `<div class="scene" data-id="${t.id}" style="--a:${t.a};--b:${t.b}"><div class="scene-art">${ART[t.id]()}</div></div>`).join('');
@@ -693,7 +717,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   function applyState(s) {
     Object.assign(state, {
       live: true, dry: !!s.dry, version: s.version, mode: s.mode, hdmi: s.hdmi, output: s.output,
-      pad: s.pad, padSupport: !!s.padSupport, volume: s.volume ?? state.volume,
+      res: s.res || null, tvRes: s.tvRes || '1080',
+      pad: s.pad, padSupport: !!s.padSupport, volume: s.volume ?? state.volume, muted: !!s.muted,
       phones: s.remote ? s.remote.phones : 0, remoteUrl: s.remote ? s.remote.url : state.remoteUrl,
       qr: !!(s.remote && s.remote.qr), wifi: s.wifi, ip: s.ip, info: s.info || null,
       audio: s.audio && s.audio.target ? s.audio : state.audio, bt: s.bt || state.bt,
@@ -703,31 +728,60 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     lastOut = state.output;
     applyPrefs();
   }
+  // Ouvert depuis le PC (port 8421) : si le serveur tarde à démarrer, on l'attend au lieu de
+  // passer en maquette. Ailleurs (aperçu, fichier), pas de serveur : maquette tout de suite.
+  const onBox = location.port === '8421' || /^(127\.0\.0\.1|localhost|scaros(\.local)?)$/.test(location.hostname);
+  let lostTimer = null, lostToast = false, firstState = null;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
   async function connect() {
     if (location.protocol === 'file:') return false;
-    try {
-      const s = await api('/api/state');
-      if (!s || !s.version || !s.apps) return false;
-      applyState(s);
-      return true;
-    } catch (e) { return false; }
+    for (let i = 0; i < (onBox ? 90 : 1); i++) {
+      try {
+        const s = await api('/api/state');
+        if (!s || !s.version || !s.apps) return false;
+        if (lostToast) { lostToast = false; T.classList.remove('on'); }
+        applyState(s);
+        firstState = s;
+        return true;
+      } catch (e) {
+        if (!(e instanceof TypeError) || !onBox) return false;  // page introuvable : maquette
+        if (i === 3) { lostToast = true; toast('alert', 'Démarrage du serveur Scaros…', 120000); }
+        await wait(1000);
+      }
+    }
+    return false;
   }
   function listen() {
     const es = new EventSource('/api/events');
     es.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (err) { return; } onEvent(m); };
-    es.onerror = () => { state.lost = true; };
+    es.onerror = () => {
+      if (state.lost) return;
+      state.lost = true;
+      clearTimeout(lostTimer);
+      lostTimer = setTimeout(() => { lostToast = true; toast('alert', 'Connexion au serveur Scaros perdue… reconnexion.', 120000); }, 4000);
+    };
     es.onopen = () => {
+      clearTimeout(lostTimer);
       if (!state.lost) return;
       state.lost = false;
-      api('/api/state').then(s => { applyState(s); renderAll(); }).catch(() => {});
+      if (lostToast) { lostToast = false; T.classList.remove('on'); }
+      api('/api/state').then(s => { applyState(s); syncApp(s); renderAll(); }).catch(() => {});
     };
+  }
+  // menu rechargé (ou serveur relancé) pendant qu'une appli est ouverte : on le reflète
+  function syncApp(s) {
+    if (s.app && byId[s.app] && state.launched !== s.app) {
+      openOverlay(s.app, true);
+      if (s.shown) appShown(s.app);
+      api('/api/resume', {}).catch(() => {});
+    } else if (!s.app && state.launched) closeLaunch(false);
   }
   function onEvent(m) {
     if (m.type === 'app') onApp(m);
     else if (m.type === 'home') goHome();
     else if (m.type === 'menu') toggleControl();
     else if (m.type === 'display') {
-      Object.assign(state, { mode: m.mode, hdmi: m.hdmi, output: m.output });
+      Object.assign(state, { mode: m.mode, hdmi: m.hdmi, output: m.output, res: m.res || null, tvRes: m.tvRes || state.tvRes });
       applyOutput();
       rerenderPane();
     } else if (m.type === 'pad') {
@@ -738,8 +792,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else if (!m.name && was) toast('gamepad', 'Manette déconnectée.');
       rerenderPane();
     } else if (m.type === 'volume') {
-      if (m.level != null) showVol(m.level);
-      if (state.panel === 'sound') rerenderPane();
+      if (m.level != null) state.volume = m.level;
+      state.muted = !!m.muted;
+      if (!m.quiet && m.level != null) showVol();
+      renderStatus();
+      if (state.panel === 'sound' || state.panel === 'control') rerenderPane();
     } else if (m.type === 'remote') {
       const more = m.phones > state.phones;
       state.phones = m.phones;
@@ -783,6 +840,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const t = byId[m.id];
     if (!t) return;
     if (m.state === 'running') { if (state.launched !== m.id) openOverlay(m.id); }
+    else if (m.state === 'shown') { if (state.launched === m.id) appShown(m.id); }
     else if (m.state === 'closed') { if (state.launched === m.id) closeLaunch(false); }
     else {
       if (state.launched === m.id) closeLaunch(false);
@@ -815,6 +873,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     sp.classList.toggle('dim', !state.pad);
     sp.title = state.pad ? 'Manette connectée' : 'Aucune manette';
     $('#st-phone').hidden = !(state.live ? state.phones > 0 : state.phoneDemo);
+    $('#st-mute').hidden = !state.muted;
     const sa = $('#st-audio');
     sa.hidden = state.audio.target !== 'bt';
     sa.title = `Son sur ${state.audio.device}`;
@@ -913,6 +972,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     return n ? `${n} connecté${n > 1 ? 's' : ''}` : 'Aucun';
   }
   const outputLabel = () => state.output === 'tv' ? 'Télé' : 'Écran du PC';
+  // ligne Volume : gauche/droite pour régler, A pour couper le son
+  const volRow = short => `<button type="button" class="opt" data-act="vol" data-adjust="vol">${icon(state.muted ? 'mute' : 'speaker')}<span class="opt-main"><span class="opt-title">Volume</span><span class="opt-desc">${state.muted ? 'Son coupé · A pour le remettre' : short ? 'A : couper le son' : 'Gauche, droite pour régler · A pour couper'}</span></span><span class="meter"><i style="width:${state.muted ? 0 : state.volume ?? 0}%"></i></span><span class="opt-val">${state.muted ? 'Muet' : `${state.volume ?? '—'} %`}</span></button>`;
+  const RES_DEMO = { 1080: '1920×1080', 720: '1280×720', max: '3840×2160' };
   const shortAudio = () => state.audio.target === 'bt' ? state.audio.device : state.audio.target === 'tv' ? 'Télé' : 'PC';
   function fmtUptime(s) {
     if (!s) return '—';
@@ -1001,11 +1063,17 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     display: () => ({
       title: 'Écran', icon: 'display', pa: '#4c8dff', pb: '#1d3b8a', caption: 'Branche la télé en HDMI : l’image y passe toute seule.',
       lead: 'Choisis où s’affiche Scaros. Le son suit l’image, sauf si tu choisis une autre sortie dans Son.',
-      body: `<div class="card"><span class="sdot ${state.hdmi ? 'on' : ''}"></span><div><div class="card-title">Télé (HDMI) : ${state.hdmi ? 'branchée' : 'non branchée'}</div><div class="card-sub">Image sur ${state.output === 'tv' ? 'la télé' : 'l’écran du PC'}</div></div></div>
+      body: `<div class="card"><span class="sdot ${state.hdmi ? 'on' : ''}"></span><div><div class="card-title">Télé (HDMI) : ${state.hdmi ? 'branchée' : 'non branchée'}</div><div class="card-sub">Image sur ${state.output === 'tv' ? 'la télé' : 'l’écran du PC'}${state.res ? ` · ${esc(state.res)}` : ''}</div></div></div>
         <div class="opts" role="radiogroup" aria-label="Où afficher Scaros">
           ${radio('mode:auto', 'Auto', 'Passe sur la télé dès que le HDMI est branché, revient sur le PC quand tu le débranches.', state.mode === 'auto')}
           ${radio('mode:pc', 'Écran du PC', 'Reste sur l’écran du portable, même si la télé est branchée.', state.mode === 'pc')}
           ${radio('mode:tv', 'Télé (HDMI)', state.hdmi ? 'L’image passe sur la télé, l’écran du PC s’éteint.' : 'Branche le câble HDMI pour la choisir.', state.mode === 'tv', !state.hdmi)}
+        </div>
+        ${group('Définition sur la télé')}
+        <div class="opts" role="radiogroup" aria-label="Définition sur la télé">
+          ${radio('res:1080', '1080p · recommandé', 'Image nette, et le PC reste fluide même sur une télé 4K.', state.tvRes === '1080')}
+          ${radio('res:720', '720p', 'Plus fluide si les vidéos ou les menus saccadent.', state.tvRes === '720')}
+          ${radio('res:max', 'Maximum de la télé', 'Sur une télé 4K, ce PC risque de ramer.', state.tvRes === 'max')}
         </div>
         ${state.live && !state.dry ? '' : `${group('Démo')}<div class="opts">${row('hdmi', 'tv', `${state.hdmi ? 'Débrancher' : 'Brancher'} le câble HDMI`, 'Simule la télé pour voir la bascule. Raccourci : <kbd>H</kbd>')}</div>`}`
     }),
@@ -1014,7 +1082,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       return {
         title: 'Son', icon: 'speaker', pa: '#ff5f7e', pb: '#8c1d3d', caption: `Le son sort sur ${esc(state.audio.device)}.`,
         lead: 'Règle le volume et choisis où sort le son.',
-        body: `<div class="opts"><button type="button" class="opt" data-act="vol" data-adjust="vol">${icon('speaker')}<span class="opt-main"><span class="opt-title">Volume</span><span class="opt-desc">Gauche et droite pour régler</span></span><span class="meter"><i style="width:${state.volume ?? 0}%"></i></span><span class="opt-val">${state.volume ?? '—'} %</span></button></div>
+        body: `<div class="opts">${volRow()}</div>
           ${group('Sortie')}
           <div class="opts" role="radiogroup" aria-label="Sortie du son">
             ${radio('audio:auto', 'Auto', 'Sur le casque ou l’enceinte Bluetooth dès qu’il est connecté, sinon sur l’écran utilisé.', state.audio.mode === 'auto')}
@@ -1085,7 +1153,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
               <p class="kicker">Télécommande</p>
               <h2 class="qr-title">Scanne avec ton téléphone pour piloter Scaros</h2>
               <p class="qr-url"><small>Ou tape cette adresse</small>${esc(short)}</p>
-              <ol class="steps"><li>Même Wi-Fi que Scaros.</li><li>Appareil photo, puis touche le lien.</li><li>Rien à installer.</li></ol>
+              <ol class="steps"><li>Téléphone sur le même Wi-Fi que Scaros.</li><li>Appareil photo, puis touche le lien.</li><li>Pour la garder : Partager › Sur l’écran d’accueil.</li></ol>
               <p class="qr-status"><span class="sdot ${phones ? 'on' : ''}"></span>${phones ? `${phones > 1 ? phones + ' téléphones connectés' : 'Téléphone connecté'}` : 'En attente d’un téléphone…'}</p>
               <div class="opts">
                 ${row('back', 'back', 'Retour', '')}
@@ -1097,7 +1165,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     },
     wifi: () => {
       const cur = state.wifiList.find(n => n.active);
-      const netRow = n => `<button type="button" class="opt" data-act="wifinet:${state.wifiList.indexOf(n)}">${sigBars(n.signal)}<span class="opt-main"><span class="opt-title">${esc(n.ssid)}</span><span class="opt-desc">${n.active ? 'Connecté' : n.known ? 'Enregistré' : n.secure ? 'Protégé par un mot de passe' : 'Réseau ouvert'}</span></span>${n.secure ? icon('lock', 'chev') : ''}</button>`;
+      const netRow = n => `<button type="button" class="opt" data-act="wifinet:${esc(n.ssid)}">${sigBars(n.signal)}<span class="opt-main"><span class="opt-title">${esc(n.ssid)}</span><span class="opt-desc">${n.active ? 'Connecté' : n.known ? 'Enregistré' : n.secure ? 'Protégé par un mot de passe' : 'Réseau ouvert'}</span></span>${n.secure ? icon('lock', 'chev') : ''}</button>`;
       return {
         title: 'Wi-Fi', icon: 'wifi', pa: '#4c8dff', pb: '#1d3b8a', caption: 'Choisis un réseau, puis tape son mot de passe avec le clavier à l’écran.',
         body: `<div class="card"><span class="sdot ${cur ? 'on' : ''}"></span><div><div class="card-title">${cur ? esc(cur.ssid) : 'Pas de Wi-Fi'}</div><div class="card-sub">${cur ? (state.ip ? `Adresse : ${esc(state.ip)}` : 'Connecté') : 'Choisis un réseau ci-dessous.'}</div></div></div>
@@ -1177,22 +1245,27 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       };
     },
     control: () => {
-      const d = new Date();
+      const d = new Date(), app = state.launched && byId[state.launched];
+      // ouvert pendant une appli : elle reste ouverte derrière, on peut y revenir ou la fermer
+      const appBlock = app ? `<div class="cc-app"><span class="cc-app-art" style="--bg:${app.bg}">${ART[app.id]()}</span><div><p class="cc-app-k">En cours</p><p class="cc-app-n">${app.name}</p></div></div>
+          <div class="opts cc-app-rows">${row('resume', 'play', `Revenir à ${app.name}`, '')}${row('closeapp', 'close', `Fermer ${app.name}`, '')}</div>` : '';
+      // pendant une appli, l'appli en cours remplace la grande horloge (tout tient sans défiler)
       return {
         side: true,
-        body: `<div class="cc-head"><p class="cc-time">${fT.format(d)}</p><p class="cc-date">${fD.format(d)}</p></div>
+        body: `<div class="pane-main cc-main">${app ? '' : `<div class="cc-head"><p class="cc-time">${fT.format(d)}</p><p class="cc-date">${fD.format(d)}</p></div>`}
+          ${appBlock}
           <div class="quick">
             ${quick('panel:remote', 'qr', 'Télécommande')}
             ${quick('power:sleep', 'moon', 'Veille')}
-            ${quick('power:restart', 'replay', 'Redémarrer')}
             ${quick('power:off', 'power', 'Éteindre')}
           </div>
           <div class="opts">
+            ${volRow(true)}
             ${row('panel:sound', 'speaker', 'Son', '', esc(shortAudio()))}
             ${row('panel:display', state.output === 'tv' ? 'tv' : 'laptop', 'Écran', '', outputLabel())}
             ${row('panel:bluetooth', 'bluetooth', 'Bluetooth', '', btSummary())}
             ${row('panel:settings', 'gear', 'Tous les réglages', '')}
-          </div>`
+          </div></div>`
       };
     }
   };
@@ -1235,6 +1308,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'nearest' }); }
   }
   function openPanel(id) {
+    // la liste Wi-Fi se met à jour d'elle-même à l'ouverture (au plus toutes les 20 s)
+    if (id === 'wifi' && state.live && Date.now() - lastWifiScan > 20000) {
+      lastWifiScan = Date.now();
+      api('/api/wifi/scan', {}).catch(() => {});
+    }
     if (state.panel) {
       state.panelStack.push({ id: state.panel, act: currentAct() });
       state.panel = id;
@@ -1257,21 +1335,24 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     renderPanel(prev.act);
     updateHints();
   }
-  function closePanel() {
+  // resume : le panneau était ouvert par-dessus une appli, on lui rend l'écran
+  function closePanel({ resume = true } = {}) {
     if (!state.panel) return;
     state.panel = null;
     state.panelStack = [];
     $('#tv').classList.remove('pane-open', 'qr-open');
     pane.classList.remove('on'); scrim.classList.remove('on');
     setTimeout(() => { if (!state.panel) { pane.hidden = true; scrim.hidden = true; } }, 450);
-    setFocus(state.focus);
+    if (state.launched) {
+      if (resume && state.live) api('/api/resume', {}).catch(() => {});
+      if (!state.live && L.classList.contains('ready')) $('#l-back').focus({ preventScroll: true });
+    } else setFocus(state.focus);
     updateHints();
   }
   function toggleControl() {
     if (state.booting || state.power) return;
     if (state.panel === 'control' && !state.panelStack.length) return closePanel();
-    if (state.panel) closePanel();
-    if (state.launched) closeLaunch();
+    if (state.panel) closePanel({ resume: false });
     openPanel('control');
   }
   function activate(act) {
@@ -1283,15 +1364,31 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       if (state.live) api('/api/display', { mode: v }).catch(() => toast('alert', 'Le changement d’écran a échoué.'));
       else { state.mode = v; applyOutput(); renderPanel(act); }
     }
+    else if (k === 'res') {
+      if (state.live) api('/api/display', { res: v }).catch(() => toast('alert', 'Le changement de définition a échoué.'));
+      else {
+        state.tvRes = v;
+        if (state.output === 'tv') { state.res = RES_DEMO[v]; toast('tv', `Image sur la télé en ${state.res}.`); }
+        renderPanel(act);
+      }
+    }
+    else if (k === 'vol') mute();
+    else if (k === 'resume') closePanel();
+    else if (k === 'closeapp') { closePanel({ resume: false }); closeLaunch(); }
     else if (k === 'hdmi') { toggleHdmi(); if (!state.live) renderPanel('hdmi'); }
     else if (k === 'back') backPanel();
-    else if (k === 'phone') { closePanel(); showPhone(!state.phoneDemo); }
-    else if (k === 'replay') { closePanel(); boot(); }
+    else if (k === 'phone') { closePanel({ resume: false }); if (state.launched) closeLaunch(); showPhone(!state.phoneDemo); }
+    else if (k === 'replay') { closePanel({ resume: false }); if (state.launched) closeLaunch(); boot(); }
     else if (k === 'pair') {
       if (state.live) api('/api/pair', {}).catch(fail);
       else toast('gamepad', 'Sur le PC, Scaros cherche la manette pendant 30 secondes.');
     }
-    else if (k === 'power') { closePanel(); v === 'sleep' ? sleep() : powerOff(v === 'restart'); }
+    else if (k === 'power') {
+      // la veille ferme l'appli ouverte (la vidéo s'arrête) ; extinction : le PC s'en charge
+      closePanel({ resume: false });
+      if (state.launched) closeLaunch(v === 'sleep');
+      v === 'sleep' ? sleep() : powerOff(v === 'restart');
+    }
     else if (k === 'audio' || k === 'audiouse') {
       const mode = k === 'audio' ? v : 'bluetooth', mac = k === 'audiouse' ? v : undefined;
       if (state.live) api('/api/audio', { mode, mac }).catch(fail);
@@ -1305,7 +1402,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else { state.wifiScanning = true; rerenderPane(); setTimeout(() => { state.wifiScanning = false; rerenderPane(); }, 1500); }
     }
     else if (k === 'wifinet') {
-      const n = state.wifiList[Number(v)];
+      const n = state.wifiList.find(x => x.ssid === v);
       if (!n) return;
       state.wifiSel = n.ssid;
       if (n.active || n.known) openPanel('wifinetwork');
@@ -1370,7 +1467,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (msg) toast(...msg);
     if ((st === 'badpass' || st === 'needpass') && state.panel !== 'wifipass') {
       state.wifiSel = ssid;
-      if (!state.panel) openPanel('settings');
+      if (!state.panel) { openPanel('settings'); openPanel('wifi'); }
       openPassword();
     }
   }
@@ -1392,7 +1489,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   // ---------- écran ----------
   function applyOutput(silent) {
-    if (!state.live) state.output = computeOutput();
+    if (!state.live) {
+      state.output = computeOutput();
+      state.res = state.output === 'tv' ? RES_DEMO[state.tvRes] : '1366×768';
+    }
     const o = state.output;
     if (o !== lastOut) {
       lastOut = o;
@@ -1476,15 +1576,27 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   }
 
   // ---------- ouverture d'une appli ----------
-  let launchTimer;
+  let launchTimer, slowTimer, awayTimer;
   function launch(id) {
     if (id === 'settings') { openPanel('settings'); return; }
     openOverlay(id);
     if (state.live) api('/api/launch', { id }).catch(() => { closeLaunch(false); toast('alert', 'Scaros ne répond pas.'); });
   }
-  function openOverlay(id) {
+  // la fenêtre de l'appli est à l'écran : le menu derrière s'arrête de dessiner
+  function appShown(id) {
     const t = byId[id];
-    if (state.panel) closePanel();
+    clearTimeout(slowTimer);
+    $('#l-status').textContent = `${t.name} est ouvert`;
+    $('#l-note').textContent = '';
+    $('#l-fine').textContent = state.live ? 'Bouton Xbox : retour au menu · ≡ : centre de contrôle' : '';
+    L.classList.remove('slow');
+    L.classList.add('ready');
+    clearTimeout(awayTimer);
+    awayTimer = setTimeout(() => { if (state.launched === id) $('#tv').classList.add('away'); }, 700);
+  }
+  function openOverlay(id, instant) {
+    const t = byId[id];
+    if (state.panel) closePanel({ resume: false });
     const r = $('#t-' + id + ' .icon-art').getBoundingClientRect();
     L.style.setProperty('--t', `${r.top}px`);
     L.style.setProperty('--l', `${r.left}px`);
@@ -1494,24 +1606,35 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     L.style.setProperty('--lfg', t.fg || '#fff');
     $('#l-logo').innerHTML = ART[id]();
     $('#l-status').textContent = `Ouverture de ${t.name}…`;
-    L.classList.remove('ready');
+    $('#l-note').textContent = ''; $('#l-fine').textContent = '';
+    L.classList.remove('ready', 'slow');
     state.launched = id;
+    if (instant) L.style.transition = 'none';
     L.hidden = false; void L.offsetWidth; L.classList.add('on');
-    clearTimeout(launchTimer);
+    if (instant) { void L.offsetWidth; L.style.transition = ''; }
+    clearTimeout(launchTimer); clearTimeout(slowTimer);
+    // un premier lancement peut être long sur ce petit PC : on le dit plutôt que de laisser croire à une panne
+    slowTimer = setTimeout(() => {
+      if (state.launched !== id || L.classList.contains('ready')) return;
+      $('#l-note').textContent = `${t.name} met un peu de temps à s’ouvrir. La première fois, ça peut prendre jusqu’à une minute.`;
+      $('#l-fine').textContent = 'B pour revenir au menu';
+      L.classList.add('slow');
+    }, state.live ? 12000 : 60000);
     if (!state.live) {
       launchTimer = setTimeout(() => {
         $('#l-status').textContent = `${t.name} est ouvert`;
         $('#l-note').textContent = `Sur le PC, ${t.name} s’affiche ici en plein écran, en interface TV.`;
-        $('#l-fine').textContent = 'Maquette : aucune appli n’est vraiment lancée.';
+        $('#l-fine').textContent = 'Maquette : aucune appli n’est vraiment lancée. ≡ ouvre le centre de contrôle par-dessus.';
         L.classList.add('ready');
-        $('#l-back').focus({ preventScroll: true });
+        if (!state.panel) $('#l-back').focus({ preventScroll: true });
       }, reduce ? 0 : 1400);
     }
   }
   function closeLaunch(notify = true) {
-    clearTimeout(launchTimer);
+    clearTimeout(launchTimer); clearTimeout(slowTimer); clearTimeout(awayTimer);
     const was = state.launched;
     state.launched = null;
+    $('#tv').classList.remove('away');
     if (state.live && notify && was) api('/api/close', {}).catch(() => {});
     L.classList.remove('on');
     setTimeout(() => { if (!state.launched) L.hidden = true; }, 600);
@@ -1519,7 +1642,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   }
   function goHome() {
     if (state.power === 'sleep') { wake(); return; }
-    if (state.panel) closePanel();
+    if (state.panel) closePanel({ resume: false });
     if (state.launched) closeLaunch(false);
     setFocus(state.focus);
   }
@@ -1589,18 +1712,28 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => T.classList.remove('on'), ms);
   }
-  function showVol(level) {
-    state.volume = level;
-    V.style.setProperty('--v', level / 100);
-    $('#vol-num').textContent = level;
+  function showVol() {
+    const level = state.volume ?? 0;
+    V.style.setProperty('--v', state.muted ? 0 : level / 100);
+    V.classList.toggle('muted', state.muted);
+    $('#vol-ic').innerHTML = icon(state.muted ? 'mute' : 'speaker');
+    $('#vol-num').textContent = state.muted ? 'Muet' : level;
     V.classList.add('on');
     clearTimeout(volTimer);
-    volTimer = setTimeout(() => V.classList.remove('on'), 1500);
+    volTimer = setTimeout(() => V.classList.remove('on'), 1600);
   }
   function vol(d) {
     if (state.live) { api('/api/input', { action: d > 0 ? 'volup' : 'voldown' }).catch(() => {}); return; }
-    showVol(Math.max(0, Math.min(100, state.volume + d)));
-    if (state.panel === 'sound') rerenderPane();
+    state.volume = Math.max(0, Math.min(100, state.volume + d));
+    state.muted = false;
+    showVol(); renderStatus();
+    if (state.panel === 'sound' || state.panel === 'control') rerenderPane();
+  }
+  function mute() {
+    if (state.live) { api('/api/input', { action: 'mute' }).catch(() => {}); return; }
+    state.muted = !state.muted;
+    showVol(); renderStatus();
+    if (state.panel === 'sound' || state.panel === 'control') rerenderPane();
   }
 
   // ---------- télécommande de démo (maquette) ----------
@@ -1626,20 +1759,17 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   // ---------- une seule entrée pour toutes les commandes ----------
   function act(a) {
-    lastInputAt = Date.now();
+    poke();
     if (state.booting) { endBoot(); return; }
     if (state.power === 'busy') return;
     if (state.power) { if (!(state.live && state.power === 'off')) wake(); return; }
     if (a === 'volup') return vol(5);
     if (a === 'voldown') return vol(-5);
+    if (a === 'mute') return mute();
     if (a === 'menu') return toggleControl();
-    if (a === 'qr') { if (state.panel !== 'remote') { closePanel(); if (state.launched) closeLaunch(); openPanel('remote'); } return; }
-    if (state.launched) {
-      if (a === 'back' || a === 'home') closeLaunch();
-      else if (a.startsWith('ch')) channel(a);
-      return;
-    }
+    if (a === 'qr') { if (state.panel !== 'remote') { closePanel({ resume: false }); openPanel('remote'); } return; }
     if (state.panel) {
+      if (a === 'home') { closePanel({ resume: false }); if (state.launched) closeLaunch(); return; }
       const cur = state.pItems[state.pIdx];
       if ((a === 'left' || a === 'right') && cur && cur.dataset.adjust === 'vol') vol(a === 'left' ? -5 : 5);
       else if (a === 'up' || a === 'down' || a === 'left' || a === 'right') {
@@ -1650,8 +1780,12 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       }
       else if (a === 'ok') { const el = state.pItems[state.pIdx]; if (el) activate(el.dataset.act); }
       else if (a === 'back') backPanel();
-      else if (a === 'home') closePanel();
-      else if (a.startsWith('ch')) { closePanel(); channel(a); }
+      else if (a.startsWith('ch')) { closePanel({ resume: false }); channel(a); }
+      return;
+    }
+    if (state.launched) {
+      if (a === 'back' || a === 'home') closeLaunch();
+      else if (a.startsWith('ch')) channel(a);
       return;
     }
     if (a === 'up' || a === 'down' || a === 'left' || a === 'right') move(a);
@@ -1660,17 +1794,23 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     else if (a.startsWith('ch')) channel(a);
   }
 
+  function poke() {
+    lastInputAt = Date.now();
+    $('#tv').classList.remove('idle');
+  }
+  setInterval(() => { if (Date.now() - lastInputAt > 45000) $('#tv').classList.add('idle'); }, 5000);
+
   // clavier (sur le PC, la manette et le téléphone arrivent aussi ici sous forme de touches)
   const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok',
     Escape: 'back', Backspace: 'back', Home: 'home', '+': 'volup', '=': 'volup', '-': 'voldown',
     m: 'menu', M: 'menu', ContextMenu: 'menu', F1: 'menu', q: 'qr', Q: 'qr',
-    '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4' };
+    '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4', '0': 'mute' };
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (state.panel === 'wifipass' && (e.key.length === 1 || e.key === 'Backspace')) {
       e.preventDefault();
-      lastInputAt = Date.now();
+      poke();
       if (e.key === 'Backspace') state.pw = state.pw.slice(0, -1); else typeChar(e.key);
       // après une frappe au clavier ou au téléphone, Entrée valide directement
       const okKey = state.pItems.find(el => el.classList.contains('go'));
@@ -1701,7 +1841,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     });
     el.addEventListener('focus', () => { if (state.focus !== el.dataset.id) setFocus(el.dataset.id, false); });
   });
-  addEventListener('pointerdown', () => { lastInputAt = Date.now(); }, { passive: true });
+  addEventListener('pointerdown', poke, { passive: true });
+  addEventListener('pointermove', () => { if ($('#tv').classList.contains('idle')) poke(); }, { passive: true });
   pane.addEventListener('click', e => {
     const el = e.target.closest('[data-act]');
     if (!el || el.disabled) return;
@@ -1793,6 +1934,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (!live) return;
     renderAll();
     listen();
+    syncApp(firstState);
   });
 })();
 </script>
