@@ -1415,6 +1415,7 @@ class Scaros:
 
     # ---------- réglages de l'interface (apparence, taille du texte, économiseur, veille auto) ----------
     PREFS = {"textScale": ("normal", "large", "xlarge"), "autoSleep": (0, 15, 30, 60), "saver": (0, 2, 5, 10, 15),
+             "saverOn": ("on", "off"),
              "theme": ("dark", "light", "auto"),
              "bg": ("weather", "stars", "aurora", "rain", "snow", "none")}
 

@@ -1780,7 +1780,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       };
     },
     general: () => {
-      const ts = state.prefs.textScale, as = Number(state.prefs.autoSleep) || 0, th = state.prefs.theme || 'dark', sv = saverMinutes();
+      const ts = state.prefs.textScale, as = Number(state.prefs.autoSleep) || 0, th = state.prefs.theme || 'dark';
+      const svOn = saverEnabled(), sv = saverDelay();
       return {
         title: 'Affichage et veille', icon: 'look', pa: '#8b6cff', pb: '#3b2a8a', caption: 'Pour bien lire depuis le canapé.',
         body: `${group('Apparence')}<div class="opts" role="radiogroup" aria-label="Apparence">
@@ -1794,13 +1795,16 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
             ${radio('pref:textScale:xlarge', 'Très grande', '', ts === 'xlarge')}
           </div>
           ${group('Économiseur d’écran')}<div class="opts" role="radiogroup" aria-label="Économiseur d’écran">
-            ${radio('pref:saver:2', 'Après 2 minutes', '', sv === 2)}
-            ${radio('pref:saver:5', 'Après 5 minutes', '', sv === 5)}
-            ${radio('pref:saver:10', 'Après 10 minutes', '', sv === 10)}
-            ${radio('pref:saver:15', 'Après 15 minutes', '', sv === 15)}
-            ${radio('pref:saver:0', 'Jamais', '', sv === 0)}
+            ${radio('pref:saverOn:on', 'Activé', 'Les paysages de Scaros avec l’heure et la météo, quand personne ne touche au menu.', svOn)}
+            ${radio('pref:saverOn:off', 'Désactivé', 'Le menu reste affiché tel quel.', !svOn)}
           </div>
-          <div class="opts" style="margin-top:.55rem">${row('saverpreview', 'play', 'Voir l’économiseur', 'Les paysages de Scaros avec l’heure et la météo. Une touche pour revenir.')}</div>
+          ${svOn ? `${group('L’économiseur se lance au bout de')}<div class="opts" role="radiogroup" aria-label="Délai de l’économiseur">
+            ${radio('pref:saver:2', '2 minutes', '', sv === 2)}
+            ${radio('pref:saver:5', '5 minutes', '', sv === 5)}
+            ${radio('pref:saver:10', '10 minutes', '', sv === 10)}
+            ${radio('pref:saver:15', '15 minutes', '', sv === 15)}
+          </div>` : ''}
+          <div class="opts" style="margin-top:.55rem">${row('saverpreview', 'play', 'Voir l’économiseur', 'Une touche pour revenir.')}</div>
           ${group('Veille automatique du menu')}<div class="opts" role="radiogroup" aria-label="Veille automatique">
             ${radio('pref:autoSleep:0', 'Jamais', '', as === 0)}
             ${radio('pref:autoSleep:15', 'Après 15 minutes', '', as === 15)}
@@ -2338,10 +2342,16 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const SAVER_POS = ['bl', 'tr', 'br', 'tl'];
   const SAVER_SCENE_MS = 60000, SAVER_FADE_MS = 1100;
   let saverList = [], saverIdx = 0, saverTimers = [], saverSwap = null, saverFrom = null;
-  function saverMinutes() {
-    const v = Number(state.prefs.saver);
-    return Number.isFinite(v) && v >= 0 ? v : 5;
+  // activé ou non (Réglages › Affichage et veille), et le délai, gardé quand on le coupe puis le rallume
+  function saverEnabled() {
+    const on = state.prefs.saverOn;
+    return on ? on !== 'off' : Number(state.prefs.saver) !== 0;  // version 0.7 : « Jamais » était saver = 0
   }
+  function saverDelay() {
+    const v = Number(state.prefs.saver);
+    return [2, 5, 10, 15].includes(v) ? v : 5;
+  }
+  const saverMinutes = () => saverEnabled() ? saverDelay() : 0;
   function canSaver() {
     return !state.saver && !state.launched && !mirroring() && !state.power && !state.booting
       && !(state.update && state.update.running) && !(state.diag && state.diag.running) && !(state.bt && state.bt.scanning);
