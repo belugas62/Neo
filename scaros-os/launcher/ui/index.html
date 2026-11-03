@@ -689,6 +689,31 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .dpad { width: 10rem; height: 10rem; }
 }
 
+/* ---------- économiseur d'écran : le paysage de l'accueil en plein écran, qui avance lentement ----------
+   Le menu (et un panneau ouvert) se cache derrière un fondu au noir ; il réapparaît tel quel. Seuls le
+   décor et le ciel bougent (zoom et glissement lents, faits par la carte graphique). */
+.ss { position: fixed; inset: 0; z-index: 44; color: #fff; cursor: none; }
+.ss-veil { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity 1s ease; pointer-events: none; }
+.ss.dark .ss-veil { opacity: 1; }
+.ss-info { position: absolute; max-width: 62rem; opacity: 0; text-shadow: 0 .2rem 2.6rem #00000099, 0 .1rem .5rem #00000066; }
+.ss.on .ss-info { opacity: 1; }
+.ss-info[data-pos="bl"] { left: 7rem; bottom: 6.5rem; }
+.ss-info[data-pos="br"] { right: 7rem; bottom: 6.5rem; text-align: right; }
+.ss-info[data-pos="tr"] { right: 7rem; top: 6rem; text-align: right; }
+.ss-info[data-pos="tl"] { left: 7rem; top: 6rem; }
+.ss-time { margin: 0; font-size: 10.5rem; font-weight: 600; letter-spacing: -.045em; line-height: .92; font-variant-numeric: tabular-nums; }
+.ss-date { margin: 1rem 0 0; font-size: calc(2.3rem * var(--fs)); font-weight: 600; }
+.ss-date::first-letter { text-transform: uppercase; }
+.ss-wx { display: flex; align-items: center; gap: .7rem; margin: .5rem 0 0; font-size: calc(2rem * var(--fs)); color: #ffffffe6; }
+.ss-wx:empty { display: none; }
+.ss-info[data-pos$="r"] .ss-wx { justify-content: flex-end; }
+.ss-wx .ic { width: 2.3rem; height: 2.3rem; filter: drop-shadow(0 .1rem .6rem #00000080); }
+.ss-cap { margin: 1.8rem 0 0; font-size: calc(1.3rem * var(--fs)); font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #ffffffbf; }
+.tv.screensaver .status, .tv.screensaver .shelf-info, .tv.screensaver .dock, .tv.screensaver .foot, .tv.screensaver .home-scrim,
+.tv.screensaver .pane, .tv.screensaver .scrim, .tv.screensaver .phone { visibility: hidden; }
+.tv.screensaver .decor, .tv.screensaver .sky { will-change: transform; transform-origin: var(--kb-o, 50% 60%); animation: saverPan 64s ease-in-out both; }
+@keyframes saverPan { from { transform: scale(1.03); } to { transform: scale(1.16) translate(var(--kb-x, -1.5%), var(--kb-y, -1%)); } }
+
 /* une appli est ouverte par-dessus : le menu caché derrière ne dessine plus rien */
 .tv.away .stage { visibility: hidden; }
 .tv.away .stage *, .tv.away .launch * { animation-play-state: paused !important; }
@@ -790,6 +815,16 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   </div>
 
   <div class="blink" id="blink"></div>
+
+  <div class="ss" id="ss" hidden aria-hidden="true">
+    <div class="ss-info" id="ss-info" data-pos="bl">
+      <p class="ss-time" id="ss-time">--:--</p>
+      <p class="ss-date" id="ss-date"></p>
+      <p class="ss-wx" id="ss-wx"></p>
+      <p class="ss-cap" id="ss-cap"></p>
+    </div>
+    <div class="ss-veil"></div>
+  </div>
 
   <div class="off" id="off" hidden>
     <div class="saver-bg"></div>
@@ -979,7 +1014,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const BT_KIND = { audio: 'Casque ou enceinte', input: 'Manette', other: 'Appareil Bluetooth' };
 
   const state = {
-    live: false, dry: false, version: '0.6', lost: false, mouse: false,
+    live: false, dry: false, version: '0.7', lost: false, mouse: false,
     focus: 'youtube', panel: null, pItems: [], pIdx: 0, panelStack: [], launched: null,
     mode: 'auto', hdmi: false, output: 'pc', volume: 35, muted: false, booting: false, power: null,
     res: '1366×768', tvRes: '1080', shown: false,
@@ -994,7 +1029,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       { ssid: 'Bbox-55AA12', signal: 38, secure: true, known: false, active: false }
     ],
     wifiScanning: false, wifiSel: null, pw: '', pwShow: false, kbMode: 'abc', kbShift: false,
-    prefs: { textScale: 'normal', autoSleep: 0, theme: 'dark', bg: 'weather' }, appsUpdating: false,
+    prefs: { textScale: 'normal', autoSleep: 0, theme: 'dark', bg: 'weather', saver: 5 }, appsUpdating: false,
+    saver: false, saverScene: null,
     // maquette : valeurs d'exemple (sur le PC, elles viennent du serveur)
     weather: { city: 'Lille', temp: 14, kind: 'rain', label: 'Pluie', day: true, max: 16, min: 9 },
     place: { city: 'Lille', auto: true },
@@ -1095,8 +1131,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   }
   function onEvent(m) {
     if (m.type === 'app') onApp(m);
-    else if (m.type === 'home') goHome();
-    else if (m.type === 'menu') toggleControl();
+    else if (m.type === 'home') { if (!stopSaver()) { poke(); goHome(); } }
+    else if (m.type === 'menu') { if (!stopSaver()) { poke(); toggleControl(); } }
     else if (m.type === 'display') {
       Object.assign(state, { mode: m.mode, hdmi: m.hdmi, output: m.output, res: m.res || null, tvRes: m.tvRes || state.tvRes });
       applyOutput();
@@ -1184,6 +1220,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   function onApp(m) {
     const t = byId[m.id];
     if (!t) return;
+    if (m.state === 'running') stopSaver();  // appli lancée depuis le téléphone : elle s'ouvre directement
     if (m.state === 'running') { if (state.launched !== m.id) openOverlay(m.id); }
     else if (m.state === 'shown') { if (state.launched === m.id) appShown(m.id); }
     else if (m.state === 'closed') { if (state.launched === m.id) closeLaunch(false); }
@@ -1743,7 +1780,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       };
     },
     general: () => {
-      const ts = state.prefs.textScale, as = Number(state.prefs.autoSleep) || 0, th = state.prefs.theme || 'dark';
+      const ts = state.prefs.textScale, as = Number(state.prefs.autoSleep) || 0, th = state.prefs.theme || 'dark', sv = saverMinutes();
       return {
         title: 'Affichage et veille', icon: 'look', pa: '#8b6cff', pb: '#3b2a8a', caption: 'Pour bien lire depuis le canapé.',
         body: `${group('Apparence')}<div class="opts" role="radiogroup" aria-label="Apparence">
@@ -1756,13 +1793,21 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
             ${radio('pref:textScale:large', 'Grande', '', ts === 'large')}
             ${radio('pref:textScale:xlarge', 'Très grande', '', ts === 'xlarge')}
           </div>
+          ${group('Économiseur d’écran')}<div class="opts" role="radiogroup" aria-label="Économiseur d’écran">
+            ${radio('pref:saver:2', 'Après 2 minutes', '', sv === 2)}
+            ${radio('pref:saver:5', 'Après 5 minutes', '', sv === 5)}
+            ${radio('pref:saver:10', 'Après 10 minutes', '', sv === 10)}
+            ${radio('pref:saver:15', 'Après 15 minutes', '', sv === 15)}
+            ${radio('pref:saver:0', 'Jamais', '', sv === 0)}
+          </div>
+          <div class="opts" style="margin-top:.55rem">${row('saverpreview', 'play', 'Voir l’économiseur', 'Les paysages de Scaros avec l’heure et la météo. Une touche pour revenir.')}</div>
           ${group('Veille automatique du menu')}<div class="opts" role="radiogroup" aria-label="Veille automatique">
             ${radio('pref:autoSleep:0', 'Jamais', '', as === 0)}
             ${radio('pref:autoSleep:15', 'Après 15 minutes', '', as === 15)}
             ${radio('pref:autoSleep:30', 'Après 30 minutes', '', as === 30)}
             ${radio('pref:autoSleep:60', 'Après 1 heure', '', as === 60)}
           </div>
-          <p class="note" style="margin-top:1rem">La veille ne coupe jamais une appli ouverte : elle ne compte que le temps passé sur le menu sans y toucher.</p>`
+          <p class="note" style="margin-top:1rem">L’économiseur et la veille ne passent jamais par-dessus une appli ouverte : ils ne comptent que le temps passé sur le menu sans y toucher.</p>`
       };
     },
     apps: () => ({
@@ -2061,7 +2106,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else { const n = state.wifiList.find(x => x.ssid === ssid); if (n) { n.known = false; n.active = false; } wifiToast('forgotten', ssid); rerenderPane(); renderStatus(); }
     }
     else if (k === 'pref') {
-      const [key, raw] = v.split(':'), value = key === 'autoSleep' ? Number(raw) : raw;
+      const [key, raw] = v.split(':'), value = key === 'autoSleep' || key === 'saver' ? Number(raw) : raw;
       if (state.live) api('/api/prefs', { key, value }).catch(fail);
       else { state.prefs[key] = value; savePrefsLocal(); applyPrefs(); renderPanel(act); }
     }
@@ -2070,6 +2115,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else toast('download', 'Sur le PC, Scaros télécharge ici les dernières versions des applis.');
     }
     else if (k === 'reload') location.reload();
+    else if (k === 'saverpreview') startSaver();
     else if (k === 'diagsec') { /* rubrique du rapport : focusable pour défiler à la manette */ }
     else if (k === 'diagstart') {
       if (state.diag.running) return;
@@ -2130,10 +2176,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   }
   // ce que montre le décor : temps qu'il fait (réel ou choisi), moment de la journée
   function skyScene() {
-    const bg = state.prefs.bg || 'weather', w = state.weather;
+    const o = state.saverScene;  // économiseur d'écran : il choisit lui-même l'ambiance
+    const bg = o ? (o.aurora ? 'aurora' : 'weather') : state.prefs.bg || 'weather', w = state.weather;
     if (bg === 'none') return null;
-    let kind = bg === 'weather' ? (w ? w.kind : 'clear') : { stars: 'clear', aurora: 'clear', rain: 'rain', snow: 'snow' }[bg];
-    let phase = bg === 'stars' || bg === 'aurora' ? 'night' : dayPhase(bg === 'weather' ? w : null);
+    let kind = o ? o.kind : bg === 'weather' ? (w ? w.kind : 'clear') : { stars: 'clear', aurora: 'clear', rain: 'rain', snow: 'snow' }[bg];
+    let phase = o ? o.phase : bg === 'stars' || bg === 'aurora' ? 'night' : dayPhase(bg === 'weather' ? w : null);
     const bright = kind === 'clear' || kind === 'partly';
     const pal = phase === 'night' ? (bright ? PAL.night : PAL.murk)
       : (phase === 'dawn' || phase === 'dusk') && bright ? PAL[phase]
@@ -2188,9 +2235,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     $('#ap-title').textContent = `Recopie de l’écran : ${dev}`;
     $('#ap-sub').textContent = state.live ? 'B ou bouton Xbox pour arrêter · ≡ pour le centre de contrôle' : 'Maquette : sur le PC, l’écran de l’iPhone s’affiche ici. B pour arrêter.';
     if (now === 'mirroring' && was !== 'mirroring') {
+      stopSaver();
       if (state.panel) closePanel({ resume: false });
       if (!state.live) toast('airplay', `${dev} recopie son écran sur Scaros.`);
     } else if (now !== 'mirroring' && was === 'mirroring') {
+      poke();
       toast('airplay', 'Recopie terminée.');
       if (!state.launched && !state.panel) setFocus(state.focus);
     }
@@ -2271,6 +2320,110 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     else delete root.dataset.look;
     if ($('#sky')) applySky();
   }
+  // ---------- économiseur d'écran ----------
+  // Après quelques minutes sans toucher au menu : le paysage de l'accueil en plein écran, qui avance
+  // lentement et change d'ambiance chaque minute (fondu au noir). L'heure, la date et la météo changent
+  // de coin à chaque scène : rien ne reste au même endroit, la télé ne marque pas. Jamais par-dessus une
+  // appli, une recopie AirPlay, une mise à jour ou un diagnostic ; une touche le ferme sans rien déclencher.
+  const SAVER_SCENES = [
+    { kind: 'clear', phase: 'dawn', label: 'Aube sur le lac' },
+    { kind: 'partly', phase: 'day', label: 'Après-midi en montagne' },
+    { kind: 'clear', phase: 'dusk', label: 'Coucher de soleil' },
+    { kind: 'clear', phase: 'night', label: 'Nuit étoilée' },
+    { kind: 'clear', phase: 'night', aurora: true, label: 'Aurore boréale' },
+    { kind: 'snow', phase: 'day', label: 'Neige sur les sommets' },
+    { kind: 'fog', phase: 'day', label: 'Brume sur la vallée' },
+    { kind: 'rain', phase: 'day', label: 'Averse sur le lac' }
+  ];
+  const SAVER_POS = ['bl', 'tr', 'br', 'tl'];
+  const SAVER_SCENE_MS = 60000, SAVER_FADE_MS = 1100;
+  let saverList = [], saverIdx = 0, saverTimers = [], saverSwap = null, saverFrom = null;
+  function saverMinutes() {
+    const v = Number(state.prefs.saver);
+    return Number.isFinite(v) && v >= 0 ? v : 5;
+  }
+  function canSaver() {
+    return !state.saver && !state.launched && !mirroring() && !state.power && !state.booting
+      && !(state.update && state.update.running) && !(state.diag && state.diag.running) && !(state.bt && state.bt.scanning);
+  }
+  function renderSaverInfo() {
+    const d = new Date();
+    $('#ss-time').textContent = fT.format(d);
+    $('#ss-date').textContent = fD.format(d);
+    // sur une ambiance qui n'est pas le temps réel, la ville rappelle que la météo affichée, elle, est vraie
+    const live = state.saverScene && state.saverScene.live;
+    $('#ss-wx').innerHTML = state.weather ? wxLine(state.weather, !live) : '';
+  }
+  function saverScene(i) {
+    const sc = saverList[i % saverList.length], w = state.weather;
+    state.saverScene = sc.live
+      ? { live: true, kind: w ? w.kind : 'clear', phase: dayPhase(w), label: w && w.city ? `En ce moment à ${w.city}` : 'En ce moment' }
+      : sc;
+    applySky();
+    const pos = SAVER_POS[i % SAVER_POS.length];
+    $('#ss-info').dataset.pos = pos;
+    // le soleil ou la lune passe du côté opposé à l'heure : jamais l'un derrière l'autre
+    for (const el of [$('#decor'), $('#sky')]) el.style.setProperty('--orb-x', pos.endsWith('r') ? '26%' : '74%');
+    $('#ss-cap').textContent = state.saverScene.label;
+    renderSaverInfo();
+    // le travelling repart d'un autre point à chaque scène
+    const st = $('#stage');
+    st.style.setProperty('--kb-o', `${30 + (i * 37) % 40}% ${45 + (i * 23) % 25}%`);
+    st.style.setProperty('--kb-x', `${i % 2 ? 1.5 : -1.5}%`);
+    for (const el of [$('#decor'), $('#sky')]) { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; }
+  }
+  function startSaver() {
+    if (state.saver) return;
+    state.saver = true;
+    // d'abord le temps qu'il fait en ce moment, puis les autres ambiances dans le désordre
+    saverList = [{ live: true }, ...SAVER_SCENES.slice().sort(() => Math.random() - 0.5)];
+    saverIdx = 0; saverFrom = null;
+    const sv = $('#ss');
+    sv.hidden = false;
+    requestAnimationFrame(() => sv.classList.add('dark'));
+    saverTimers.push(setTimeout(() => {
+      if (!state.saver) return;
+      $('#tv').classList.add('screensaver');
+      saverScene(0);
+      sv.classList.add('on');
+      sv.classList.remove('dark');
+    }, reduce ? 30 : SAVER_FADE_MS));
+    saverTimers.push(setInterval(() => {
+      sv.classList.add('dark');
+      clearTimeout(saverSwap);
+      saverSwap = setTimeout(() => { if (state.saver) { saverScene(++saverIdx); sv.classList.remove('dark'); } }, reduce ? 30 : SAVER_FADE_MS + 400);
+    }, SAVER_SCENE_MS));
+    saverTimers.push(setInterval(renderSaverInfo, 10000));
+  }
+  // renvoie vrai s'il était affiché (la touche a seulement servi à le fermer)
+  function stopSaver() {
+    if (!state.saver) return false;
+    state.saver = false;
+    saverTimers.forEach(t => { clearTimeout(t); clearInterval(t); });
+    saverTimers = [];
+    clearTimeout(saverSwap);
+    const sv = $('#ss');
+    sv.hidden = true;
+    sv.classList.remove('dark', 'on');
+    $('#tv').classList.remove('screensaver', 'idle');
+    for (const el of [$('#decor'), $('#sky')]) { el.style.animation = ''; el.style.removeProperty('--orb-x'); }
+    state.saverScene = null;
+    applySky();
+    lastInputAt = Date.now();
+    return true;
+  }
+  setInterval(() => {
+    const min = saverMinutes();
+    if (min > 0 && canSaver() && Date.now() - lastInputAt > min * 60000) startSaver();
+  }, 5000);
+  // souris (mode souris du téléphone, vraie souris) : un vrai déplacement le ferme, un clic aussi
+  addEventListener('pointermove', e => {
+    if (!state.saver || e.pointerType !== 'mouse') return;
+    if (!saverFrom) { saverFrom = [e.clientX, e.clientY]; return; }
+    if (Math.hypot(e.clientX - saverFrom[0], e.clientY - saverFrom[1]) > 12) stopSaver();
+  }, { passive: true });
+  $('#ss').addEventListener('pointerdown', e => { e.preventDefault(); stopSaver(); });
+
   function savePrefsLocal() { try { localStorage.setItem('scaros-prefs', JSON.stringify(state.prefs)); } catch (e) {} }
   try { Object.assign(state.prefs, JSON.parse(localStorage.getItem('scaros-prefs') || '{}')); } catch (e) {}
   applyPrefs();
@@ -2374,6 +2527,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   // ---------- ouverture d'une appli ----------
   let launchTimer, slowTimer, awayTimer;
   function launch(id) {
+    stopSaver();
     if (id === 'settings') { openPanel('settings'); return; }
     openOverlay(id);
     if (state.live) api('/api/launch', { id }).catch(() => { closeLaunch(false); toast('alert', 'Scaros ne répond pas.'); });
@@ -2427,6 +2581,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     }
   }
   function closeLaunch(notify = true) {
+    // retour au menu après une appli : ça compte comme une activité, sinon l'économiseur ou la veille
+    // partiraient aussitôt (le temps passé dans l'appli n'est pas du temps « sans toucher au menu »)
+    poke();
     clearTimeout(launchTimer); clearTimeout(slowTimer); clearTimeout(awayTimer);
     const was = state.launched;
     state.launched = null;
@@ -2492,7 +2649,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else { state.power = 'off'; showOff('off', 'Scaros est éteint. Appuie sur une touche pour rallumer.'); }
     }, reduce ? 30 : 700);
   }
-  function sleep() { state.power = 'sleep'; showOff('sleep', 'Appuie sur une touche pour revenir.'); }
+  function sleep() { stopSaver(); state.power = 'sleep'; showOff('sleep', 'Appuie sur une touche pour revenir.'); }
   function wake() {
     const was = state.power;
     state.power = null; OFF.hidden = true;
@@ -2565,6 +2722,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   // ---------- une seule entrée pour toutes les commandes ----------
   function act(a) {
     poke();
+    // économiseur : la première touche le ferme sans rien faire d'autre (le volume, lui, marche)
+    if (state.saver && !['volup', 'voldown', 'mute'].includes(a)) { stopSaver(); return; }
     if (state.booting) { endBoot(); return; }
     if (state.power === 'busy') return;
     if (state.power) { if (!(state.live && state.power === 'off')) wake(); return; }
@@ -2618,6 +2777,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (state.saver) { e.preventDefault(); act(KEYS[e.key] || 'wake'); return; }
     if (KBT[state.panel] && (e.key.length === 1 || e.key === 'Backspace')) {
       e.preventDefault();
       poke();

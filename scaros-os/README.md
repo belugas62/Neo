@@ -171,6 +171,14 @@ démarrage grâce à l'adresse internet de la box ; la météo vient d'Open-Mete
 **Apparence :** dans **Réglages > Affichage et veille**, choisis **Sombre**, **Clair**, ou **Automatique**
 (clair de 7 h à 19 h, sombre le soir). La taille du texte et la veille automatique se règlent au même endroit.
 
+**Économiseur d'écran :** après 5 minutes sans toucher au menu, le paysage de Scaros passe en plein écran et avance
+lentement, avec l'heure, la date et la météo en grand. L'ambiance change chaque minute avec un fondu : le temps qu'il
+fait vraiment, puis l'aube, un coucher de soleil, une nuit étoilée, une aurore boréale, la neige, la brume, une averse.
+L'heure change de coin à chaque fois pour ne pas marquer la télé. N'importe quelle touche le ferme sans rien lancer ;
+le volume marche sans le fermer, et une chaîne choisie au téléphone s'ouvre directement. Il ne passe jamais
+par-dessus une appli, une recopie AirPlay, une mise à jour ou un diagnostic. Délai (2, 5, 10, 15 minutes ou jamais)
+et bouton **Voir l'économiseur** dans **Réglages > Affichage et veille**.
+
 **Télé :** branche le câble HDMI, l'image et le son passent sur la télé. Tu peux fermer
 l'écran du portable, il ne se met pas en veille. Le choix Auto / Écran du PC / Télé est
 dans **Réglages > Écran**. L'image est envoyée en **1080p**, même sur une télé 4K : ce petit PC
@@ -273,6 +281,7 @@ mais pas encore sur ta machine. À surveiller au premier essai :
   pas avec la vraie souris virtuelle du portable) ;
 - AirPlay : la fluidité de la recopie et le son ;
 - le volume affiché par-dessus YouTube, Jellyfin ou Steam Link ;
+- la fluidité de l'économiseur d'écran sur la télé (zoom lent du paysage) ;
 - la mise à jour lancée depuis le menu ;
 - le son sur la télé ;
 - l'appairage Bluetooth de la manette, et sa reconnexion toute seule après un redémarrage ;

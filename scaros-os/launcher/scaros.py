@@ -47,7 +47,7 @@ try:
 except ImportError:
     qrcode = None
 
-VERSION = "0.6"
+VERSION = "0.7"
 ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "scaros"
@@ -1413,8 +1413,8 @@ class Scaros:
         finally:
             self.apps_updating = False
 
-    # ---------- réglages de l'interface (apparence, taille du texte, veille auto) ----------
-    PREFS = {"textScale": ("normal", "large", "xlarge"), "autoSleep": (0, 15, 30, 60),
+    # ---------- réglages de l'interface (apparence, taille du texte, économiseur, veille auto) ----------
+    PREFS = {"textScale": ("normal", "large", "xlarge"), "autoSleep": (0, 15, 30, 60), "saver": (0, 2, 5, 10, 15),
              "theme": ("dark", "light", "auto"),
              "bg": ("weather", "stars", "aurora", "rain", "snow", "none")}
 
