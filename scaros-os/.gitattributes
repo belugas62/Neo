@@ -1,0 +1,4 @@
+# fins de ligne Unix partout : un script modifié sous Windows doit rester lisible par bash
+* text=auto eol=lf
+*.png binary
+*.woff2 binary
