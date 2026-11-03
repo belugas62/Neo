@@ -411,6 +411,24 @@ html[data-look="light"] .dock-glass { background: #ffffff47; border-color: #ffff
 .facts { display: grid; grid-template-columns: auto 1fr; gap: .9rem 2.4rem; margin: 0 0 2rem; padding: 1.5rem; border-radius: 1.1rem; background: var(--glass); }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+/* diagnostic réseau : consigne pendant l'écoute, puis rapport par rubriques */
+.diag-now { margin-bottom: 1.6rem; padding: 1.8rem 2rem; border-radius: 1.4rem; background: var(--glass); border: 1px solid var(--line); }
+.diag-now p { margin: 0; }
+.diag-now .k { margin-bottom: .8rem; font-size: calc(1.3rem * var(--fs)); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--pad-a); }
+.diag-now .u { margin: .3rem 0 .9rem; font-size: calc(3.2rem * var(--fs)); font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.diag-now .t { font-size: calc(1.6rem * var(--fs)); color: var(--text-2); }
+.diag-sec { margin: 0 0 1rem; padding: 1.2rem 1.5rem; border: 1px solid var(--line); border-radius: 1.1rem; background: var(--glass); transition: border-color .2s; }
+.diag-sec:focus { outline: none; }
+.diag-sec.is-focus { border-color: color-mix(in oklab, var(--text) 50%, transparent); }
+.diag-sec h3 { margin: 0 0 .5rem; font-size: calc(1.3rem * var(--fs)); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.diag-sec.verdict { padding: 1.6rem 1.8rem; }
+.diag-sec.verdict .diag-l { font-size: calc(1.75rem * var(--fs)); }
+.diag-l { display: flex; gap: .9rem; align-items: flex-start; margin: .4rem 0; font-size: calc(1.5rem * var(--fs)); color: var(--text-2); overflow-wrap: anywhere; }
+.diag-l .ic { flex: none; width: 1.8rem; height: 1.8rem; margin-top: .15rem; }
+.diag-l.ok .ic { color: var(--pad-a); }
+.diag-l.bad { color: var(--text); }
+.diag-l.bad .ic { color: #ff9f43; }
+.diag-l.inf { padding-left: 2.7rem; color: var(--muted); }
 .spin { display: inline-block; width: 1.3rem; height: 1.3rem; box-sizing: border-box; border: .17rem solid color-mix(in oklab, currentColor 22%, transparent); border-top-color: currentColor; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .remote-grid { display: grid; grid-template-columns: auto 1fr; gap: 2.4rem; align-items: center; margin-bottom: 2rem; }
@@ -952,6 +970,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     place: { city: 'Lille', auto: true },
     airplay: { enabled: true, available: true, state: 'idle', device: null, name: 'Scaros', running: true, advertised: true, error: null, checking: false },
     update: { available: false, checking: false, running: false, step: null, checked: Date.now() / 1000 },
+    diag: { running: false, step: null, until: null, at: null }, diagReport: '',
     cityQuery: '', cityResults: null
   };
   let lastInputAt = Date.now(), lastWifiScan = 0;
@@ -983,7 +1002,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       qr: !!(s.remote && s.remote.qr), localName: (s.remote && s.remote.name) || null, wifi: s.wifi, ip: s.ip, info: s.info || null,
       audio: s.audio && s.audio.target ? s.audio : state.audio, bt: s.bt || state.bt,
       wifiList: s.wifiList || [], prefs: { ...state.prefs, ...(s.prefs || {}) },
-      weather: s.weather || null, place: s.place || null, airplay: s.airplay || state.airplay, update: s.update || state.update,
+      weather: s.weather || null, place: s.place || null, airplay: s.airplay || state.airplay, update: s.update || state.update, diag: s.diag || state.diag,
       installed: Object.fromEntries(Object.entries(s.apps || {}).map(([k, v]) => [k, v.installed]))
     });
     lastOut = state.output;
@@ -1103,6 +1122,16 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       if (m.step !== was && m.step === 'done') toast('download', 'Mise à jour installée. L’écran redémarre…', 15000);
       rerenderPane();
       if (state.focus === 'settings') renderShelf();
+    } else if (m.type === 'diag') {
+      const was = state.diag.step;
+      state.diag = { ...state.diag, ...m };
+      if (m.step !== was && m.step === 'done') {
+        loadDiag();
+        if (state.panel !== 'netdiag') toast('search', 'Diagnostic réseau terminé : Réglages › Wi-Fi › Diagnostic réseau.', 6000);
+      }
+      if (m.step !== was && m.step === 'failed') toast('alert', 'Le diagnostic réseau n’a pas pu se lancer. Mets à jour Scaros, puis réessaie.', 6000);
+      diagTick();
+      if (state.panel === 'netdiag') rerenderPane();
     } else if (m.type === 'prefs') {
       state.prefs = { ...state.prefs, ...(m.prefs || {}) };
       applyPrefs();
@@ -1337,6 +1366,54 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     return p.length > 30 ? '…' + p.slice(-30) : p;
   }
 
+  // rapport de scaros-diag : « == Rubrique == », puis « [ok] … », « [!!] … » ou une ligne d'info
+  function parseDiag(text) {
+    if (!text) return null;
+    const secs = []; let cur = null;
+    for (const raw of text.split('\n')) {
+      const m = raw.match(/^== (.*) ==$/);
+      if (m) { cur = { title: m[1], lines: [] }; secs.push(cur); continue; }
+      const t = raw.trim();
+      if (!cur || !t) continue;
+      const kind = t.startsWith('[ok]') ? 'ok' : t.startsWith('[!!]') ? 'bad' : 'inf';
+      cur.lines.push({ kind, text: kind === 'inf' ? t : t.slice(4).trim() });
+    }
+    const verdict = secs.find(x => x.title === 'Verdict');
+    return { verdict, secs: secs.filter(x => x !== verdict) };
+  }
+  const cap1 = t => t.charAt(0).toUpperCase() + t.slice(1);
+  const diagLine = l => `<p class="diag-l ${l.kind}">${l.kind === 'ok' ? icon('check') : l.kind === 'bad' ? icon('alert') : ''}<span>${esc(cap1(l.text))}</span></p>`;
+  const diagLeft = () => Math.max(0, Math.round((state.diag.until || 0) - Date.now() / 1000));
+  let diagTimer = null;
+  function diagTick() {  // compte à rebours pendant l'écoute, sans redessiner la page
+    clearInterval(diagTimer); diagTimer = null;
+    if (!(state.diag.running && state.diag.step === 'listen')) return;
+    diagTimer = setInterval(() => {
+      if (!(state.diag.running && state.diag.step === 'listen')) { clearInterval(diagTimer); diagTimer = null; return; }
+      const el = document.getElementById('diag-count');
+      if (el) el.textContent = `${diagLeft()} s`;
+    }, 500);
+  }
+  function loadDiag() {
+    if (!state.live) return;
+    api('/api/diag').then(r => {
+      state.diagReport = r.report || '';
+      state.diag = { ...state.diag, at: r.at || state.diag.at };
+      if (state.panel === 'netdiag') rerenderPane();
+    }).catch(() => {});
+  }
+  const DEMO_DIAG = `== Connexion ==
+       Wi-Fi (wlp3s0) : adresse 192.168.1.11 sur « Maison_5G », 5 GHz, signal -58 dBm
+  [ok] économie d'énergie Wi-Fi coupée
+== Box ==
+  [ok] la box (192.168.1.1) répond (5/5)
+== Adresse en double ==
+  [ok] aucun autre appareil n'utilise 192.168.1.11
+== Test en direct ==
+  [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)
+== Verdict ==
+  [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)`;
+
   // each page: title, art (left illustration), lead, body
   const PAGES = {
     settings: () => ({
@@ -1457,9 +1534,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
               <p class="qr-net">${icon('wifi')}<span>Wi-Fi de Scaros : <b>${esc(wifiCurrent() || 'aucun')}</b>${state.localName ? ` · ${esc(state.localName)}` : ''}</span></p>
               <ol class="steps"><li>Téléphone sur ce même Wi-Fi (pas l’invité).</li><li>Appareil photo, puis touche le lien.</li><li>Pour la garder : Partager › Sur l’écran d’accueil.</li></ol>
               <p class="qr-status"><span class="sdot ${phones ? 'on' : ''}"></span>${phones ? `${phones > 1 ? phones + ' téléphones connectés' : 'Téléphone connecté'}` : 'En attente d’un téléphone…'}</p>
-              <p class="qr-help">La page ne s’ouvre pas ? Sur iPhone, utilise Safari : Brave ou Chrome doivent d’abord avoir l’accès « Réseau local » (Réglages › Confidentialité et sécurité).</p>
+              <p class="qr-help">La page ne s’ouvre pas ? Essaie dans Safari, sinon lance le diagnostic réseau ci-dessous.</p>
               <div class="opts">
                 ${row('back', 'back', 'Retour', '')}
+                ${row('panel:netdiag', 'info', 'Diagnostic réseau', '')}
                 ${state.live ? '' : row('phone', 'phone', state.phoneDemo ? 'Masquer la télécommande de démo' : 'Essayer la télécommande ici', '')}
               </div>
             </div>
@@ -1472,7 +1550,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       return {
         title: 'Wi-Fi', icon: 'wifi', pa: '#4c8dff', pb: '#1d3b8a', caption: 'Choisis un réseau, puis tape son mot de passe avec le clavier à l’écran.',
         body: `<div class="card"><span class="sdot ${cur ? 'on' : ''}"></span><div><div class="card-title">${cur ? esc(cur.ssid) : 'Pas de Wi-Fi'}</div><div class="card-sub">${cur ? (state.ip ? `Adresse : ${esc(state.ip)}` : 'Connecté') : 'Choisis un réseau ci-dessous.'}</div></div></div>
-          <div class="opts">${row('wifiscan', 'search', state.wifiScanning ? 'Recherche en cours…' : 'Actualiser la liste', '', state.wifiScanning ? '<span class="spin"></span>' : '')}</div>
+          <div class="opts">${row('wifiscan', 'search', state.wifiScanning ? 'Recherche en cours…' : 'Actualiser la liste', '', state.wifiScanning ? '<span class="spin"></span>' : '')}
+            ${row('panel:netdiag', 'info', 'Diagnostic réseau', 'Si le téléphone ou l’iPhone (AirPlay) n’arrive pas à joindre Scaros.')}</div>
           ${group('Réseaux')}
           <div class="opts">${state.wifiList.length ? state.wifiList.map(netRow).join('') : '<p class="opt-empty">Aucun réseau trouvé. Actualise la liste.</p>'}</div>`
       };
@@ -1562,7 +1641,36 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
           <ol class="steps"><li>Même Wi-Fi que Scaros (pas le réseau invité).</li><li>Centre de contrôle › Recopie de l’écran › Scaros.</li><li>Ou le bouton AirPlay d’une appli (vidéo, photos, musique).</li><li>B ou bouton Xbox pour arrêter la recopie.</li></ol>
           ${group('Scaros n’apparaît pas ?')}
           <ol class="steps"><li>Si l’état ci-dessus dit « Prêt » : c’est le Wi-Fi qui empêche l’iPhone de voir Scaros.</li><li>Test : ouvre scaros.local:8421/remote sur l’iPhone. Si la page ne s’ouvre pas, la box bloque la découverte entre appareils (option « isolation » ou réseau invité).</li><li>Sur la box, désactive l’isolation Wi-Fi, ou mets l’iPhone et Scaros sur le même réseau (même nom de Wi-Fi).</li></ol>
+          <div class="opts" style="margin-top:1rem">${row('panel:netdiag', 'info', 'Diagnostic réseau', 'Trouve ce qui bloque entre l’iPhone et Scaros.')}</div>
           ${state.live && !state.dry ? '' : `${group('Démo')}<div class="opts">${row('airplaydemo', 'airplay', mirroring() ? 'Arrêter la recopie de démo' : 'Essayer une recopie', 'Simule un iPhone qui envoie son écran.')}</div>`}`
+      };
+    },
+    netdiag: () => {
+      const d = state.diag, rep = parseDiag(state.diagReport);
+      const addr = (state.remoteUrl || '').replace(/^https?:\/\//, '');
+      let now = '';
+      if (d.running && d.step === 'listen') {
+        now = `<div class="diag-now"><p class="k">Maintenant, sur le téléphone</p><p class="t">Ouvre Safari et tape l’adresse :</p><p class="u">${esc(addr)}</p>
+          <p class="t">Tu peux aussi essayer AirPlay. Scaros écoute encore <b id="diag-count">${diagLeft()} s</b>.</p></div>`;
+      } else if (d.running) {
+        now = `<div class="card"><span class="sdot"></span><div><div class="card-title">Vérification de la connexion… <span class="spin"></span></div><div class="card-sub">Une quinzaine de secondes. Prépare ton téléphone.</div></div></div>`;
+      } else if (d.step === 'done' && !rep && state.live) {
+        now = `<div class="card"><span class="sdot"></span><div><div class="card-title">Lecture du résultat… <span class="spin"></span></div></div></div>`;
+      } else if (d.step === 'failed') {
+        now = `<div class="card"><span class="sdot"></span><div><div class="card-title">Le diagnostic n’a pas pu se lancer</div><div class="card-sub">Mets à jour Scaros (Réglages › Mise à jour), puis réessaie.</div></div></div>`;
+      }
+      const when = d.at ? `${fDay.format(new Date(d.at * 1000))} à ${fT.format(new Date(d.at * 1000))}` : '';
+      const report = !d.running && rep ? `
+          ${rep.verdict ? `<div class="diag-sec verdict" data-act="diagsec:v" tabindex="-1"><h3>Résultat${when ? ` · ${esc(when)}` : ''}</h3>${rep.verdict.lines.map(diagLine).join('')}</div>` : ''}
+          <div class="opts">${row('diagstart', 'replay', 'Relancer le diagnostic', 'Garde ton téléphone en main : il faudra essayer pendant 30 secondes.')}</div>
+          ${group('Détails')}
+          ${rep.secs.map((sec, i) => `<div class="diag-sec" data-act="diagsec:${i}" tabindex="-1"><h3>${esc(sec.title)}</h3>${sec.lines.map(diagLine).join('')}</div>`).join('')}
+          ${state.live ? `<p class="note">Pour copier ce rapport, ouvre <b>${esc(addr.replace(/\/remote$/, ''))}/diag</b> dans le navigateur d’un PC.</p>` : ''}` : '';
+      return {
+        title: 'Diagnostic réseau', icon: 'search', pa: '#4c8dff', pb: '#1d3b8a', caption: 'Pour la télécommande du téléphone et AirPlay.',
+        lead: d.running || rep || d.step === 'done' ? '' : 'Scaros vérifie sa connexion, puis écoute 30 secondes pendant que tu essaies d’ouvrir la télécommande sur le téléphone. Il voit ainsi si la demande du téléphone arrive jusqu’à lui.',
+        body: d.running || (d.step === 'done' && !rep && state.live) ? `${now}<div class="opts">${row('back', 'back', 'Retour', 'Le diagnostic continue.')}</div>`
+          : `${now}${report || `<div class="opts">${row('diagstart', 'search', 'Lancer le diagnostic', 'Garde ton téléphone en main : il faudra essayer pendant 30 secondes.')}</div>`}`
       };
     },
     update: () => {
@@ -1673,7 +1781,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   };
   const PAGE_NAME = { settings: 'Réglages', display: 'Écran', sound: 'Son', bluetooth: 'Bluetooth', btdevice: 'Appareil', controller: 'Manette',
     remote: 'Télécommande', wifi: 'Wi-Fi', ambiance: 'Fond et météo', citysearch: 'Ville', cityresults: 'Résultats',
-    airplay: 'AirPlay', update: 'Mise à jour', wifinetwork: 'Réseau', wifipass: 'Mot de passe', general: 'Affichage et veille', apps: 'Applis',
+    airplay: 'AirPlay', update: 'Mise à jour', netdiag: 'Diagnostic réseau', wifinetwork: 'Réseau', wifipass: 'Mot de passe', general: 'Affichage et veille', apps: 'Applis',
     power: 'Alimentation', about: 'À propos', control: 'Centre de contrôle' };
 
   const currentAct = () => state.pItems[state.pIdx] && state.pItems[state.pIdx].dataset.act;
@@ -1714,6 +1822,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     // la liste Wi-Fi se met à jour d'elle-même à l'ouverture (au plus toutes les 20 s)
     if (id === 'update' && state.live && !state.update.checking && !state.update.running
         && Date.now() / 1000 - (state.update.checked || 0) > 600) api('/api/update/check', {}).catch(() => {});
+    if (id === 'netdiag' && state.live && state.diag.at && !state.diagReport) loadDiag();
     if (id === 'citysearch') { state.cityQuery = ''; state.kbMode = 'abc'; state.kbShift = false; }
     if (id === 'airplay' && state.live && state.airplay.running && !state.airplay.checking) api('/api/airplay', { action: 'check' }).catch(() => {});
     if (id === 'wifi' && state.live && Date.now() - lastWifiScan > 20000) {
@@ -1877,6 +1986,19 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else toast('download', 'Sur le PC, Scaros télécharge ici les dernières versions des applis.');
     }
     else if (k === 'reload') location.reload();
+    else if (k === 'diagsec') { /* rubrique du rapport : focusable pour défiler à la manette */ }
+    else if (k === 'diagstart') {
+      if (state.diag.running) return;
+      if (state.live) { api('/api/diag/start', {}).catch(fail); return; }
+      // maquette : on simule les étapes
+      state.diag = { ...state.diag, running: true, step: 'checks', until: null };
+      renderPanel();
+      setTimeout(() => { state.diag = { ...state.diag, step: 'listen', until: Date.now() / 1000 + 8 }; diagTick(); rerenderPane(); }, 1500);
+      setTimeout(() => {
+        state.diag = { running: false, step: 'done', until: null, at: Date.now() / 1000 };
+        state.diagReport = DEMO_DIAG; diagTick(); rerenderPane();
+      }, 9500);
+    }
     else if (k === 'btdev') { state.btSel = v; openPanel('btdevice'); }
     else if (k === 'btconnect' || k === 'btdisconnect' || k === 'btremove') {
       const action = k.slice(2);
@@ -2502,6 +2624,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   // horloge
   const fT = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const fDay = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
   const fD = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   function tick() {
     const d = new Date();

@@ -43,7 +43,8 @@ polkit.addRule(function (action, subject) {
     return polkit.Result.YES;
   }
   if (action.id == "org.freedesktop.systemd1.manage-units" &&
-      action.lookup("unit") == "scaros-update.service" && action.lookup("verb") == "start") {
+      (action.lookup("unit") == "scaros-update.service" || action.lookup("unit") == "scaros-diag.service") &&
+      action.lookup("verb") == "start") {
     return polkit.Result.YES;
   }
 });
@@ -63,7 +64,8 @@ apt_install \
   python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-rsvg-2.0 fontconfig \
   uxplay avahi-utils gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav \
   gstreamer1.0-x gstreamer1.0-gl gstreamer1.0-pulseaudio \
-  curl ca-certificates wget flatpak plymouth avahi-daemon zram-tools wireless-tools iw openssh-server
+  curl ca-certificates wget flatpak plymouth avahi-daemon zram-tools wireless-tools iw openssh-server \
+  tcpdump iputils-arping
 
 # micrologiciels (son Intel SOF, Wi-Fi) : présents si la section non-free-firmware est activée
 for fw in firmware-sof-signed firmware-misc-nonfree firmware-iwlwifi firmware-realtek; do
@@ -96,12 +98,18 @@ if grep -qE '^[[:space:]]*wpa-ssid' "$IFACES" 2>/dev/null; then
   fi
 fi
 systemctl enable NetworkManager >/dev/null 2>&1 || true
-# sans économie d'énergie Wi-Fi, le portable reste joignable (téléphone, SSH)
+# sans économie d'énergie Wi-Fi, le portable reste joignable (télécommande, AirPlay, SSH) :
+# sinon la carte s'assoupit et le téléphone ne le trouve plus au bout d'un moment
 mkdir -p /etc/NetworkManager/conf.d
 printf '[connection]\nwifi.powersave = 2\n' > /etc/NetworkManager/conf.d/scaros-wifi.conf
 for dev in /sys/class/net/wl*; do
   [ -e "$dev" ] && iw dev "$(basename "$dev")" set power_save off 2>/dev/null || true
 done
+wifi_modprobe="# Scaros : la carte Wi-Fi ne s'assoupit jamais (cartes Realtek et Intel)
+options rtw88_core disable_lps_deep=y
+options rtw89_core disable_ps_mode=y
+options iwlmvm power_scheme=1"
+printf '%s\n' "$wifi_modprobe" > /etc/modprobe.d/scaros-wifi.conf
 
 # ---------------------------------------------------------------------------
 step "3/9 Applis YouTube, Jellyfin, Plex et Steam Link (Flathub ; Twitch n'a besoin de rien)"
@@ -127,6 +135,7 @@ rm -rf "$DEST/launcher" "$DEST/system"
 cp -r "$HERE/launcher" "$HERE/system" "$DEST/"
 chmod 755 "$DEST/system/session.sh" "$DEST/launcher/scaros.py" "$DEST/launcher/osd.py"
 install -m 755 "$HERE/update.sh" /usr/local/bin/scaros-update
+install -m 755 "$HERE/system/scaros-diag.sh" /usr/local/bin/scaros-diag
 mkdir -p /var/lib/scaros
 # mise à jour lancée depuis le menu (Réglages > À propos), en root, dans un service à part
 cat > /etc/systemd/system/scaros-update.service <<'EOF'
@@ -138,6 +147,16 @@ After=network-online.target
 Type=oneshot
 ExecStart=/usr/local/bin/scaros-update
 TimeoutStartSec=1800
+EOF
+# diagnostic réseau lancé depuis le menu (Réglages › Wi-Fi › Diagnostic réseau), en root
+cat > /etc/systemd/system/scaros-diag.service <<'EOF'
+[Unit]
+Description=Diagnostic réseau de Scaros OS
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/scaros-diag --service
+TimeoutStartSec=180
 EOF
 systemctl daemon-reload
 # polices du menu, aussi pour l'affichage par-dessus les applis

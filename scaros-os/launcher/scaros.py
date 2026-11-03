@@ -60,6 +60,9 @@ AIRPLAY_NAME = "Scaros"         # nom affiché dans la liste AirPlay de l'iPhone
 UPDATE_API = "https://api.github.com/repos/belugas62/Neo/commits/scaros-os"
 INSTALLED_COMMIT = Path("/opt/scaros/commit")              # écrit par scaros-update
 UPDATE_STATUS = Path("/var/lib/scaros/update-status.json")  # progression écrite par scaros-update
+DIAG_STATUS = Path("/var/lib/scaros/diag-status.json")      # progression écrite par scaros-diag
+DIAG_REPORT = Path("/var/lib/scaros/diag.txt")              # dernier rapport de scaros-diag
+DIAG_SECONDS = 30                                           # écoute pendant l'essai sur le téléphone
 PHONE_TTL = 40                # un téléphone qui ne donne plus signe de vie depuis 40 s est parti
 AUDIO_MODES = ("auto", "tv", "pc", "bluetooth")
 AUDIO_NAMES = {"tv": "la télé (HDMI)", "pc": "les haut-parleurs du PC"}
@@ -140,6 +143,41 @@ WEATHER_CODES = {
     85: ("snow", "Averses de neige"), 86: ("snow", "Averses de neige"),
     95: ("storm", "Orage"), 96: ("storm", "Orage et grêle"), 99: ("storm", "Orage et grêle"),
 }
+DRY_DIAG = """Diagnostic réseau de Scaros (démo)
+
+== Scaros ==
+       Scaros OS {version}, nom sur le réseau : scaros.local
+  [ok] le serveur de Scaros répond (port 8421)
+  [ok] il accepte les téléphones sur toutes ses adresses
+  [ok] AirPlay tourne (ports 7000 7001 7100)
+  [ok] les annonces Bonjour (AirPlay, scaros.local) fonctionnent
+
+== Connexion ==
+       Wi-Fi (wlp3s0) : adresse 192.168.1.11 sur « Maison_5G », 5 GHz, signal -58 dBm
+       borne 50:91:e3:12:34:56 · carte ath10k_pci · MAC 3c:91:80:aa:bb:cc
+  [ok] économie d'énergie Wi-Fi coupée
+       IPv6 : 2a02:8428:1234:5600::1b
+
+== Box ==
+  [ok] la box (192.168.1.1) répond (5/5)
+
+== Adresse en double ==
+  [ok] aucun autre appareil n'utilise 192.168.1.11
+
+== Pare-feu ==
+  [ok] aucun pare-feu ne bloque les téléphones
+
+== Appareils vus par Scaros ==
+       192.168.1.1 (box) · 00:1a:2b:3c:4d:5e
+       192.168.1.28 (PC-Salon.local) · 8c:16:45:aa:bb:cc
+
+== Test en direct ==
+       écoute de 30 s pendant l'essai sur le téléphone (192.168.1.11:8421/remote ou AirPlay)
+  [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)
+
+== Verdict ==
+  [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)
+"""
 DRY_WEATHER = [  # --dry-run : réponses d'Open-Meteo simulées
     {"current": {"temperature_2m": 14.2, "weather_code": 63, "is_day": 1},
      "daily": {"temperature_2m_max": [16.1], "temperature_2m_min": [9.4]}},
@@ -309,6 +347,7 @@ class Scaros:
         self.airplay_restart = False
         self.mirroring = False
         self.update = {"checking": False, "running": False, "available": None, "step": None}
+        self.diag = {"running": False, "step": None, "until": None, "at": None if DRY else self._diag_report_time()}
         self.weather = None
         self.weather_lock = threading.Lock()
         self.dry_weather = 0
@@ -429,7 +468,7 @@ class Scaros:
             "wifi": self.wifi(nets), "wifiList": nets, "ip": ip, "info": system_info(),
             "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning, "audio": bt_audio_available()},
             "weather": self.weather, "place": self.settings.get("weather_place"),
-            "update": self.update, "justUpdated": self.just_updated(),
+            "update": self.update, "justUpdated": self.just_updated(), "diag": self.diag,
         })
         return s
 
@@ -1777,6 +1816,76 @@ class Scaros:
         self.settings["update_seen"] = self._update_status_file().get("at", 0)
         self._save_settings()
 
+    # ---------- diagnostic réseau (scaros-diag) ----------
+    @staticmethod
+    def _diag_report_time():
+        try:
+            return int(DIAG_REPORT.stat().st_mtime)
+        except OSError:
+            return None
+
+    def diag_report(self):
+        if DRY:
+            return DRY_DIAG.format(version=VERSION) if self.diag.get("at") else ""
+        try:
+            return DIAG_REPORT.read_text(errors="replace")[:20000]
+        except OSError:
+            return ""
+
+    def start_diag(self):
+        if self.diag.get("running"):
+            return False
+        self.diag.update(running=True, step="checks", until=None, error=None)
+        self.bus.emit("diag", **self.diag)
+        threading.Thread(target=self._run_diag, daemon=True).start()
+        return True
+
+    def _run_diag(self):
+        if DRY:
+            time.sleep(1.5)
+            self.diag.update(step="listen", until=time.time() + 8)
+            self.bus.emit("diag", **self.diag)
+            time.sleep(8)
+            self.diag.update(running=False, step="done", until=None, at=int(time.time()))
+            self.bus.emit("diag", **self.diag)
+            return
+        # scaros-diag tourne en root (tcpdump, arping) dans un service à part
+        started = time.time()
+        code, _ = run(["systemctl", "start", "--no-block", "scaros-diag.service"], timeout=20)
+        if code != 0:
+            self.diag.update(running=False, step="failed", error="service")
+            self.bus.emit("diag", **self.diag)
+            return
+        seen = None
+        while time.time() - started < DIAG_SECONDS + 90:
+            time.sleep(0.5)
+            try:
+                st = json.loads(DIAG_STATUS.read_text())
+            except (OSError, ValueError):
+                st = {}
+            if st.get("at", 0) < started - 2:  # fichier laissé par un diagnostic précédent
+                st = {}
+            if st.get("step") and st != seen:
+                seen = st
+                self.diag.update(step=st["step"], until=st.get("until") or None)
+                if st["step"] in ("done", "failed"):
+                    break
+                self.bus.emit("diag", **self.diag)
+            if time.time() - started > 10:
+                active = run(["systemctl", "is-active", "scaros-diag.service"], timeout=5, quiet=True)[1].strip()
+                if active in ("inactive", "failed"):
+                    break
+        try:  # le service a pu finir entre deux lectures
+            st = json.loads(DIAG_STATUS.read_text())
+            if st.get("at", 0) >= started - 2 and st.get("step") == "done":
+                self.diag["step"] = "done"
+        except (OSError, ValueError):
+            pass
+        done = self.diag.get("step") == "done"
+        self.diag.update(running=False, until=None, step="done" if done else "failed",
+                         at=self._diag_report_time() if done else self.diag.get("at"))
+        self.bus.emit("diag", **self.diag)
+
     # ---------- météo (Open-Meteo, sans compte) ----------
     @staticmethod
     def _http_json(url, timeout=10):
@@ -2087,6 +2196,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json({"error": "offline", "results": []}, 502)
         if path == "/api/qr.svg":
             return self.qr()
+        if path == "/api/diag":
+            return self.json({**self.app.diag, "report": self.app.diag_report()})
+        if path in ("/diag", "/diag/"):
+            # pour lire ou copier le rapport depuis un PC du même réseau
+            text = self.app.diag_report() or "Pas encore de diagnostic : lance-le dans Réglages › Wi-Fi › Diagnostic réseau.\n"
+            return self.send(200, text.encode(), "text/plain; charset=utf-8")
         if path in ("/remote", "/remote/"):
             return self.file(UI / "remote.html")
         if path == "/":
@@ -2220,6 +2335,8 @@ class Handler(BaseHTTPRequestHandler):
             if not self.is_local():
                 return self.json({"error": "réservé au PC"}, 403)
             return self.json({"ok": a.start_update()})
+        if path == "/api/diag/start":
+            return self.json({"ok": a.start_diag()})
         if path == "/api/update/ack":
             a.ack_update()
             return self.json({"ok": True})

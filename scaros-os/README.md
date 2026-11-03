@@ -172,6 +172,13 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
 - **Changer de Wi-Fi :** **Réglages > Wi-Fi**, choisis le réseau et tape le mot de passe avec le clavier à l'écran
   (ou un vrai clavier, ou la télécommande du téléphone). En secours : console, `su -` puis `nmtui`.
 - **Vérifier le décodage vidéo :** `vainfo` doit lister VP9 et HEVC.
+- **Le téléphone n'arrive pas à joindre Scaros (télécommande ou AirPlay) : lance le diagnostic réseau.**
+  **Réglages > Wi-Fi > Diagnostic réseau** (aussi sur l'écran Télécommande et dans AirPlay). Scaros vérifie sa
+  connexion (économie d'énergie Wi-Fi, adresse utilisée par un autre appareil, pare-feu, box), puis écoute 30 secondes
+  pendant que tu essaies d'ouvrir la télécommande sur le téléphone : il voit si la demande arrive jusqu'à lui, et
+  dit où elle se perd. Pour copier le rapport, ouvre `http://<adresse de Scaros>:8421/diag` sur un PC.
+  À la main : `su -` puis `scaros-diag`. Si « rien n'est arrivé », c'est le réseau entre le téléphone et le PC :
+  souvent un CPL ou un répéteur Wi-Fi qui isole les appareils. Le plus sûr est alors de brancher le PC par câble.
 - **La télécommande du téléphone ne s'ouvre pas (« Ce site est inaccessible ») :** sur iPhone, ouvre-la dans **Safari**.
   Les autres navigateurs (Brave, Chrome, Firefox…) ne peuvent joindre les appareils de la maison qu'avec l'accès
   « Réseau local » : **Réglages > Confidentialité et sécurité > Réseau local**, active ton navigateur. Attention, l'appareil
@@ -225,6 +232,7 @@ scaros-os/
 │       └── fonts/          police Figtree (licence OFL)
 └── system/
     ├── session.sh          session graphique : Openbox, serveur, menu plein écran
+    ├── scaros-diag.sh      diagnostic réseau (commande scaros-diag, lancé aussi depuis le menu)
     ├── openbox/rc.xml      toutes les fenêtres en plein écran
     └── plymouth/scaros/    écran de démarrage
 ```
