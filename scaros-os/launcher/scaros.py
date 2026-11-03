@@ -1082,13 +1082,17 @@ class Scaros:
         else:
             devices = []
             code, out = run(["bluetoothctl", "devices"], timeout=5, quiet=True)
-            for line in out.splitlines():
-                m = re.match(r"Device (\S+) (.+)", line)
-                info = self._bt_info(m.group(1)) if m else None
+            paired = set(re.findall(r"^Device (\S+)", run(["bluetoothctl", "devices", "Paired"], timeout=5, quiet=True)[1], re.M))
+            unnamed = re.compile(r"(?:[0-9A-F]{2}[-:]){5}[0-9A-F]{2}", re.I)
+            for mac, name in re.findall(r"^Device (\S+) (.+)$", out, re.M):
+                # pendant une recherche, des dizaines d'appareils sans nom passent (téléphones, montres
+                # des voisins) : on ne les interroge pas un par un, ce petit PC ramerait
+                if mac not in paired and unnamed.fullmatch(name.strip()):
+                    continue
+                info = self._bt_info(mac)
                 if not info:
                     continue
-                unnamed = re.fullmatch(r"(?:[0-9A-F]{2}[-:]){5}[0-9A-F]{2}", info["name"], re.I)
-                if info["paired"] or (info["kind"] in ("audio", "input") and not unnamed):
+                if info["paired"] or (info["kind"] in ("audio", "input") and not unnamed.fullmatch(info["name"])):
                     devices.append(info)
         # Les AirPods (et d'autres) se montrent sous deux adresses : la vraie, appairée, et une
         # adresse Bluetooth LE qui change. On garde une seule ligne par nom, la meilleure.

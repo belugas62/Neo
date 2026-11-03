@@ -1032,7 +1032,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const wait = ms => new Promise(r => setTimeout(r, ms));
   async function connect() {
     if (location.protocol === 'file:') return false;
-    for (let i = 0; i < (onBox ? 90 : 1); i++) {
+    for (let i = 0; onBox || i < 1; i++) {  // sur le PC : on attend le serveur aussi longtemps qu'il faut
       try {
         const s = await api('/api/state');
         if (!s || !s.version || !s.apps) return false;
@@ -1045,7 +1045,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         }, 3600);
         return true;
       } catch (e) {
-        if (!(e instanceof TypeError) || !onBox) return false;  // page introuvable : maquette
+        // sur le PC, le serveur peut démarrer ou redémarrer (mise à jour) : on l'attend, quelle que
+        // soit l'erreur ; ailleurs (aperçu, fichier), pas de serveur : maquette tout de suite
+        if (!onBox) return false;
         if (i === 3) { lostToast = true; toast('alert', 'Démarrage du serveur Scaros…', 120000); }
         await wait(1000);
       }
@@ -1180,8 +1182,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   // ---------- shelf & status ----------
   function shelfChips(t) {
-    if (t.id === 'settings') return [`Image sur ${state.output === 'tv' ? 'la télé' : 'l’écran du PC'}`, `Son sur ${state.audio.device}`];
     if (t.id === 'settings' && state.update.available) return ['!Mise à jour de Scaros disponible', `Image sur ${state.output === 'tv' ? 'la télé' : 'l’écran du PC'}`];
+    if (t.id === 'settings') return [`Image sur ${state.output === 'tv' ? 'la télé' : 'l’écran du PC'}`, `Son sur ${state.audio.device}`];
     if (state.live && state.installed[t.id] === false) return ['!À installer : lance scaros-update'];
     return t.id === 'twitch' ? ['SmartTwitchTV, appli non officielle'] : [];
   }

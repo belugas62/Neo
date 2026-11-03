@@ -117,6 +117,13 @@ class Bubble(Gtk.Window):
         self.hide()
         return False
 
+    def cancel(self):
+        """Cache tout de suite (appli fermée, menu revenu devant)."""
+        if self.timer:
+            GLib.source_remove(self.timer)
+            self.timer = None
+        self.hide()
+
     def background(self, cr, w, h):
         u = self.unit()
         cr.set_source_rgb(*SHEET)
@@ -233,19 +240,23 @@ def main():
         buf += chunk
         while b"\n" in buf:
             line, buf = buf.split(b"\n", 1)
+            # un message abîmé est ignoré : une exception ici couperait l'affichage jusqu'au redémarrage
             try:
-                msg = json.loads(line)
-            except ValueError:
-                continue
-            kind = msg.get("t")
-            if kind == "volume":
-                volume.show_level(msg.get("level"), msg.get("muted"))
-            elif kind == "note":
-                note.show_note(str(msg.get("icon", "alert")), str(msg.get("text", ""))[:160], int(msg.get("ms", 3500)))
-            elif kind == "hide":
-                volume.hide()
-                note.hide()
+                handle(json.loads(line))
+            except (ValueError, TypeError, AttributeError) as e:
+                print(f"message ignoré : {e}", file=sys.stderr)
         return True
+
+    def handle(msg):
+        kind = msg.get("t")
+        if kind == "volume":
+            volume.show_level(msg.get("level"), msg.get("muted"))
+        elif kind == "note":
+            ms = max(800, min(20000, int(msg.get("ms") or 3500)))
+            note.show_note(str(msg.get("icon", "alert")), str(msg.get("text", ""))[:160], ms)
+        elif kind == "hide":
+            volume.cancel()
+            note.cancel()
 
     stdin = sys.stdin.buffer.raw
     GLib.io_add_watch(stdin, GLib.PRIORITY_DEFAULT, GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, on_input)

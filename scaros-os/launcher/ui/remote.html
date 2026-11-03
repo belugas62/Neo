@@ -329,8 +329,18 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
     if (!b) return;
     b.classList.add('hl'); setTimeout(() => b.classList.remove('hl'), 140);
   }
+  // fin d'un appui : aussi quand le téléphone passe en arrière-plan en plein appui (appel,
+  // notification), sinon la répétition continuerait à envoyer des flèches jusqu'au retour
+  function endGesture() {
+    if (!g) return;
+    clearTimeout(g.hold); clearInterval(g.rep); clearHl();
+    g = null;
+  }
+  const holds = new Set();  // boutons maintenus (volume) : arrêtés au passage en arrière-plan
+  document.addEventListener('visibilitychange', () => { if (!visible()) { endGesture(); holds.forEach(stop => stop()); } });
   pad.addEventListener('pointerdown', e => {
     e.preventDefault();
+    endGesture();
     pad.setPointerCapture(e.pointerId);
     const zone = zoneAt(e.clientX, e.clientY);
     g = { x: e.clientX, y: e.clientY, moved: false, steps: 0, zone, hold: null, rep: null };
@@ -355,11 +365,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
     clearHl();
     g = null;
   });
-  pad.addEventListener('pointercancel', () => {
-    if (!g) return;
-    clearTimeout(g.hold); clearInterval(g.rep); clearHl();
-    g = null;
-  });
+  pad.addEventListener('pointercancel', endGesture);
 
   // autres touches : réaction immédiate, répétition si on reste appuyé (volume)
   document.addEventListener('pointerdown', e => {
@@ -372,9 +378,10 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
     let t2;
     const t1 = b.hasAttribute('data-repeat') ? setTimeout(() => { t2 = setInterval(() => send(a), 140); }, 420) : null;
     const stop = () => {
-      clearTimeout(t1); clearInterval(t2); b.classList.remove('down');
+      clearTimeout(t1); clearInterval(t2); b.classList.remove('down'); holds.delete(stop);
       ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.removeEventListener(ev, stop));
     };
+    holds.add(stop);
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, stop));
   });
   document.addEventListener('keydown', e => {
