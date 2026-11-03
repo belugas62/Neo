@@ -491,7 +491,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .cc-head { margin-bottom: 1.6rem; }
 .cc-time { margin: 0; font-size: calc(5rem * var(--fs)); font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
 .cc-date { margin: .4rem 0 0; font-size: calc(1.7rem * var(--fs)); color: var(--text-2); }
-.quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; margin-bottom: 1.2rem; }
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: .7rem; margin-bottom: 1.2rem; }
 .cc-app { display: flex; align-items: center; gap: 1.3rem; margin-bottom: .9rem; }
 .cc-app-art { flex: none; display: grid; place-items: center; width: 8.4rem; aspect-ratio: 5 / 3; border-radius: .9rem; background: var(--bg); box-shadow: inset 0 0 0 1px #ffffff14; }
 .cc-app-art svg { width: 46%; height: 52%; }
@@ -500,7 +500,12 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .cc-app-rows { margin-bottom: 1.2rem; }
 .opt.q { flex-direction: column; justify-content: center; gap: .6rem; min-height: 7rem; padding: .9rem .4rem; text-align: center; }
 .opt.q > .ic { width: 2.6rem; height: 2.6rem; }
-.opt.q .opt-title { font-size: calc(1.5rem * var(--fs)); }
+.opt.q .opt-title { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(1.5rem * min(var(--fs), 1.06)); }
+/* tuile qui s'allume (mode souris) */
+.opt.q.on { background: var(--led); color: #fff; }
+.opt.q.on > .ic { color: #fff; }
+.opt.q.on.is-focus { background: var(--focus-bg); color: var(--focus-fg); }
+.opt.q.on.is-focus > .ic { color: var(--led); }
 .pane.side .opts { gap: .45rem; }
 .pane.side .opt { min-height: 5.2rem; }
 .pane.side .meter { flex-basis: 9rem; }
@@ -631,9 +636,15 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .dpad [data-pact="right"] { grid-area: 2 / 3; }
 .dpad [data-pact="down"] { grid-area: 3 / 2; }
 .prow { display: flex; gap: .6rem; align-items: center; }
+/* comme la vraie télécommande : 2 × 2 touches, et le volume en bascule verticale à droite */
+.pctrl { display: grid; grid-template-columns: 1fr 1fr 3.4rem; gap: .5rem; }
+.pctrl .pbtn { font-size: calc(.85rem * var(--fs)); }
+.procker { grid-column: 3; grid-row: 1 / 3; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 1.7rem; background: #ffffff0d; }
+.procker button { flex: 1; padding: 0; border: 0; background: none; color: inherit; font-size: calc(1.2rem * var(--fs)); cursor: pointer; }
+.procker .plabel { flex: none; padding: .25rem 0; font-size: calc(.62rem * var(--fs)); font-weight: 700; letter-spacing: .08em; color: var(--muted); border-block: 1px solid var(--line); }
+.procker button:focus-visible { outline: .14rem solid #fff; outline-offset: -.14rem; }
 .pbtn { flex: 1; display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .62rem 0; border: 1px solid var(--line); border-radius: .8rem; background: #ffffff0d; font-weight: 600; font-size: calc(.95rem * var(--fs)); cursor: pointer; }
 .pbtn .ic { width: 1.1rem; height: 1.1rem; }
-.plabel { flex: 1.2; text-align: center; font-size: calc(.85rem * var(--fs)); color: var(--muted); }
 .pbtn:focus-visible, .dpad button:focus-visible, .phone-x:focus-visible { outline: .14rem solid #fff; outline-offset: .1rem; }
 .press { animation: press .22s ease; }
 @keyframes press { 50% { background: #ffffff38; transform: scale(.94); } }
@@ -821,15 +832,16 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       <button type="button" data-pact="right" aria-label="Droite" data-icon="right"></button>
       <button type="button" data-pact="down" aria-label="Bas" data-icon="down"></button>
     </div>
-    <div class="prow">
+    <div class="pctrl">
       <button type="button" class="pbtn" data-pact="back"><span data-icon="back"></span>Retour</button>
       <button type="button" class="pbtn" data-pact="home"><span data-icon="home"></span>Accueil</button>
-      <button type="button" class="pbtn" data-pact="menu" aria-label="Centre de contrôle">≡</button>
-    </div>
-    <div class="prow">
-      <button type="button" class="pbtn" data-pact="voldown" aria-label="Baisser le volume">−</button>
-      <button type="button" class="pbtn plabel" data-pact="mute" aria-label="Couper le son">Volume</button>
-      <button type="button" class="pbtn" data-pact="volup" aria-label="Monter le volume">+</button>
+      <button type="button" class="pbtn" data-pact="playpause"><span data-icon="play"></span>Lecture</button>
+      <button type="button" class="pbtn" data-pact="menu" aria-label="Centre de contrôle">≡ Menu</button>
+      <div class="procker" role="group" aria-label="Volume">
+        <button type="button" data-pact="volup" aria-label="Monter le volume">+</button>
+        <button type="button" class="plabel" data-pact="mute" aria-label="Couper le son">VOL</button>
+        <button type="button" data-pact="voldown" aria-label="Baisser le volume">−</button>
+      </div>
     </div>
     <div class="prow">
       <button type="button" class="pbtn" data-pact="ch1">1</button>
@@ -899,6 +911,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     'wx-rain': '<path d="M7.5 15h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.6 1.2A3.5 3.5 0 0 0 7.5 15z"/><path d="M9 17.5l-1 3M13 17.5l-1 3M17 17.5l-1 3"/>',
     'wx-snow': '<path d="M7.5 15h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.6 1.2A3.5 3.5 0 0 0 7.5 15z"/><path d="M8.5 18.5v.1M12 20.5v.1M15.5 18.5v.1"/>',
     'wx-storm': '<path d="M7.5 15h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.6 1.2A3.5 3.5 0 0 0 7.5 15z"/><path d="M12.5 15.5l-2 3.2h3l-2 3.3"/>',
+    mouse: '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3.5"/>',
     qr: '<rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M14 14h2.5v2.5H14zM18.5 18.5H21V21h-2.5zM14 19.5V21M19.5 14H21"/>'
   };
   const icon = (n, cls = 'ic') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
@@ -966,7 +979,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const BT_KIND = { audio: 'Casque ou enceinte', input: 'Manette', other: 'Appareil Bluetooth' };
 
   const state = {
-    live: false, dry: false, version: '0.5', lost: false,
+    live: false, dry: false, version: '0.6', lost: false, mouse: false,
     focus: 'youtube', panel: null, pItems: [], pIdx: 0, panelStack: [], launched: null,
     mode: 'auto', hdmi: false, output: 'pc', volume: 35, muted: false, booting: false, power: null,
     res: '1366×768', tvRes: '1080', shown: false,
@@ -1020,6 +1033,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       audio: s.audio && s.audio.target ? s.audio : state.audio, bt: s.bt || state.bt,
       wifiList: s.wifiList || [], prefs: { ...state.prefs, ...(s.prefs || {}) },
       weather: s.weather || null, place: s.place || null, airplay: s.airplay || state.airplay, update: s.update || state.update, diag: s.diag || state.diag,
+      mouse: !!s.mouse,
       installed: Object.fromEntries(Object.entries(s.apps || {}).map(([k, v]) => [k, v.installed]))
     });
     lastOut = state.output;
@@ -1125,6 +1139,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       state.appsUpdating = m.state === 'updating';
       toast(m.state === 'failed' ? 'alert' : 'download', { updating: 'Mise à jour des applis… ça peut prendre quelques minutes.', done: 'Applis à jour.', failed: 'La mise à jour des applis a échoué.' }[m.state], m.state === 'updating' ? 20000 : 4000);
       api('/api/state').then(s => { applyState(s); renderTiles(); rerenderPane(); }).catch(() => {});
+    } else if (m.type === 'mouse') {
+      onMouse(!!m.on);
     } else if (m.type === 'airplay') {
       const was = state.airplay.state;
       state.airplay = { ...state.airplay, ...m };
@@ -1281,7 +1297,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const nav = /^(panel|btdev):/.test(act);
     return `<button type="button" class="opt" data-act="${act}">${ic ? icon(ic) : ''}<span class="opt-main"><span class="opt-title">${title}</span>${desc ? `<span class="opt-desc">${desc}</span>` : ''}</span>${val ? `<span class="opt-val">${val}</span>` : ''}${nav ? icon('chevron', 'chev') : ''}</button>`;
   };
-  const quick = (act, ic, title) => `<button type="button" class="opt q" data-act="${act}">${icon(ic)}<span class="opt-title">${title}</span></button>`;
+  const quick = (act, ic, title, on) => `<button type="button" class="opt q${on ? ' on' : ''}" data-act="${act}"${on != null ? ` aria-pressed="${!!on}"` : ''}>${icon(ic)}<span class="opt-title">${title}</span></button>`;
   const group = t => `<p class="opt-group">${t}</p>`;
 
   let qrLib = null;
@@ -1422,16 +1438,19 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     }).catch(() => {});
   }
   const DEMO_DIAG = `== Connexion ==
-       Wi-Fi (wlp3s0) : adresse 192.168.1.11 sur « Maison_5G », 5 GHz, signal -58 dBm
+       Wi-Fi (wlp3s0) : adresse 192.168.1.11 sur « TP-Link_2G », 2,4 GHz, signal -52 dBm
   [ok] économie d'énergie Wi-Fi coupée
 == Box ==
   [ok] la box (192.168.1.1) répond (5/5)
 == Adresse en double ==
   [ok] aucun autre appareil n'utilise 192.168.1.11
 == Test en direct ==
-  [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)
+  [ok] 192.168.1.24 (iPhone-de-Oscar.local) : connexion établie (télécommande)
+== AirPlay (découverte par l'iPhone) ==
+       Scaros reçoit bien les annonces Bonjour de 4 appareil(s) du réseau
+  [!!] aucune recherche AirPlay n'est arrivée (si tu as ouvert « Recopie de l'écran » sur l'iPhone pendant le test) : l'iPhone n'est sans doute pas sur le même Wi-Fi ou la même bande que Scaros. Mets-les tous les deux sur le Wi-Fi 2,4 GHz du même boîtier
 == Verdict ==
-  [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)`;
+  [!!] aucune recherche AirPlay n'est arrivée (si tu as ouvert « Recopie de l'écran » sur l'iPhone pendant le test) : l'iPhone n'est sans doute pas sur le même Wi-Fi ou la même bande que Scaros. Mets-les tous les deux sur le Wi-Fi 2,4 GHz du même boîtier`;
 
   // each page: title, art (left illustration), lead, body
   const PAGES = {
@@ -1534,6 +1553,15 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
           <dt>≡ Menu</dt><dd>Centre de contrôle</dd>
           <dt>LB / RB</dt><dd>Volume − / +</dd>
           <dt>Y</dt><dd>Lecture / pause</dd>
+        </dl>
+        ${group('Mode souris')}
+        <div class="opts">${row('mouse', 'mouse', 'Mode souris', 'Pour les applis qui se pilotent mal aux flèches. Aussi dans le centre de contrôle.', state.mouse ? 'Activé' : 'Désactivé')}</div>
+        <dl class="facts">
+          <dt>Stick gauche</dt><dd>Déplacer le curseur</dd>
+          <dt>A</dt><dd>Cliquer (maintenu : glisser)</dd>
+          <dt>X</dt><dd>Clic droit</dd>
+          <dt>Stick droit</dt><dd>Faire défiler</dd>
+          <dt>Dans le menu</dt><dd>La manette garde les flèches</dd>
         </dl>`
     }),
     remote: () => {
@@ -1639,9 +1667,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else if (mirroring()) { title = `Recopie : ${esc(a.device || 'iPhone')}`; sub = 'B ou bouton Xbox pour l’arrêter.'; ok = true; }
       else if (a.error) { title = 'AirPlay ne démarre pas'; sub = esc(a.error); }
       else if (!a.running) { title = 'Démarrage d’AirPlay…'; sub = 'Quelques secondes.'; }
-      else if (a.checking) { title = 'Vérification sur le réseau…'; sub = 'Scaros regarde s’il est bien visible, comme le ferait l’iPhone.'; }
-      else if (a.advertised === false) { title = 'Lancé, mais invisible sur le réseau'; sub = 'Redémarre AirPlay. Si ça persiste, redémarre le PC.'; }
-      else { title = 'Prêt'; sub = `Visible sur le réseau sous le nom « ${esc(a.name || 'Scaros')} ».`; ok = true; }
+      else if (a.checking) { title = 'Vérification de l’annonce…'; sub = 'Scaros regarde s’il s’annonce bien sur le Wi-Fi.'; }
+      else if (a.advertised === false) { title = 'Lancé, mais pas annoncé sur le Wi-Fi'; sub = 'Redémarre AirPlay. Si ça persiste, redémarre le PC.'; }
+      else { title = 'Prêt'; sub = `Annoncé sur le Wi-Fi sous le nom « ${esc(a.name || 'Scaros')} ».`; ok = true; }
       return {
         title: 'AirPlay', icon: 'airplay', pa: '#7a6cff', pb: '#2e2a8a', caption: 'Depuis un iPhone, un iPad ou un Mac.',
         lead: 'Envoie l’écran de ton iPhone, une vidéo ou des photos sur la télé, comme avec une Apple TV.',
@@ -1649,7 +1677,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
           <div class="opts">
             ${mirroring() ? row('airplaystop', 'close', 'Arrêter la recopie', '') : ''}
             ${on && !mirroring() ? row('airplayrestart', 'replay', 'Redémarrer AirPlay', 'À faire si Scaros n’apparaît pas sur l’iPhone.') : ''}
-            ${on && a.running && !mirroring() ? row('airplaycheck', 'search', 'Vérifier la visibilité', 'Regarde si Scaros est bien annoncé sur le Wi-Fi.') : ''}
+            ${on && a.running && !mirroring() ? row('airplaycheck', 'search', 'Vérifier l’annonce', 'Regarde si Scaros s’annonce bien sur le Wi-Fi.') : ''}
           </div>
           ${group('AirPlay')}
           <div class="opts" role="radiogroup" aria-label="AirPlay">
@@ -1659,7 +1687,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
           ${group('Sur l’iPhone')}
           <ol class="steps"><li>Même Wi-Fi que Scaros (pas le réseau invité).</li><li>Centre de contrôle › Recopie de l’écran › Scaros.</li><li>Ou le bouton AirPlay d’une appli (vidéo, photos, musique).</li><li>B ou bouton Xbox pour arrêter la recopie.</li></ol>
           ${group('Scaros n’apparaît pas ?')}
-          <ol class="steps"><li>Si l’état ci-dessus dit « Prêt » : c’est le Wi-Fi qui empêche l’iPhone de voir Scaros.</li><li>Test : ouvre scaros.local:8421/remote sur l’iPhone. Si la page ne s’ouvre pas, la box bloque la découverte entre appareils (option « isolation » ou réseau invité).</li><li>Sur la box, désactive l’isolation Wi-Fi, ou mets l’iPhone et Scaros sur le même réseau (même nom de Wi-Fi).</li></ol>
+          <ol class="steps"><li>Si l’état ci-dessus dit « Prêt » : Scaros s’annonce bien, c’est le Wi-Fi qui n’apporte pas l’annonce jusqu’à l’iPhone.</li><li>Mets l’iPhone sur le même Wi-Fi <b>et la même bande</b> que Scaros : le 2,4 GHz du même boîtier (CPL ou box). Entre 2,4 et 5 GHz, beaucoup de CPL bloquent les annonces AirPlay alors que la télécommande marche.</li><li>Sur l’iPhone, coupe puis rallume le Wi-Fi : il oublie les appareils qu’il avait en mémoire.</li><li>Toujours rien ? Lance le diagnostic et ouvre la Recopie de l’écran pendant l’écoute : il dit si la recherche de l’iPhone arrive jusqu’à Scaros.</li></ol>
           <div class="opts" style="margin-top:1rem">${row('panel:netdiag', 'info', 'Diagnostic réseau', 'Trouve ce qui bloque entre l’iPhone et Scaros.')}</div>
           ${state.live && !state.dry ? '' : `${group('Démo')}<div class="opts">${row('airplaydemo', 'airplay', mirroring() ? 'Arrêter la recopie de démo' : 'Essayer une recopie', 'Simule un iPhone qui envoie son écran.')}</div>`}`
       };
@@ -1670,7 +1698,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       let now = '';
       if (d.running && d.step === 'listen') {
         now = `<div class="diag-now"><p class="k">Maintenant, sur le téléphone</p><p class="t">Ouvre Safari et tape l’adresse :</p><p class="u">${esc(addr)}</p>
-          <p class="t">Tu peux aussi essayer AirPlay. Scaros écoute encore <b id="diag-count">${diagLeft()} s</b>.</p></div>`;
+          <p class="t">Puis, sur l’iPhone : Centre de contrôle › Recopie de l’écran. Scaros écoute encore <b id="diag-count">${diagLeft()} s</b>.</p></div>`;
       } else if (d.running) {
         now = `<div class="card"><span class="sdot"></span><div><div class="card-title">Vérification de la connexion… <span class="spin"></span></div><div class="card-sub">Une quinzaine de secondes. Prépare ton téléphone.</div></div></div>`;
       } else if (d.step === 'done' && !rep && state.live) {
@@ -1687,7 +1715,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
           ${state.live ? `<p class="note">Pour copier ce rapport, ouvre <b>${esc(addr.replace(/\/remote$/, ''))}/diag</b> dans le navigateur d’un PC.</p>` : ''}` : '';
       return {
         title: 'Diagnostic réseau', icon: 'search', pa: '#4c8dff', pb: '#1d3b8a', caption: 'Pour la télécommande du téléphone et AirPlay.',
-        lead: d.running || rep || d.step === 'done' ? '' : 'Scaros vérifie sa connexion, puis écoute 30 secondes pendant que tu essaies d’ouvrir la télécommande sur le téléphone. Il voit ainsi si la demande du téléphone arrive jusqu’à lui.',
+        lead: d.running || rep || d.step === 'done' ? '' : 'Scaros vérifie sa connexion, puis écoute 30 secondes pendant que tu ouvres la télécommande puis la Recopie de l’écran sur le téléphone. Il voit ainsi si les demandes du téléphone arrivent jusqu’à lui.',
         body: d.running || (d.step === 'done' && !rep && state.live) ? `${now}<div class="opts">${row('back', 'back', 'Retour', 'Le diagnostic continue.')}</div>`
           : `${now}${report || `<div class="opts">${row('diagstart', 'search', 'Lancer le diagnostic', 'Garde ton téléphone en main : il faudra essayer pendant 30 secondes.')}</div>`}`
       };
@@ -1786,6 +1814,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
           ${appBlock}
           <div class="quick">
             ${quick('panel:remote', 'qr', 'Télécommande')}
+            ${quick('mouse', 'mouse', 'Souris', state.mouse)}
             ${quick('power:sleep', 'moon', 'Veille')}
             ${quick('power:off', 'power', 'Éteindre')}
           </div>
@@ -1940,6 +1969,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       }
     }
     else if (k === 'vol') mute();
+    else if (k === 'mouse') {
+      if (state.live) api('/api/mouse', { on: !state.mouse }).catch(fail);
+      else onMouse(!state.mouse);
+    }
     else if (k === 'airplay') {
       if (state.live) api('/api/airplay', { enabled: v === 'on' }).catch(fail);
       else { state.airplay.enabled = v === 'on'; renderPanel(act); }
@@ -2492,6 +2525,15 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     showVol(); renderStatus();
     if (state.panel === 'sound' || state.panel === 'control') rerenderPane();
   }
+  // mode souris : le pavé du téléphone devient un trackpad, la manette déplace le curseur dans les applis
+  function onMouse(on) {
+    if (on === state.mouse) return;
+    state.mouse = on;
+    toast('mouse', on ? 'Mode souris activé. Dans les applis : stick gauche pour le curseur, A pour cliquer, X pour le clic droit, stick droit pour défiler.'
+      : 'Mode souris désactivé : la manette revient aux flèches.', on ? 6500 : 3000);
+    if (state.panel === 'control' || state.panel === 'controller') rerenderPane();
+  }
+
   function mute() {
     if (state.live) { api('/api/input', { action: 'mute' }).catch(() => {}); return; }
     state.muted = !state.muted;

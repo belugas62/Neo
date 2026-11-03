@@ -126,8 +126,19 @@ reboot
 Au clavier : flèches, Entrée, Échap ; la **touche Windows** ramène au menu ; **M** ouvre le centre de contrôle ;
 **1 à 5** ouvrent directement YouTube, Jellyfin, Plex, Steam Link et Twitch ; **+ / −** pour le volume, **0** coupe le son.
 
-**Télécommande du téléphone :** glisse sur le pavé pour te déplacer, touche OK pour valider. Touche la barre
-de volume pour couper ou remettre le son. En haut, elle affiche ce qui est à l'écran.
+**Télécommande du téléphone :** glisse sur le pavé pour te déplacer, touche OK pour valider. Sous le pavé, les
+touches sont rangées comme sur une télécommande Apple TV : **Retour**, **Accueil**, **Lecture** et **Menu** à gauche,
+et le **volume** en bascule verticale à droite (**+** en haut, **−** en bas, reste appuyé pour aller vite ; touche le
+chiffre du milieu pour couper ou remettre le son). En haut, elle affiche ce qui est à l'écran.
+
+**Mode souris** (pour une appli ou un site qui se pilote mal aux flèches) : sur la télécommande, touche **Souris**
+au-dessus du pavé. Le pavé devient un trackpad : glisse un doigt pour déplacer le curseur (plus tu vas vite, plus il
+va loin), **touche** pour cliquer, **appui long** ou **touche à deux doigts** pour le clic droit, **glisse à deux
+doigts** pour faire défiler. **Flèches** revient au pavé habituel. À la manette, active-le avec la tuile **Souris** du
+centre de contrôle (**≡**), ou dans **Réglages > Manette** : par-dessus une appli, le **stick gauche** déplace le
+curseur, **A** clique (maintenu : glisser), **X** fait un clic droit et le **stick droit** fait défiler ; B, la croix,
+LB/RB, ≡ et le bouton Xbox gardent leur rôle. Dans le menu de Scaros, la manette garde les flèches. Le mode est le
+même pour la télécommande et la manette : l'activer d'un côté l'active de l'autre.
 
 **Dans Steam Link**, la manette sert au jeu : tous ses boutons vont au jeu, et un appui court sur
 le bouton Xbox ouvre le menu de Steam. Pour revenir au menu Scaros, **maintiens le bouton Xbox**
@@ -178,8 +189,8 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
 - **Le téléphone n'arrive pas à joindre Scaros (télécommande ou AirPlay) : lance le diagnostic réseau.**
   **Réglages > Wi-Fi > Diagnostic réseau** (aussi sur l'écran Télécommande et dans AirPlay). Scaros vérifie sa
   connexion (économie d'énergie Wi-Fi, adresse utilisée par un autre appareil, pare-feu, box), puis écoute 30 secondes
-  pendant que tu essaies d'ouvrir la télécommande sur le téléphone : il voit si la demande arrive jusqu'à lui, et
-  dit où elle se perd. Pour copier le rapport, ouvre `http://<adresse de Scaros>:8421/diag` sur un PC.
+  pendant que tu ouvres la télécommande puis la **Recopie de l'écran** sur le téléphone : il voit si les demandes
+  arrivent jusqu'à lui (connexion de la télécommande, recherche AirPlay), et dit où elles se perdent. Pour copier le rapport, ouvre `http://<adresse de Scaros>:8421/diag` sur un PC.
   À la main : `su -` puis `scaros-diag`. Si « rien n'est arrivé », c'est le réseau entre le téléphone et le PC :
   souvent un CPL ou un répéteur Wi-Fi qui isole les appareils. Le plus sûr est alors de brancher le PC par câble.
 - **CPL ou répéteur Wi-Fi :** mets Scaros sur le Wi-Fi **2,4 GHz** du boîtier (souvent le même nom, sans « _5G »).
@@ -197,11 +208,19 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
   même (pas le réseau invité). Si le QR code marche mais pas l'icône de l'écran d'accueil, c'est que l'adresse du PC a
   changé : supprime l'icône et ajoute-la de nouveau depuis la page ouverte par le QR code. Pour qu'elle ne change
   plus, réserve l'adresse du PC dans les réglages de la box (« bail DHCP statique »).
-- **Scaros n'apparaît pas dans la recopie de l'écran de l'iPhone :** regarde **Réglages > AirPlay**, qui dit ce qui
-  coince. « Prêt » veut dire que Scaros est bien annoncé sur le Wi-Fi : c'est alors la box qui empêche l'iPhone de le
-  voir (réseau invité ou option « isolation » des appareils Wi-Fi). Test simple : si `scaros.local:8421/remote` ne
-  s'ouvre pas sur l'iPhone, la découverte entre appareils est bloquée. Sinon, « Redémarrer AirPlay », et le journal
-  est dans `~/.local/state/scaros/airplay.log`.
+- **Scaros n'apparaît pas dans la recopie de l'écran de l'iPhone (alors que la télécommande marche) :** regarde
+  **Réglages > AirPlay**, qui dit ce qui coince. « Prêt » veut dire que Scaros s'annonce bien sur le Wi-Fi. La
+  télécommande passe par une connexion directe, mais l'iPhone trouve AirPlay grâce à des annonces envoyées à tout le
+  réseau (Bonjour, en multicast), que beaucoup de CPL et de répéteurs filtrent, surtout entre leurs bandes 2,4 et
+  5 GHz. Donc :
+  1. mets l'iPhone sur le même Wi-Fi **et la même bande** que Scaros (le 2,4 GHz du même boîtier) ;
+  2. sur l'iPhone, coupe puis rallume le Wi-Fi (il oublie les appareils qu'il avait en mémoire) ;
+  3. toujours rien : lance **Réglages > Wi-Fi > Diagnostic réseau** et, pendant l'écoute, ouvre la télécommande
+     puis **Recopie de l'écran** sur l'iPhone. La partie « AirPlay » du rapport dit si la recherche de l'iPhone
+     arrive jusqu'à Scaros, si Scaros lui répond, ou si le réseau bloque toutes les annonces ;
+  4. dans les réglages du CPL ou de la box, désactive l'isolation des appareils et le filtrage multicast (IGMP).
+
+  Sinon, « Redémarrer AirPlay », et le journal est dans `~/.local/state/scaros/airplay.log`.
 - **Une appli met du temps à s'ouvrir :** la première ouverture peut prendre jusqu'à une minute sur ce PC.
   Si elle se ferme aussitôt, Scaros la relance une fois tout seul.
 - **Mettre à jour les applis :** **Réglages > Applis > Mettre à jour les applis**.
@@ -250,6 +269,8 @@ mais pas encore sur ta machine. À surveiller au premier essai :
 
 - la bascule HDMI (les noms des sorties vidéo varient d'un PC à l'autre) et le passage en 1080p ;
 - le centre de contrôle par-dessus une appli, puis le retour dans l'appli ;
+- le mode souris : la vitesse du curseur au téléphone et à la manette (testée ici avec une souris simulée,
+  pas avec la vraie souris virtuelle du portable) ;
 - AirPlay : la fluidité de la recopie et le son ;
 - le volume affiché par-dessus YouTube, Jellyfin ou Steam Link ;
 - la mise à jour lancée depuis le menu ;
@@ -288,6 +309,7 @@ Steam Link (`com.valvesoftware.SteamLink`). Twitch est l'appli web SmartTwitchTV
 (<https://github.com/fgl27/SmartTwitchTV>), ouverte dans un Chromium plein écran avec son propre profil.
 
 `scaros.py` réserve la manette et la transforme en touches clavier, pour qu'elle marche pareil dans
-toutes les applis. Pour tester sans le portable : `python3 launcher/scaros.py --dry-run`, puis
+toutes les applis. En mode souris, il crée une souris virtuelle (uinput, avec repli sur `xdotool`) ; la télécommande
+lui envoie ses gestes par une connexion WebSocket gardée ouverte (`/api/mouse`). Pour tester sans le portable : `python3 launcher/scaros.py --dry-run`, puis
 ouvre <http://localhost:8421>. Dans ce mode, rien n'est lancé pour de vrai, et la touche H simule
 le branchement de la télé.

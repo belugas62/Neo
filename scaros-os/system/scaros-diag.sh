@@ -208,6 +208,60 @@ show_neighbours() {
   return 0
 }
 
+# AirPlay : l'iPhone trouve Scaros par des annonces Bonjour (mDNS, multicast). On regarde si
+# sa recherche arrive jusqu'à Scaros pendant le test, et si Scaros lui répond.
+airplay_discovery() {
+  local mdns="$1" summary others answers askers peer n name names who
+  title "AirPlay (découverte par l'iPhone)"
+  summary=$(awk -v me="$MYADDRS" '
+    function host(a) { sub(/:$/, "", a); sub(/[.][0-9]+$/, "", a); return a }
+    {
+      s = ""
+      for (i = 1; i <= NF; i++) if ($i == "IP" || $i == "IP6") { s = $(i + 1); break }
+      if (s == "") next
+      h = host(s)
+      air = ($0 ~ /_airplay[.]_tcp|_raop[.]_tcp/)
+      question = ($0 ~ /[?][[:space:]]+[^[:space:]]*_(airplay|raop)[.]_tcp/)
+      if (index(me, " " h " ")) { if (air && !question) ans++; next }
+      talk[h] = 1
+      if (question) ask[h]++
+    }
+    END {
+      n = 0; for (h in talk) n++
+      printf "N %d\nA %d\n", n, ans
+      for (h in ask) printf "Q %s %d\n", h, ask[h]
+    }' <<<"$mdns")
+  others=$(awk '$1 == "N" {print $2}' <<<"$summary")
+  answers=$(awk '$1 == "A" {print $2}' <<<"$summary")
+  askers=$(awk '$1 == "Q" {print $2, $3}' <<<"$summary")
+  if [ -n "$askers" ]; then
+    # shellcheck disable=SC2046
+    names=$(names_of $(awk '{print $1}' <<<"$askers"))
+    while read -r peer n; do
+      name=$(name_in "$peer" "$names")
+      who="$peer${name:+ ($name)}"
+      ok "$who cherche les appareils AirPlay ($n fois) : sa recherche arrive jusqu'à Scaros"
+    done <<<"$askers"
+    if [ "${answers:-0}" -gt 0 ]; then
+      ok "Scaros répond et s'annonce sous le nom « Scaros » ($answers réponses)"
+      info "si Scaros n'apparaît quand même pas sur l'iPhone, ses réponses se perdent en route vers lui :"
+      info "mets l'iPhone sur le même Wi-Fi ET la même bande (2,4 GHz) que Scaros, puis coupe et rallume son Wi-Fi"
+    elif pgrep -x uxplay >/dev/null; then
+      bad "l'iPhone cherche AirPlay mais Scaros ne lui répond pas : redémarre AirPlay (Réglages › AirPlay), puis le PC si ça continue"
+    else
+      bad "l'iPhone cherche AirPlay mais AirPlay ne tourne pas sur Scaros : regarde Réglages › AirPlay"
+    fi
+  elif [ "${others:-0}" -gt 0 ]; then
+    info "Scaros reçoit bien les annonces Bonjour de $others appareil(s) du réseau"
+    bad "aucune recherche AirPlay n'est arrivée (si tu as ouvert « Recopie de l'écran » sur l'iPhone pendant le test) : l'iPhone n'est sans doute pas sur le même Wi-Fi ou la même bande que Scaros. Mets-les tous les deux sur le Wi-Fi 2,4 GHz du même boîtier"
+  else
+    bad "aucune annonce Bonjour n'arrive jusqu'à Scaros : le Wi-Fi (ou le CPL) bloque le multicast, l'iPhone ne peut pas trouver Scaros pour AirPlay. Mets l'iPhone et Scaros sur le même Wi-Fi 2,4 GHz ; dans les réglages du CPL ou de la box, désactive l'isolation et le filtrage multicast (IGMP)"
+  fi
+  if [ "$MAIN_BAND" = "5 GHz" ]; then
+    info "Scaros est en 5 GHz : AirPlay est souvent invisible entre les bandes 2,4 et 5 GHz d'un CPL ou d'un répéteur"
+  fi
+}
+
 listen_test() {
   [ "$LISTEN" -gt 0 ] && [ -n "$MAIN_IP" ] || return 0
   title "Test en direct"
@@ -215,16 +269,16 @@ listen_test() {
     info "test impossible : outil tcpdump absent (fais une mise à jour de Scaros)"
     return
   fi
-  local cap deadline tpid analysis peers names peer aq syn sa inn out rst svc name who pingout
+  local cap deadline tpid analysis mdns peers names peer aq syn sa inn out rst svc name who pingout
   cap=$(mktemp)
   deadline=$(( $(date +%s) + LISTEN ))
   status "listen" "$deadline"
-  info "écoute de $LISTEN s pendant l'essai sur le téléphone ($MAIN_IP:$PORT/remote ou AirPlay)"
+  info "écoute de $LISTEN s pendant l'essai sur le téléphone ($MAIN_IP:$PORT/remote, puis Recopie de l'écran)"
   if [ "$SERVICE" = 0 ]; then
-    printf "\n  >> MAINTENANT, sur le téléphone : ouvre Safari à l'adresse %s:%s/remote\n     (tu peux aussi essayer AirPlay). Ne touche pas au PC.\n\n" "$MAIN_IP" "$PORT" >&2
+    printf "\n  >> MAINTENANT, sur le téléphone : ouvre Safari à l'adresse %s:%s/remote,\n     puis ouvre « Recopie de l'écran » (AirPlay). Ne touche pas au PC.\n\n" "$MAIN_IP" "$PORT" >&2
   fi
   timeout "$LISTEN" tcpdump -i any -nn -l \
-    "not host 127.0.0.1 and not host ::1 and (tcp port $PORT or tcp port 7000 or tcp port 7001 or tcp port 7100 or (arp and host $MAIN_IP))" \
+    "not host 127.0.0.1 and not host ::1 and (tcp port $PORT or tcp port 7000 or tcp port 7001 or tcp port 7100 or udp port 5353 or (arp and host $MAIN_IP))" \
     >"$cap" 2>/dev/null &
   tpid=$!
   while kill -0 "$tpid" 2>/dev/null; do
@@ -234,6 +288,10 @@ listen_test() {
   wait "$tpid" 2>/dev/null
   [ "$SERVICE" = 1 ] || printf '\r                      \r' >&2
 
+  # annonces Bonjour (AirPlay) à part ; le reste : connexions de la télécommande et d'AirPlay
+  mdns=$(grep -E '[.]5353[: ]' "$cap")
+  grep -vE '[.]5353[: ]' "$cap" > "$cap.tcp"
+  mv -f "$cap.tcp" "$cap"
   # pour chaque appareil : demandes ARP (« où est Scaros ? »), connexions reçues, réponses de Scaros
   analysis=$(awk -v me="$MYADDRS" -v port="$PORT" '
     function host(a) { sub(/:$/, "", a); sub(/[.][0-9]+$/, "", a); return a }
@@ -274,6 +332,7 @@ listen_test() {
       # vu chez nous : un CPL TP-Link isolait les appareils sur son 5 GHz, pas sur son 2,4 GHz
       bad "Scaros est sur le Wi-Fi 5 GHz « $MAIN_SSID » : sur beaucoup de CPL et de répéteurs, le 5 GHz isole les appareils. Essaie le Wi-Fi 2,4 GHz du même boîtier (souvent le même nom, sans « _5G ») dans Réglages › Wi-Fi"
     fi
+    airplay_discovery "$mdns"
     return
   fi
   peers=$(awk '{print $1}' <<<"$analysis")
@@ -306,6 +365,7 @@ listen_test() {
       info "Scaros arrive à joindre $who"
     fi
   done <<<"$analysis"
+  airplay_discovery "$mdns"
 }
 
 verdict() {

@@ -224,7 +224,35 @@ if [ "$(hostname)" != scaros ]; then
   hostnamectl set-hostname scaros
   sed -i "s/\b$old\b/scaros/g" /etc/hosts
 fi
+# AirPlay : l'iPhone trouve Scaros grâce à Avahi (Bonjour). Il doit tourner et publier les
+# services (une option « disable-publishing » ou IPv4 coupé le rendrait invisible)
+avahi_conf=/etc/avahi/avahi-daemon.conf
+if [ -f "$avahi_conf" ]; then
+  sed -E 's/^[[:space:]]*disable-publishing[[:space:]]*=[[:space:]]*yes/disable-publishing=no/;
+          s/^[[:space:]]*use-ipv4[[:space:]]*=[[:space:]]*no/use-ipv4=yes/' "$avahi_conf" > "$avahi_conf.scaros"
+  if cmp -s "$avahi_conf" "$avahi_conf.scaros"; then rm -f "$avahi_conf.scaros"
+  else mv -f "$avahi_conf.scaros" "$avahi_conf"; systemctl restart avahi-daemon >/dev/null 2>&1 || true; fi
+fi
 systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
+# mode souris (télécommande et manette) : une souris virtuelle (uinput) que le compte de la box
+# a le droit de créer, sans accélération ajoutée par Xorg (la télécommande et la manette la calculent)
+echo uinput > /etc/modules-load.d/scaros-uinput.conf
+cat > /etc/udev/rules.d/60-scaros-uinput.rules <<'EOF'
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"
+EOF
+modprobe uinput 2>/dev/null || true
+udevadm control --reload-rules 2>/dev/null || true
+if [ -e /dev/uinput ]; then chgrp input /dev/uinput 2>/dev/null && chmod 660 /dev/uinput 2>/dev/null || true; fi
+mkdir -p /etc/X11/xorg.conf.d
+cat > /etc/X11/xorg.conf.d/40-scaros-souris.conf <<'EOF'
+# Scaros OS : souris virtuelle du mode souris, sans accélération (calculée par la télécommande)
+Section "InputClass"
+    Identifier "Scaros souris"
+    MatchProduct "Scaros souris"
+    Option "AccelProfile" "flat"
+    Option "AccelSpeed" "0"
+EndSection
+EOF
 
 # ---------------------------------------------------------------------------
 step "7/9 Portable fermé + télé : pas de mise en veille"

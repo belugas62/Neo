@@ -42,6 +42,7 @@ ICONS = {
                '<path d="M12 14l5 6H7z"/>',
     "wifi": '<path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.6 16a5 5 0 0 1 6.8 0"/><circle cx="12" cy="19.3" r="1.1" fill="#fff"/>',
     "alert": '<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.3v.2"/>',
+    "mouse": '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3.5"/>',
 }
 
 

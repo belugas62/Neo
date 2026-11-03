@@ -11,11 +11,13 @@ Bluetooth, et lit la manette.
 """
 
 import argparse
+import base64
 import glob
 import hashlib
 import io
 import json
 import logging
+import math
 import os
 import queue
 import re
@@ -45,7 +47,7 @@ try:
 except ImportError:
     qrcode = None
 
-VERSION = "0.5"
+VERSION = "0.6"
 ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "scaros"
@@ -171,7 +173,7 @@ DRY_DIAG = """Diagnostic réseau de Scaros (démo)
   [ok] les annonces Bonjour (AirPlay, scaros.local) fonctionnent
 
 == Connexion ==
-       Wi-Fi (wlp3s0) : adresse 192.168.1.11 sur « Maison_5G », 5 GHz, signal -58 dBm
+       Wi-Fi (wlp3s0) : adresse 192.168.1.11 sur « TP-Link_2G », 2,4 GHz, signal -52 dBm
        borne 50:91:e3:12:34:56 · carte ath10k_pci · MAC 3c:91:80:aa:bb:cc
   [ok] économie d'énergie Wi-Fi coupée
        IPv6 : 2a02:8428:1234:5600::1b
@@ -187,16 +189,19 @@ DRY_DIAG = """Diagnostic réseau de Scaros (démo)
 
 == Appareils vus par Scaros ==
        192.168.1.1 (box) · 00:1a:2b:3c:4d:5e
-       192.168.1.28 (PC-Salon.local) · 8c:16:45:aa:bb:cc
+       192.168.1.24 (iPhone-de-Oscar.local) · 6e:21:aa:bb:cc:dd
 
 == Test en direct ==
-       écoute de 30 s pendant l'essai sur le téléphone (192.168.1.11:8421/remote ou AirPlay)
-  [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)
-  [!!] Scaros est sur le Wi-Fi 5 GHz « Maison_5G » : sur beaucoup de CPL et de répéteurs, le 5 GHz isole les appareils. Essaie le Wi-Fi 2,4 GHz du même boîtier (souvent le même nom, sans « _5G ») dans Réglages › Wi-Fi
+       écoute de 30 s pendant l'essai sur le téléphone (192.168.1.11:8421/remote, puis Recopie de l'écran)
+  [ok] 192.168.1.24 (iPhone-de-Oscar.local) : connexion établie (télécommande)
+       Scaros arrive à joindre 192.168.1.24 (iPhone-de-Oscar.local)
+
+== AirPlay (découverte par l'iPhone) ==
+       Scaros reçoit bien les annonces Bonjour de 4 appareil(s) du réseau
+  [!!] aucune recherche AirPlay n'est arrivée (si tu as ouvert « Recopie de l'écran » sur l'iPhone pendant le test) : l'iPhone n'est sans doute pas sur le même Wi-Fi ou la même bande que Scaros. Mets-les tous les deux sur le Wi-Fi 2,4 GHz du même boîtier
 
 == Verdict ==
-  [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)
-  [!!] Scaros est sur le Wi-Fi 5 GHz « Maison_5G » : sur beaucoup de CPL et de répéteurs, le 5 GHz isole les appareils. Essaie le Wi-Fi 2,4 GHz du même boîtier (souvent le même nom, sans « _5G ») dans Réglages › Wi-Fi
+  [!!] aucune recherche AirPlay n'est arrivée (si tu as ouvert « Recopie de l'écran » sur l'iPhone pendant le test) : l'iPhone n'est sans doute pas sur le même Wi-Fi ou la même bande que Scaros. Mets-les tous les deux sur le Wi-Fi 2,4 GHz du même boîtier
 """
 DRY_WEATHER = [  # --dry-run : réponses d'Open-Meteo simulées
     {"current": {"temperature_2m": 14.2, "weather_code": 63, "is_day": 1},
@@ -366,6 +371,8 @@ class Scaros:
         self.airplay_checking = False
         self.airplay_restart = False
         self.mirroring = False
+        self.mouse = Mouse()
+        self.mouse_mode = False      # mode souris : pavé du téléphone en trackpad, manette en curseur
         self.update = {"checking": False, "running": False, "available": None, "step": None,
                        "source": source_label()}
         self.diag = {"running": False, "step": None, "until": None, "at": None if DRY else self._diag_report_time()}
@@ -478,6 +485,7 @@ class Scaros:
                 "prefs": self.settings.get("ui", {}),
                 "audio": {"mode": self.audio_mode, "target": self.audio_target, "device": self.audio_device},
                 "airplay": self.airplay_state(),
+                "mouse": self.mouse_mode,
             }
         if lite:  # la télécommande n'a besoin que de ça : réponse immédiate
             s["remoteBuild"] = remote_page()[1]
@@ -819,6 +827,43 @@ class Scaros:
         """
         cur = self.current
         return bool(cur and not self.overlay and not self.mirroring and self.apps[cur[0]].get("controller") == "native")
+
+    # ---------- mode souris ----------
+    def set_mouse_mode(self, on):
+        """Pavé du téléphone en trackpad et manette en curseur (dans les applis), pour celles
+        qui se pilotent mal aux flèches. Activé depuis la télécommande ou le centre de contrôle."""
+        on = bool(on)
+        with self.lock:
+            if on == self.mouse_mode:
+                return
+            self.mouse_mode = on
+        log.info("mode souris %s", "activé" if on else "désactivé")
+        self.bus.emit("mouse", on=on)
+        if on:
+            threading.Thread(target=self.mouse.wake, daemon=True).start()
+        self.notify("mouse", "Mode souris : stick gauche pour le curseur, A pour cliquer, X pour le clic droit."
+                    if on else "Mode souris désactivé : retour aux flèches.", 4500 if on else 2500)
+
+    def pad_mouse(self):
+        """La manette pilote-t-elle le curseur ? Seulement par-dessus une appli : dans le menu et le
+        centre de contrôle, elle garde les flèches (pour pouvoir désactiver le mode souris)."""
+        return self.mouse_mode and self.current is not None and not self.overlay and not self.mirroring
+
+    def mouse_event(self, msg):
+        """Un geste du pavé du téléphone : « m dx dy » (déplacer), « s dx dy » (défiler, en 1/120
+        de cran), « c left|right » (clic), « d left » / « u left » (appuyer / relâcher)."""
+        parts = str(msg).split()
+        if not parts:
+            return
+        kind = parts[0]
+        try:
+            if kind in ("m", "s") and len(parts) == 3:
+                dx, dy = (max(-4000, min(4000, int(float(v)))) for v in parts[1:])
+                (self.mouse.move if kind == "m" else self.mouse.scroll)(dx, dy)
+            elif kind in ("c", "d", "u") and len(parts) == 2 and parts[1] in Mouse.BUTTONS:
+                self.mouse.button(parts[1], {"c": "click", "d": "down", "u": "up"}[kind])
+        except ValueError:
+            pass
 
     def set_pad(self, name):
         with self.lock:
@@ -1638,7 +1683,9 @@ class Scaros:
             started = time.monotonic()
             # UxPlay écrit ses messages avec printf : sans « stdbuf -oL », ils restent en mémoire
             # au lieu d'arriver ligne par ligne (connexion d'un iPhone repérée trop tard)
-            cmd = ["uxplay", "-n", AIRPLAY_NAME, "-nh", "-fs", "-nohold", "-reset", "15"]
+            # -p : ports fixes (TCP 7000 7001 7100, UDP 6000 6001 7011) au lieu de ports au hasard,
+            # que le diagnostic réseau sait surveiller et qu'un pare-feu peut laisser passer
+            cmd = ["uxplay", "-n", AIRPLAY_NAME, "-nh", "-fs", "-nohold", "-reset", "15", "-p"]
             if shutil.which("stdbuf"):
                 cmd = ["stdbuf", "-oL", "-eL"] + cmd
             try:
@@ -2093,6 +2140,135 @@ class Scaros:
             log.warning("python3-evdev absent : la manette sera lue par le menu uniquement")
 
 
+class Mouse:
+    """Souris virtuelle : le pavé du téléphone et la manette déplacent le vrai curseur.
+
+    Elle passe par uinput : Xorg la voit comme une vraie souris, c'est fluide et ça marche dans
+    toutes les applis. Sans accès à /dev/uinput (mise à jour pas encore faite), repli sur xdotool,
+    moins fluide mais suffisant. Xorg n'accélère pas cette souris (40-scaros-souris.conf) :
+    l'accélération est calculée par la télécommande et par la manette.
+    """
+
+    NAME = "Scaros souris"
+    BUTTONS = {"left": 1, "middle": 2, "right": 3}
+
+    def __init__(self):
+        self.dev = None
+        self.tried = False
+        self.hires = False
+        self.lock = threading.Lock()
+        self.pending = [0, 0]        # repli xdotool : petits mouvements regroupés
+        self.flusher = None
+        self.rest = [0, 0]           # défilement pas encore envoyé (en 1/120 de cran)
+        self.dry = {"x": 0, "y": 0, "sx": 0, "sy": 0, "buttons": []}   # --dry-run : ce qui aurait été fait
+
+    def _device(self):
+        if self.tried:
+            return self.dev
+        self.tried = True
+        if DRY or evdev is None:
+            return None
+        try:
+            rel = [E.REL_X, E.REL_Y, E.REL_WHEEL, E.REL_HWHEEL]
+            hires = [getattr(E, n) for n in ("REL_WHEEL_HI_RES", "REL_HWHEEL_HI_RES") if hasattr(E, n)]
+            self.dev = evdev.UInput({E.EV_REL: rel + hires, E.EV_KEY: [E.BTN_LEFT, E.BTN_RIGHT, E.BTN_MIDDLE]},
+                                    name=self.NAME)
+            self.hires = len(hires) == 2
+            log.info("souris virtuelle prête (uinput)")
+        except (OSError, evdev.UInputError) as e:
+            log.warning("souris virtuelle impossible (%s) : repli sur xdotool, moins fluide", e)
+        return self.dev
+
+    def wake(self):
+        """Mode souris activé : la souris existe tout de suite (Xorg met une demi-seconde à la voir)
+        et le curseur se montre au milieu de l'écran."""
+        if DRY:
+            return
+        self._device()
+        geo = run(["xdotool", "getdisplaygeometry"], timeout=3, quiet=True)[1].split()
+        if len(geo) == 2 and all(g.isdigit() for g in geo):
+            run(["xdotool", "mousemove", str(int(geo[0]) // 2), str(int(geo[1]) // 2)], timeout=3, quiet=True)
+
+    def move(self, dx, dy):
+        if DRY:
+            self.dry["x"] += dx
+            self.dry["y"] += dy
+        if not (dx or dy) or DRY:
+            return
+        dev = self._device()
+        with self.lock:
+            if dev:
+                if dx:
+                    dev.write(E.EV_REL, E.REL_X, dx)
+                if dy:
+                    dev.write(E.EV_REL, E.REL_Y, dy)
+                dev.syn()
+                return
+            self.pending[0] += dx
+            self.pending[1] += dy
+            if self.flusher is None:  # un xdotool toutes les 25 ms au plus
+                self.flusher = threading.Timer(0.025, self._flush)
+                self.flusher.daemon = True
+                self.flusher.start()
+
+    def _flush(self):
+        with self.lock:
+            (dx, dy), self.pending, self.flusher = self.pending, [0, 0], None
+        if dx or dy:
+            run(["xdotool", "mousemove_relative", "--", str(dx), str(dy)], timeout=2, quiet=True)
+
+    def button(self, name, action):
+        """action : "click", "down" ou "up"."""
+        if DRY:
+            self.dry["buttons"] = (self.dry["buttons"] + [f"{action} {name}"])[-20:]
+            return
+        dev = self._device()
+        if dev:
+            code = {"left": E.BTN_LEFT, "middle": E.BTN_MIDDLE, "right": E.BTN_RIGHT}[name]
+            with self.lock:
+                if action in ("click", "down"):
+                    dev.write(E.EV_KEY, code, 1)
+                    dev.syn()
+                if action in ("click", "up"):
+                    dev.write(E.EV_KEY, code, 0)
+                    dev.syn()
+            return
+        self._flush()  # le curseur arrive d'abord à sa place
+        cmd = {"click": "click", "down": "mousedown", "up": "mouseup"}[action]
+        run(["xdotool", cmd, str(self.BUTTONS[name])], timeout=2, quiet=True)
+
+    def scroll(self, dx, dy):
+        """Défile de dx, dy en 1/120 de cran (dy > 0 : vers le bas de la page)."""
+        if DRY:
+            self.dry["sx"] += dx
+            self.dry["sy"] += dy
+        if not (dx or dy) or DRY:
+            return
+        dev = self._device()
+        with self.lock:
+            self.rest[0] += dx
+            self.rest[1] += dy
+            nx, ny = int(self.rest[0] / 120), int(self.rest[1] / 120)  # crans entiers
+            self.rest[0] -= nx * 120
+            self.rest[1] -= ny * 120
+            if dev:
+                # défilement fin (pixel près) pour les applis récentes, crans entiers pour les autres
+                if self.hires and dy:
+                    dev.write(E.EV_REL, E.REL_WHEEL_HI_RES, -dy)
+                if self.hires and dx:
+                    dev.write(E.EV_REL, E.REL_HWHEEL_HI_RES, dx)
+                if ny:
+                    dev.write(E.EV_REL, E.REL_WHEEL, -ny)
+                if nx:
+                    dev.write(E.EV_REL, E.REL_HWHEEL, nx)
+                dev.syn()
+                return
+        for n, neg, pos in ((ny, 4, 5), (nx, 6, 7)):
+            if n:
+                run(["xdotool", "click", "--repeat", str(min(abs(n), 20)), str(pos if n > 0 else neg)],
+                    timeout=3, quiet=True)
+
+
 class Pad:
     """Lit la manette (Xbox en Bluetooth ou autre) et la transforme en touches.
 
@@ -2102,9 +2278,15 @@ class Pad:
     Exception : une appli marquée "controller": "native" dans apps.json (Steam Link)
     lit la vraie manette pour les jeux. Scaros la lui laisse et ne surveille plus que
     le bouton Xbox maintenu, qui ramène au menu (un appui court reste pour l'appli).
+
+    Mode souris (activé depuis le centre de contrôle) : par-dessus une appli, le stick gauche
+    déplace le curseur, A clique (maintenu : glisser), X ou Y fait un clic droit, le stick droit
+    fait défiler. B, la croix, LB/RB, Menu et le bouton Xbox gardent leur rôle.
     """
 
     HOLD_HOME = 0.8
+    CURSOR_SPEED = 1500      # pixels par seconde, stick à fond
+    SCROLL_SPEED = 2000      # 1/120 de cran par seconde, stick à fond
 
     BUTTONS = {}
     if evdev is not None:
@@ -2112,6 +2294,8 @@ class Pad:
                    E.KEY_BACK: "back", E.BTN_TL: "voldown", E.BTN_TR: "volup",
                    E.BTN_NORTH: "playpause", E.BTN_WEST: "playpause", E.BTN_START: "menu"}
         DPAD = {E.BTN_DPAD_UP: "up", E.BTN_DPAD_DOWN: "down", E.BTN_DPAD_LEFT: "left", E.BTN_DPAD_RIGHT: "right"}
+        # X et Y : selon le pilote, le bouton X arrive en BTN_NORTH ou en BTN_WEST
+        MOUSE_BUTTONS = {E.BTN_SOUTH: "left", E.BTN_NORTH: "right", E.BTN_WEST: "right"}
 
     def __init__(self, app):
         self.app = app
@@ -2120,6 +2304,12 @@ class Pad:
         self.grabbed = False
         self.guide_down = None       # moment où le bouton Xbox a été enfoncé
         self.guide_fired = False
+        self.axes = {}               # position des sticks, de -1 à 1
+        self.right = (None, None)    # codes du stick droit (ABS_RX/RY, ou ABS_Z/RZ en Bluetooth)
+        self.acc = [0.0, 0.0, 0.0, 0.0]   # déplacements et défilements pas encore envoyés
+        self.held = set()            # boutons de souris enfoncés à la manette
+        self.mouse = False
+        self.last_tick = time.monotonic()
 
     def find(self):
         main = None
@@ -2164,26 +2354,66 @@ class Pad:
                         pass
                 self.sources.clear()
                 self.next_fire.clear()
+                self.axes.clear()
+                if self.mouse:  # manette éteinte en plein clic : rien ne reste enfoncé
+                    self.set_mouse(False)
                 self.app.set_pad(None)
 
     def loop(self, main, group):
         absinfo = {}
-        for code in (E.ABS_X, E.ABS_Y):
+        axes = main.capabilities().get(E.EV_ABS, [])
+        codes = {c[0] if isinstance(c, tuple) else c for c in axes}
+        for code in (E.ABS_X, E.ABS_Y, E.ABS_RX, E.ABS_RY, E.ABS_Z, E.ABS_RZ):
+            if code not in codes:
+                continue
             try:
                 info = main.absinfo(code)
-                absinfo[code] = ((info.max + info.min) / 2, max(1, (info.max - info.min) / 2))
             except (OSError, KeyError):
-                pass
+                continue
+            center, half = (info.max + info.min) / 2, max(1, (info.max - info.min) / 2)
+            if code in (E.ABS_Z, E.ABS_RZ) and abs(info.value - center) > half * 0.5:
+                continue  # gâchette (au repos à fond d'un côté), pas un stick
+            absinfo[code] = (center, half)
+        # stick droit : ABS_RX/RY (pilote xpad, xpadneo), sinon ABS_Z/RZ (manette Xbox en Bluetooth simple)
+        if E.ABS_RX in absinfo and E.ABS_RY in absinfo:
+            self.right = (E.ABS_RX, E.ABS_RY)
+        elif E.ABS_Z in absinfo and E.ABS_RZ in absinfo:
+            self.right = (E.ABS_Z, E.ABS_RZ)
+        else:
+            self.right = (None, None)
         fds = {d.fd: d for d in group}
         while True:
             native = self.app.native_controller()
             if native == self.grabbed:
                 self.set_grab(group, not native)
-            ready, _, _ = select.select(list(fds), [], [], 0.04)
+            mouse = not native and self.app.pad_mouse()
+            if mouse != self.mouse:
+                self.set_mouse(mouse)
+            # en mode souris, stick penché : 100 pas par seconde pour un curseur fluide
+            moving = mouse and any(abs(v) > 0.15 for v in self.axes.values())
+            ready, _, _ = select.select(list(fds), [], [], 0.01 if moving else 0.04)
             for fd in ready:
                 for ev in fds[fd].read():
                     self.event(ev, absinfo, native)
             self.tick(native)
+
+    def set_mouse(self, on):
+        """Entrée ou sortie du mode souris : rien ne doit rester enfoncé."""
+        for name in self.held:
+            self.app.mouse.button(name, "up")
+        self.held.clear()
+        self.acc = [0.0, 0.0, 0.0, 0.0]
+        self.mouse = on
+        log.info("manette : %s", "curseur de souris" if on else "flèches")
+
+    @staticmethod
+    def curve(v, top):
+        """Doux près du centre (précis), rapide à fond."""
+        m = abs(v)
+        if m < 0.15:
+            return 0.0
+        m = min(1.0, (m - 0.15) / 0.85)
+        return math.copysign(top * m ** 2, v)
 
     def set_grab(self, group, grab):
         """Réserve toute la manette (bouton Xbox compris, parfois sur un périphérique à part),
@@ -2196,6 +2426,7 @@ class Pad:
         self.grabbed = grab
         self.sources.clear()
         self.next_fire.clear()
+        self.axes.clear()
         log.info("manette %s", "réservée à Scaros" if grab else "laissée à l'appli")
 
     def press(self, source, direction, on):
@@ -2208,6 +2439,17 @@ class Pad:
                 self.guide_fired = False
             return
         if ev.type == E.EV_KEY:
+            if self.mouse and ev.code in self.MOUSE_BUTTONS:
+                if ev.value in (0, 1):  # 2 : répétition automatique, ignorée
+                    name = self.MOUSE_BUTTONS[ev.code]
+                    if ev.value:
+                        self.held.add(name)
+                    elif name not in self.held:
+                        return  # bouton enfoncé avant le mode souris : rien à relâcher
+                    else:
+                        self.held.discard(name)
+                    self.app.mouse.button(name, "down" if ev.value else "up")
+                return
             if ev.code in self.DPAD:
                 self.press("dpad", self.DPAD[ev.code], ev.value != 0)
             elif ev.code in self.BUTTONS and ev.value == 1:
@@ -2221,7 +2463,10 @@ class Pad:
                 self.press("hat", "down", ev.value > 0)
             elif ev.code in absinfo:
                 center, half = absinfo[ev.code]
-                v = (ev.value - center) / half
+                v = max(-1.0, min(1.0, (ev.value - center) / half))
+                self.axes[ev.code] = v
+                if ev.code not in (E.ABS_X, E.ABS_Y):
+                    return  # stick droit : seulement en mode souris (défilement)
                 neg, pos = ("left", "right") if ev.code == E.ABS_X else ("up", "down")
                 for d, val in ((neg, -v), (pos, v)):
                     held = self.sources.get(("stick", d), False)
@@ -2229,13 +2474,27 @@ class Pad:
 
     def tick(self, native=False):
         now = time.monotonic()
+        dt, self.last_tick = min(0.05, max(0.0, now - self.last_tick)), now
+        if self.mouse:
+            a, (rx, ry) = self.axes, self.right
+            self.acc[0] += self.curve(a.get(E.ABS_X, 0.0), self.CURSOR_SPEED) * dt
+            self.acc[1] += self.curve(a.get(E.ABS_Y, 0.0), self.CURSOR_SPEED) * dt
+            self.acc[2] += self.curve(a.get(rx, 0.0), self.SCROLL_SPEED) * dt
+            self.acc[3] += self.curve(a.get(ry, 0.0), self.SCROLL_SPEED) * dt
+            mx, my, sx, sy = (int(v) for v in self.acc)
+            self.acc = [v - int(v) for v in self.acc]
+            if mx or my:
+                self.app.mouse.move(mx, my)
+            if sx or sy:
+                self.app.mouse.scroll(sx, sy)
         if native:
             if self.guide_down and not self.guide_fired and now - self.guide_down >= self.HOLD_HOME:
                 self.guide_fired = True
                 self.app.submit("input", "home")
             return
         for d in ("up", "down", "left", "right"):
-            on = any(v for (src, dd), v in self.sources.items() if dd == d)
+            # en mode souris, le stick gauche sert au curseur : seule la croix fait des flèches
+            on = any(v for (src, dd), v in self.sources.items() if dd == d and not (self.mouse and src == "stick"))
             nxt = self.next_fire.get(d)
             if on and nxt is None:
                 self.app.submit("input", d)
@@ -2327,6 +2586,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, json.dumps({"ok": True, "name": socket.gethostname()}).encode(), cors=True)
         if path == "/api/events":
             return self.events()
+        if path == "/api/mouse":
+            return self.mouse_socket()
+        if path == "/api/dev/mouse" and DRY:  # tests : ce que la souris aurait fait
+            return self.json(self.app.mouse.dry)
         if path == "/api/weather/search":
             q = urllib.parse.parse_qs(url.query).get("q", [""])[0].strip()[:60]
             if len(q) < 2:
@@ -2414,6 +2677,70 @@ class Handler(BaseHTTPRequestHandler):
             if phone:
                 self.app.stream_closed(ip)
 
+    WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+
+    def mouse_socket(self):
+        """Pavé souris du téléphone : une connexion WebSocket gardée ouverte, chaque geste part
+        aussitôt (pas d'aller-retour par geste comme avec une requête). Messages : voir mouse_event."""
+        key = self.headers.get("Sec-WebSocket-Key")
+        origin = self.headers.get("Origin")
+        if (self.headers.get("Upgrade") or "").lower() != "websocket" or not key:
+            return self.json({"error": "WebSocket attendu"}, 400)
+        if origin and urlparse(origin).netloc != self.headers.get("Host"):
+            log.warning("souris refusée depuis %s (origine %s)", self.address_string(), origin)
+            return self.json({"error": "requête refusée"}, 403)
+        accept = base64.b64encode(hashlib.sha1((key.strip() + self.WS_GUID).encode()).digest()).decode()
+        self.send_response(101, "Switching Protocols")
+        self.send_header("Upgrade", "websocket")
+        self.send_header("Connection", "Upgrade")
+        self.send_header("Sec-WebSocket-Accept", accept)
+        self.end_headers()
+        self.wfile.flush()
+        self.close_connection = True
+        if not self.is_local():
+            self.app.hello(self.address_string())
+        self.connection.settimeout(70)  # le téléphone envoie un « k » toutes les 20 s
+        try:
+            while True:
+                op, data = self._ws_frame()
+                if op == 8:  # fermeture
+                    self._ws_send(8, data[:2])
+                    break
+                if op == 9:  # ping
+                    self._ws_send(10, data)
+                elif op == 1:
+                    for line in data.decode("utf-8", "replace").splitlines():
+                        if line == "k":
+                            if not self.is_local():
+                                self.app.hello(self.address_string())
+                        else:
+                            self.app.mouse_event(line)
+        except (OSError, ValueError, ConnectionError):
+            pass
+
+    def _ws_read(self, n):
+        data = self.rfile.read(n)
+        if len(data) < n:
+            raise ConnectionError("WebSocket fermé")
+        return data
+
+    def _ws_frame(self):
+        b0, b1 = self._ws_read(2)
+        op, masked, n = b0 & 0x0F, b1 & 0x80, b1 & 0x7F
+        if n == 126:
+            n = int.from_bytes(self._ws_read(2), "big")
+        elif n == 127:
+            n = int.from_bytes(self._ws_read(8), "big")
+        if n > 65536:
+            raise ValueError("message trop gros")
+        mask = self._ws_read(4) if masked else b"\0\0\0\0"
+        data = bytes(c ^ mask[i % 4] for i, c in enumerate(self._ws_read(n)))
+        return op, data
+
+    def _ws_send(self, op, data=b""):
+        self.wfile.write(bytes([0x80 | op, len(data)]) + data)
+        self.wfile.flush()
+
     def do_POST(self):
         path = urlparse(self.path).path
         try:
@@ -2468,6 +2795,13 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/text":
             a.submit("text", str(body.get("text", "")))
             return self.json({"ok": True})
+        if path == "/api/mouse":
+            # {"on": true/false} : mode souris ; {"events": [...]} : gestes, si le WebSocket ne passe pas
+            if "on" in body:
+                a.set_mouse_mode(body.get("on"))
+            for ev in (body.get("events") or [])[:100]:
+                a.mouse_event(ev)
+            return self.json({"ok": True, "on": a.mouse_mode})
         if path == "/api/hello":
             return self.json({"ok": True})
         if path == "/api/wifi/scan":
