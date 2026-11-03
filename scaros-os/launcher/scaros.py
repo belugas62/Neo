@@ -45,7 +45,7 @@ try:
 except ImportError:
     qrcode = None
 
-VERSION = "0.4"
+VERSION = "0.5"
 ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "scaros"
@@ -58,7 +58,7 @@ ACTIONS = set(KEYS) | {"home", "menu", "volup", "voldown", "mute"} | {f"ch{n}" f
 MOVES = {"up", "down", "left", "right"}
 TV_RES = {"1080": (1920, 1080), "720": (1280, 720), "max": None}   # définition de l'image sur la télé
 AIRPLAY_NAME = "Scaros"         # nom affiché dans la liste AirPlay de l'iPhone (et titre de la fenêtre vidéo)
-UPDATE_API = "https://api.github.com/repos/belugas62/Neo/commits/scaros-os"
+SOURCE_CONF = Path("/etc/scaros/source.conf")            # dépôt GitHub des mises à jour (voir source.conf)
 INSTALLED_COMMIT = Path("/opt/scaros/commit")              # écrit par scaros-update
 UPDATE_STATUS = Path("/var/lib/scaros/update-status.json")  # progression écrite par scaros-update
 DIAG_STATUS = Path("/var/lib/scaros/diag-status.json")      # progression écrite par scaros-diag
@@ -91,6 +91,23 @@ def run(cmd, timeout=10, quiet=False):
     if p.returncode and not quiet:
         log.warning("%s -> %s %s", " ".join(cmd), p.returncode, p.stderr.strip()[:300])
     return p.returncode, p.stdout
+
+
+def update_source():
+    """(dépôt, branche) d'où viennent les mises à jour ; branche vide = branche principale du dépôt."""
+    repo, branch = "belugas62/Neo", "scaros-os"  # installations d'avant source.conf
+    try:
+        conf = dict(re.findall(r'^[ \t]*(REPO|BRANCH)[ \t]*=[ \t]*"?([^"#\s]*)', SOURCE_CONF.read_text(), re.M))
+    except OSError:
+        conf = {}
+    if re.fullmatch(r"[\w.-]+/[\w.-]+", conf.get("REPO", "")):
+        repo, branch = conf["REPO"], conf.get("BRANCH", "")
+    return repo, branch
+
+
+def source_label():
+    repo, branch = update_source()
+    return repo + (f" ({branch})" if branch else "")
 
 
 def bt_audio_available():
@@ -175,9 +192,11 @@ DRY_DIAG = """Diagnostic réseau de Scaros (démo)
 == Test en direct ==
        écoute de 30 s pendant l'essai sur le téléphone (192.168.1.11:8421/remote ou AirPlay)
   [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)
+  [!!] Scaros est sur le Wi-Fi 5 GHz « Maison_5G » : sur beaucoup de CPL et de répéteurs, le 5 GHz isole les appareils. Essaie le Wi-Fi 2,4 GHz du même boîtier (souvent le même nom, sans « _5G ») dans Réglages › Wi-Fi
 
 == Verdict ==
   [!!] rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)
+  [!!] Scaros est sur le Wi-Fi 5 GHz « Maison_5G » : sur beaucoup de CPL et de répéteurs, le 5 GHz isole les appareils. Essaie le Wi-Fi 2,4 GHz du même boîtier (souvent le même nom, sans « _5G ») dans Réglages › Wi-Fi
 """
 DRY_WEATHER = [  # --dry-run : réponses d'Open-Meteo simulées
     {"current": {"temperature_2m": 14.2, "weather_code": 63, "is_day": 1},
@@ -347,7 +366,8 @@ class Scaros:
         self.airplay_checking = False
         self.airplay_restart = False
         self.mirroring = False
-        self.update = {"checking": False, "running": False, "available": None, "step": None}
+        self.update = {"checking": False, "running": False, "available": None, "step": None,
+                       "source": source_label()}
         self.diag = {"running": False, "step": None, "until": None, "at": None if DRY else self._diag_report_time()}
         self.weather = None
         self.weather_lock = threading.Lock()
@@ -622,6 +642,10 @@ class Scaros:
         deadline = time.time() + 90
         while time.time() < deadline and p.poll() is None and self._is_current(p):
             new = [w for w in self._visible_windows() if w not in before]
+            if new and new != self.windows:
+                # le menu peut réapparaître pendant ce temps (Chromium relancé) : ce n'est pas l'appli
+                self.launcher_window()
+                new = [w for w in new if w not in self.launcher_ids]
             if new and new != self.windows:
                 self.windows = new
                 if not self.overlay:
@@ -995,6 +1019,8 @@ class Scaros:
                 info["connected"] = value == "yes"
             elif key == "Trusted":
                 info["trusted"] = value == "yes"
+            elif key == "RSSI":  # présent seulement si l'appareil est capté pendant la recherche en cours
+                info["seen"] = True
             elif key == "Bonded":  # « mémorisé » : la clé est gardée après un redémarrage
                 info["bonded"] = value == "yes"
             elif key == "Icon":
@@ -1515,20 +1541,26 @@ class Scaros:
             found = ("00:00:00:00:00:00", "Xbox Wireless Controller") if DRY else None
             deadline = time.time() + seconds
             while not found and time.time() < deadline:
-                code, out = run(["bluetoothctl", "devices"], timeout=5, quiet=True)
-                for line in out.splitlines():
-                    m = re.match(r"Device (\S+) (.+)", line)
-                    if m and re.search(r"xbox|controller|gamepad|manette", m.group(2), re.I):
-                        found = m.groups()
-                        break
-                time.sleep(1.5)
-            if scan:
-                scan.terminate()
+                found = self._pad_in_pairing_mode(strict=time.time() < deadline - 8)
+                if not found:
+                    time.sleep(1.5)
             if not found:
+                if scan:
+                    scan.terminate()
                 self.bus.emit("pair", state="notfound")
                 return False
             mac, name = found
             log.info("appairage de %s (%s)", name, mac)
+            if not DRY and (self._bt_info(mac) or {}).get("paired"):
+                # la manette clignote : elle a oublié Scaros (utilisée sur une console, un autre PC…).
+                # L'ancienne clé ne marche plus : on l'efface, puis on attend qu'elle réapparaisse.
+                log.info("ancienne clé de %s effacée : %s", mac, self._bt_cmd("remove", mac, timeout=10))
+                for _ in range(20):
+                    time.sleep(0.5)
+                    if (self._bt_info(mac) or {}).get("seen"):
+                        break
+            if scan:
+                scan.terminate()
             log.info("appairage : %s", self._bt_cmd("--agent", "NoInputNoOutput", "pair", mac))
             log.info("confiance : %s", self._bt_cmd("trust", mac, timeout=10))
             after = self._bt_info(mac) or {}
@@ -1545,6 +1577,21 @@ class Scaros:
             return ok
         finally:
             self.pairing = False
+
+    def _pad_in_pairing_mode(self, strict=True):
+        """Une manette captée pendant la recherche, pas déjà connectée. Une manette connue mais éteinte
+        figure aussi dans la liste : on ne la prend pas (sauf en fin de recherche, si rien d'autre)."""
+        out = run(["bluetoothctl", "devices"], timeout=5, quiet=True)[1]
+        best = None
+        for mac, name in re.findall(r"^Device (\S+) (.+)$", out, re.M):
+            if not re.search(r"xbox|controller|gamepad|manette", name, re.I):
+                continue
+            info = self._bt_info(mac) or {}
+            if info.get("connected") or (strict and not info.get("seen")):
+                continue
+            if best is None or not info.get("paired"):
+                best = (mac, name)
+        return best
 
     # ---------- par-dessus les applis ----------
     def covered(self):
@@ -1797,8 +1844,11 @@ class Scaros:
                 time.sleep(1)
                 latest = {"sha": "dry0002", "message": "Nouvelle version de test", "date": "2026-11-02T12:00:00Z"}
             else:
-                req = urllib.request.Request(UPDATE_API, headers={"User-Agent": "Scaros-OS",
-                                                                 "Accept": "application/vnd.github+json"})
+                repo, branch = update_source()
+                self.update["source"] = source_label()
+                api = f"https://api.github.com/repos/{repo}/commits/{urllib.parse.quote(branch or 'HEAD', safe='')}"
+                req = urllib.request.Request(api, headers={"User-Agent": "Scaros-OS",
+                                                          "Accept": "application/vnd.github+json"})
                 with urllib.request.urlopen(req, timeout=10) as r:
                     data = json.load(r)
                 latest = {"sha": data["sha"], "message": data["commit"]["message"].splitlines()[0][:140],
@@ -2363,8 +2413,21 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = urlparse(self.path).path
         try:
-            length = min(int(self.headers.get("Content-Length") or 0), 10000)
-            body = json.loads(self.rfile.read(length) or b"{}")
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = 0
+        if length > 10000:  # corps trop gros : on n'en lit qu'une partie, la connexion ne resservira pas
+            self.close_connection = True
+        raw = self.rfile.read(min(max(length, 0), 10000))
+        # seuls le menu et la télécommande pilotent Scaros : une page web ouverte ailleurs (dans une appli,
+        # sur un autre site) ne doit pas pouvoir éteindre le PC ou changer le Wi-Fi à ton insu
+        ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        origin = self.headers.get("Origin")
+        if ctype != "application/json" or (origin and urlparse(origin).netloc != self.headers.get("Host")):
+            log.warning("requête refusée : %s depuis %s (origine %s)", path, self.address_string(), origin or "?")
+            return self.json({"error": "requête refusée"}, 403)
+        try:
+            body = json.loads(raw or b"{}")
         except ValueError:
             return self.json({"error": "JSON invalide"}, 400)
         if not isinstance(body, dict):

@@ -1,12 +1,38 @@
 #!/usr/bin/env bash
 # Met à jour Scaros sans tout réinstaller, puis relance l'écran.
-#   depuis le menu : Réglages > À propos > Mettre à jour Scaros
+#   depuis le menu : Réglages > Mise à jour de Scaros
 #   ou à la main :   su -   puis   scaros-update
+#   changer de dépôt GitHub (le tien, par exemple) :   scaros-update --depuis ton-pseudo/scaros-os
+#                                         ou une branche précise :   --depuis ton-pseudo/scaros-os@main
 set -euo pipefail
 
-ARCHIVE="https://github.com/belugas62/Neo/archive/scaros-os.tar.gz"
 STATUS_DIR=/var/lib/scaros
+SOURCE_CONF=/etc/scaros/source.conf
 [ "$(id -u)" -eq 0 ] || { echo "Lance la mise à jour en root : tape « su - » puis « scaros-update »."; exit 1; }
+
+# dépôt suivi (lu sans exécuter le fichier) ; les installations d'avant source.conf suivent belugas62/Neo
+conf_get() { [ -f "$SOURCE_CONF" ] && sed -nE "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*\"?([^\"#[:space:]]*).*/\1/p" "$SOURCE_CONF" | tail -n1; }
+REPO="$(conf_get REPO || true)"
+BRANCH="$(conf_get BRANCH || true)"
+if [ -z "$REPO" ]; then REPO=belugas62/Neo; BRANCH=scaros-os; fi
+FROM="${SCAROS_FROM:-}"
+case "${1:-}" in
+  --depuis|--from) FROM="${2:-}" ;;
+  "") ;;
+  *) echo "Usage : scaros-update [--depuis propriétaire/dépôt[@branche]]"; exit 2 ;;
+esac
+if [ -n "$FROM" ]; then
+  if [[ ! "$FROM" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(@[A-Za-z0-9._/-]+)?$ ]]; then
+    echo "Dépôt invalide : écris-le comme ton-pseudo/scaros-os (ou ton-pseudo/scaros-os@branche)."; exit 2
+  fi
+  REPO="${FROM%%@*}"; BRANCH=""
+  [[ "$FROM" == *@* ]] && BRANCH="${FROM#*@}"
+fi
+if [ -n "$BRANCH" ]; then
+  ARCHIVE="https://github.com/$REPO/archive/refs/heads/$BRANCH.tar.gz"
+else
+  ARCHIVE="https://github.com/$REPO/archive/HEAD.tar.gz"  # branche principale du dépôt
+fi
 
 # étape en cours, lue par le menu (download, install, done, failed)
 status() {
@@ -21,15 +47,19 @@ status() {
 if [ -z "${SCAROS_SRC:-}" ]; then
   status "download"
   tmp="$(mktemp -d)"
-  echo "Téléchargement de la dernière version…"
+  echo "Téléchargement de la dernière version depuis github.com/$REPO${BRANCH:+ (branche $BRANCH)}…"
   if ! wget -q -O "$tmp/scaros.tar.gz" "$ARCHIVE" || ! tar -xzf "$tmp/scaros.tar.gz" -C "$tmp"; then
-    rm -rf "$tmp"; status "failed"; echo "Téléchargement raté : vérifie la connexion. Rien n'a été modifié."; exit 1
+    rm -rf "$tmp"; status "failed"
+    echo "Téléchargement raté : vérifie la connexion, et que le dépôt $REPO existe et est public. Rien n'a été modifié."
+    exit 1
   fi
-  src="$tmp/Neo-scaros-os/scaros-os"
-  if [ ! -f "$src/update.sh" ] || [ ! -f "$src/launcher/scaros.py" ]; then
-    rm -rf "$tmp"; status "failed"; echo "Archive inattendue : rien n'a été modifié."; exit 1
+  # Scaros peut être à la racine du dépôt ou dans un sous-dossier (scaros-os/ dans belugas62/Neo)
+  found="$(find "$tmp" -mindepth 2 -maxdepth 4 -path '*/launcher/scaros.py' -print -quit)"
+  src="${found%/launcher/scaros.py}"
+  if [ -z "$found" ] || [ ! -f "$src/update.sh" ]; then
+    rm -rf "$tmp"; status "failed"; echo "Ce dépôt ne contient pas Scaros : rien n'a été modifié."; exit 1
   fi
-  SCAROS_SRC="$src" SCAROS_TMP="$tmp" exec bash "$src/update.sh"
+  SCAROS_SRC="$src" SCAROS_TMP="$tmp" SCAROS_FROM="$FROM" exec bash "$src/update.sh" ${FROM:+--depuis "$FROM"}
 fi
 src="$SCAROS_SRC"
 on_exit() {
@@ -61,6 +91,19 @@ if [ "${#missing[@]}" -gt 0 ]; then
   apt-get update -qq
   apt-get install -y --no-install-recommends "${missing[@]}"
   [[ " ${missing[*]} " == *" libspa-0.2-bluetooth "* ]] && need_reboot=1
+fi
+
+# dépôt suivi pour les prochaines mises à jour : choisi avec --depuis, sinon celui d'avant
+if [ -n "$FROM" ] || [ ! -f "$SOURCE_CONF" ]; then
+  mkdir -p "$(dirname "$SOURCE_CONF")"
+  cat > "$SOURCE_CONF" <<EOF
+# D'où Scaros télécharge ses mises à jour (dépôt GitHub public).
+# Pour en changer : su -   puis   scaros-update --depuis propriétaire/dépôt
+REPO=$REPO
+BRANCH=$BRANCH
+EOF
+  chmod 644 "$SOURCE_CONF"
+  echo "Mises à jour suivies : github.com/$REPO${BRANCH:+ (branche $BRANCH)}"
 fi
 
 # AirPlay : l'iPhone trouve Scaros grâce à Avahi (Bonjour) ; il doit tourner

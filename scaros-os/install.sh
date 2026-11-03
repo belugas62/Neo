@@ -135,6 +135,8 @@ rm -rf "$DEST/launcher" "$DEST/system"
 cp -r "$HERE/launcher" "$HERE/system" "$DEST/"
 chmod 755 "$DEST/system/session.sh" "$DEST/launcher/scaros.py" "$DEST/launcher/osd.py"
 install -m 755 "$HERE/update.sh" /usr/local/bin/scaros-update
+# dépôt GitHub d'où viendront les mises à jour (voir source.conf)
+[ -f "$HERE/source.conf" ] && install -D -m 644 "$HERE/source.conf" /etc/scaros/source.conf
 install -m 755 "$HERE/system/scaros-diag.sh" /usr/local/bin/scaros-diag
 mkdir -p /var/lib/scaros
 # mise à jour lancée depuis le menu (Réglages > À propos), en root, dans un service à part
@@ -275,7 +277,7 @@ if [ -t 0 ]; then
   read -r -p "L'appairer maintenant ? Mets-la en mode appairage (bouton au-dessus, 3 s) puis tape Entrée. [O/n] " answer
   if [ "${answer:-o}" != n ] && [ "${answer:-o}" != N ]; then
     systemctl start bluetooth || true
-    python3 "$DEST/launcher/scaros.py" --pair && echo "Manette appairée." || echo "Pas trouvée : tu pourras réessayer depuis Paramètres > Manette."
+    python3 "$DEST/launcher/scaros.py" --pair && echo "Manette appairée." || echo "Pas trouvée : tu pourras réessayer depuis Réglages > Manette."
   fi
 fi
 echo "Redémarre avec la commande : reboot"

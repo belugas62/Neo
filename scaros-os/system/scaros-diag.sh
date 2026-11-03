@@ -25,6 +25,8 @@ esac
 
 PROBLEMS=()
 MAIN_IP=""
+MAIN_BAND=""
+MAIN_SSID=""
 REACHED=0
 title() { echo; echo "== $* =="; }
 ok()    { echo "  [ok] $*"; }
@@ -108,6 +110,7 @@ check_connection() {
       band=""
       if [ -z "$freq" ]; then :; elif [ "$freq" -ge 5900 ]; then band="6 GHz"; elif [ "$freq" -ge 4900 ]; then band="5 GHz"; else band="2,4 GHz"; fi
       info "Wi-Fi ($dev) : adresse $ip4 sur « ${ssid:-?} »${band:+, $band}${sig:+, signal $sig dBm}"
+      if [ "$dev" = "$DEFDEV" ]; then MAIN_BAND=$band; MAIN_SSID=$ssid; fi
       info "borne ${bssid:-?} · carte ${drv:-?} · MAC $mac"
       [ -n "$sig" ] && [ "$sig" -lt -75 ] && bad "le signal Wi-Fi est faible ($sig dBm) : les connexions peuvent couper"
       ps=$(iw dev "$dev" get power_save 2>/dev/null | awk '{print $NF}')
@@ -267,6 +270,10 @@ listen_test() {
   rm -f "$cap"
   if [ -z "$analysis" ]; then
     bad "rien n'est arrivé jusqu'à Scaros pendant le test : la demande du téléphone est bloquée avant le portable (Wi-Fi du CPL ou de la box qui isole les appareils, autre appareil à la même adresse, VPN ou réseau invité sur le téléphone)"
+    if [ "$MAIN_BAND" = "5 GHz" ]; then
+      # vu chez nous : un CPL TP-Link isolait les appareils sur son 5 GHz, pas sur son 2,4 GHz
+      bad "Scaros est sur le Wi-Fi 5 GHz « $MAIN_SSID » : sur beaucoup de CPL et de répéteurs, le 5 GHz isole les appareils. Essaie le Wi-Fi 2,4 GHz du même boîtier (souvent le même nom, sans « _5G ») dans Réglages › Wi-Fi"
+    fi
     return
   fi
   peers=$(awk '{print $1}' <<<"$analysis")

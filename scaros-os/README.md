@@ -182,6 +182,9 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
   dit où elle se perd. Pour copier le rapport, ouvre `http://<adresse de Scaros>:8421/diag` sur un PC.
   À la main : `su -` puis `scaros-diag`. Si « rien n'est arrivé », c'est le réseau entre le téléphone et le PC :
   souvent un CPL ou un répéteur Wi-Fi qui isole les appareils. Le plus sûr est alors de brancher le PC par câble.
+- **CPL ou répéteur Wi-Fi :** mets Scaros sur le Wi-Fi **2,4 GHz** du boîtier (souvent le même nom, sans « _5G »).
+  Vu en vrai avec un CPL TP-Link : sur son 5 GHz, l'iPhone voyait Scaros mais ne pouvait ni ouvrir la télécommande
+  ni lancer AirPlay ; sur son 2,4 GHz, tout marche. Le diagnostic réseau le signale.
 - **La télécommande du téléphone ne s'ouvre pas (« Ce site est inaccessible ») :** sur iPhone, ouvre-la dans **Safari**.
   Les autres navigateurs (Brave, Chrome, Firefox…) ne peuvent joindre les appareils de la maison qu'avec l'accès
   « Réseau local » : **Réglages > Confidentialité et sécurité > Réseau local**, active ton navigateur. Attention, l'appareil
@@ -206,7 +209,39 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
   télécharge la dernière version, l'installe et redémarre l'écran (environ une minute). Les applis et réglages sont gardés.
   À la main : `su -` puis `scaros-update`. **La toute première fois**, fais-le à la main : c'est cette mise à jour
   qui installe AirPlay, l'affichage par-dessus les applis et le bouton de mise à jour du menu.
+  Le dépôt GitHub suivi est indiqué dans **Réglages > Mise à jour de Scaros** (fichier `/etc/scaros/source.conf`).
   Pour tout réinstaller (paquets, applis), retélécharge l'archive (étape 4) et relance `install.sh`.
+
+## Mettre Scaros sur ton propre dépôt GitHub
+
+Scaros peut vivre dans n'importe quel dépôt GitHub **public** : les mises à jour du menu viendront alors de lui.
+
+1. Sur github.com, crée un dépôt vide, par exemple `scaros-os`.
+2. Mets-y le contenu de ce dossier, à la racine du dépôt (`install.sh`, `update.sh`, `source.conf`, `launcher/`,
+   `system/`…). Le plus simple : **Add file > Upload files** sur la page du dépôt, puis glisse tous les fichiers et
+   dossiers. Ou en ligne de commande :
+
+   ```bash
+   cd scaros-os
+   git init -b main
+   git add .
+   git commit -m "Scaros OS"
+   git remote add origin https://github.com/TON-PSEUDO/scaros-os.git
+   git push -u origin main
+   ```
+3. Dans `source.conf`, mets `REPO=TON-PSEUDO/scaros-os` et laisse `BRANCH=` vide (branche principale), puis
+   enregistre ce changement dans le dépôt. Les prochaines installations suivront ton dépôt.
+4. Sur le PC déjà installé, une seule fois : `su -` puis `scaros-update --depuis TON-PSEUDO/scaros-os`.
+   Ensuite le bouton **Mettre à jour** du menu prend tes versions.
+
+Pour installer Scaros sur un autre PC depuis ton dépôt (étape 4) :
+
+```bash
+su -
+wget -O scaros.tar.gz https://github.com/TON-PSEUDO/scaros-os/archive/HEAD.tar.gz
+tar xf scaros.tar.gz
+bash scaros-os-*/install.sh
+```
 
 ## Ce qui reste à vérifier sur le vrai portable
 
@@ -219,7 +254,7 @@ mais pas encore sur ta machine. À surveiller au premier essai :
 - le volume affiché par-dessus YouTube, Jellyfin ou Steam Link ;
 - la mise à jour lancée depuis le menu ;
 - le son sur la télé ;
-- l'appairage Bluetooth de la manette ;
+- l'appairage Bluetooth de la manette, et sa reconnexion toute seule après un redémarrage ;
 - la fluidité de YouTube avec le décodage matériel activé, et celle de Twitch.
 
 ## Comment c'est fait
@@ -227,6 +262,8 @@ mais pas encore sur ta machine. À surveiller au premier essai :
 ```
 scaros-os/
 ├── install.sh              installe tout sur un Debian 13 minimal
+├── update.sh               mise à jour (commande scaros-update, lancée aussi depuis le menu)
+├── source.conf             le dépôt GitHub d'où viennent les mises à jour
 ├── launcher/
 │   ├── scaros.py           serveur local : applis, écrans, son, Bluetooth, manette, télécommande, AirPlay, météo
 │   ├── osd.py              volume et notifications affichés par-dessus les applis
