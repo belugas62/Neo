@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0D0D12">
+<meta name="scaros-build" content="__BUILD__">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -229,6 +230,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   }
   function send(action) {
     if (navigator.vibrate) navigator.vibrate(10);
+    if (!es) { retry = 0; openStream(); }  // la connexion s'était coupée : on la rouvre tout de suite
     post('/api/input', { action }).catch(() => {});
   }
 
@@ -242,7 +244,8 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
     es.onerror = () => {
       closeStream();
       setOnline(false);
-      retryTimer = setTimeout(openStream, Math.min(10000, 700 * 2 ** retry++));
+      // vite au début (le Wi-Fi du téléphone se réveille en une seconde ou deux), puis plus calmement
+      retryTimer = setTimeout(openStream, retry < 8 ? Math.min(1500, 300 * 2 ** retry++) : (retry++, 5000));
     };
     es.onmessage = e => {
       let m; try { m = JSON.parse(e.data); } catch (err) { return; }
@@ -265,13 +268,25 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   function refresh() {
     // état léger : la réponse arrive tout de suite, même pendant une recherche Wi-Fi ou Bluetooth
     fetch('/api/state?lite=1', { cache: 'no-store' }).then(r => r.json()).then(s => {
+      if (s.remoteBuild && BUILD && !BUILD.startsWith('__') && s.remoteBuild !== BUILD) return newVersion();
       apps = s.apps; current = s.app; shown = !!s.shown; muted = !!s.muted;
       airplay = s.airplay && s.airplay.state === 'mirroring' ? (s.airplay.device || 'iPhone') : null;
       renderChannels(); renderNow(); renderVol(s.volume); setOnline(true);
     }).catch(() => setOnline(false));
   }
+  // la page vient du cache du téléphone (ouverture instantanée) : après une mise à jour de Scaros,
+  // on télécharge la nouvelle et on recharge, une seule fois
+  const BUILD = (document.querySelector('meta[name="scaros-build"]') || {}).content || '';
+  function newVersion() {
+    let tried = '';
+    try { tried = sessionStorage.getItem('scaros-reload') || ''; } catch (e) {}
+    if (tried === BUILD) return;
+    try { sessionStorage.setItem('scaros-reload', BUILD); } catch (e) {}
+    fetch('/remote', { cache: 'reload' }).catch(() => {}).finally(() => location.reload());
+  }
   function wakeUp() {
     if (!visible()) return;
+    retry = 0;
     openStream();
     post('/api/hello', {}, true).catch(() => {});
   }

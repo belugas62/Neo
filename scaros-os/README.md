@@ -135,8 +135,11 @@ une seconde.
 
 **Casque ou enceinte Bluetooth :** **Réglages > Bluetooth > Rechercher des appareils**, mets
 l'appareil en mode appairage, puis choisis-le dans la liste. Le son passe dessus tout seul.
-Les fois suivantes, plus besoin du mode appairage : choisis-le dans **Mes appareils** et il se reconnecte.
+Les fois suivantes, plus besoin du mode appairage : choisis-le dans **Mes appareils** et il se reconnecte
+(la manette, elle, se reconnecte seule quand tu l'allumes). Les appareils restent mémorisés après un redémarrage :
+Scaros rallume le Bluetooth s'il s'est éteint et met les appareils appairés « de confiance ».
 Pour des AirPods, ouvre le boîtier près du PC ; s'ils sont pris par ton téléphone, déconnecte-les de celui-ci.
+N'utilise **Oublier cet appareil** que s'il ne se connecte plus du tout.
 Dans **Réglages > Son**, tu choisis où sort le son : **Auto** (l'appareil Bluetooth s'il est
 connecté, sinon l'écran utilisé), **Télé**, **Haut-parleurs du PC** ou **Appareil Bluetooth**.
 
@@ -183,6 +186,9 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
   Les autres navigateurs (Brave, Chrome, Firefox…) ne peuvent joindre les appareils de la maison qu'avec l'accès
   « Réseau local » : **Réglages > Confidentialité et sécurité > Réseau local**, active ton navigateur. Attention, l'appareil
   photo ouvre les QR codes dans le navigateur par défaut.
+- **La télécommande met du temps à s'ouvrir :** fais la mise à jour de Scaros (elle coupe l'économie d'énergie
+  Wi-Fi du PC, qui le rendait lent à répondre). La page est ensuite gardée par le téléphone : elle s'affiche tout de
+  suite et se connecte en une seconde ; après une mise à jour de Scaros, elle se recharge seule.
 - **Toujours rien :** ouvre **≡ > Télécommande** sur la télé et scanne le QR code :
   il donne toujours l'adresse actuelle du PC. L'écran indique aussi le Wi-Fi de Scaros : le téléphone doit être sur le
   même (pas le réseau invité). Si le QR code marche mais pas l'icône de l'écran d'accueil, c'est que l'adresse du PC a

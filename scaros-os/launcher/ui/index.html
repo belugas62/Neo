@@ -1093,7 +1093,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       state.bt = { devices: m.devices || [], scanning: !!m.scanning, audio: m.audio ?? state.bt.audio };
       rerenderPane();
     } else if (m.type === 'btmsg') {
-      btToast(m.state, m.name);
+      btToast(m.state, m.name, m.paired);
       // échec sur un appareil : on ouvre sa fiche (réessayer, oublier)
       if (['failed', 'unreachable', 'repair'].includes(m.state) && m.mac && state.panel === 'bluetooth') { state.btSel = m.mac; openPanel('btdevice'); }
     } else if (m.type === 'wifi') {
@@ -1481,7 +1481,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         BT_KIND[d.kind] || 'Appareil Bluetooth', d.paired ? (d.connected ? 'Connecté' : 'Se connecter') : 'Appairer');
       return {
         title: 'Bluetooth', icon: 'bluetooth', pa: '#3d8bff', pb: '#173f9c', caption: 'Casques, enceintes et manettes.',
-        lead: 'Un appareil déjà appairé se reconnecte d’un appui. Pour un nouveau, mets-le en mode appairage puis lance la recherche.',
+        lead: 'Les appareils de « Mes appareils » sont mémorisés, même après un redémarrage : touche-les pour les connecter, sans mode appairage. Pour un nouveau, mets-le en mode appairage puis lance la recherche.',
         body: `<div class="opts">
             ${row('btscan', 'search', state.bt.scanning ? 'Recherche en cours…' : 'Rechercher des appareils',
               state.bt.scanning ? 'Les appareils trouvés apparaissent ci-dessous.' : '', state.bt.scanning ? '<span class="spin"></span>' : '')}
@@ -1498,7 +1498,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         body: `<div class="opts">
             ${d.connected ? row(`btdisconnect:${d.mac}`, 'close', 'Déconnecter', '') : row(`btconnect:${d.mac}`, 'replay', 'Réessayer la connexion', 'Allume l’appareil avant.')}
             ${d.kind === 'audio' && d.connected ? row(`audiouse:${d.mac}`, 'headphones', 'Utiliser pour le son', 'Le son passe sur cet appareil.') : ''}
-            ${row(`btremove:${d.mac}`, 'alert', 'Oublier cet appareil', 'Il faudra l’appairer à nouveau pour le réutiliser.')}
+            ${row(`btremove:${d.mac}`, 'alert', 'Oublier cet appareil', 'Seulement s’il ne se connecte plus du tout : il faudra l’appairer à nouveau.')}
           </div>
           ${d.kind === 'audio' && !d.connected ? `<p class="note" style="margin-top:1.2rem">AirPods : ouvre le boîtier près du PC. S’ils sont connectés à ton téléphone, déconnecte-les d’abord, ou choisis-les ici pendant qu’ils sont libres.</p>` : ''}`
       };
@@ -1787,6 +1787,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const currentAct = () => state.pItems[state.pIdx] && state.pItems[state.pIdx].dataset.act;
   function renderPanel(keepAct) {
     const p = PAGES[state.panel]();
+    // même page redessinée (liste Bluetooth, Wi-Fi…) : on garde l'endroit où on lisait
+    const oldBox = pane.dataset.page === state.panel && pane.querySelector('.pane-main, .qr-side');
+    const oldTop = oldBox ? oldBox.scrollTop : 0;
+    pane.dataset.page = state.panel;
     pane.classList.toggle('side', !!p.side);
     pane.classList.toggle('qrs', !!p.qrscreen);
     $('#tv').classList.toggle('qr-open', !!p.qrscreen);
@@ -1804,6 +1808,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         </div>`;
     }
     state.pItems = [...pane.querySelectorAll('[data-act]:not([disabled])')];
+    const newBox = pane.querySelector('.pane-main, .qr-side');
+    if (newBox && oldTop) newBox.scrollTop = oldTop;
     const pm = pane.querySelector('.pane-main');
     if (pm) pm.addEventListener('scroll', () => markMore(pm), { passive: true });
     const i = keepAct ? state.pItems.findIndex(el => el.dataset.act === keepAct) : 0;
@@ -1816,7 +1822,32 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     state.pIdx = i;
     state.pItems.forEach((el, k) => el.classList.toggle('is-focus', k === i));
     const el = state.pItems[i];
-    if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'nearest' }); }
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    // premier réglage : on remonte tout en haut (titre, état) ; dernier : on montre aussi ce qui suit
+    // (aide, liste des boutons…). Toujours sans perdre de vue le réglage choisi.
+    reveal(el, i === 0 ? 'top' : i === state.pItems.length - 1 ? 'bottom' : null);
+  }
+  const scrollBox = el => el && el.closest('.pane-main, .qr-side');
+  function reveal(el, edge) {
+    const box = scrollBox(el);
+    if (!box) { el.scrollIntoView({ block: 'nearest' }); return; }
+    const b = box.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const top = box.scrollTop + r.top - b.top, bottom = top + r.height;
+    const max = Math.max(0, box.scrollHeight - box.clientHeight);
+    const pad = parseFloat(getComputedStyle(document.documentElement).fontSize) * 2;
+    const fade = edge === 'bottom' ? 0 : box.clientHeight * 0.18;  // bas en fondu tant qu'il reste du contenu
+    const lo = Math.max(0, bottom + pad + fade - box.clientHeight), hi = Math.max(0, top - pad);
+    const want = edge === 'top' ? 0 : edge === 'bottom' ? max : box.scrollTop;
+    box.scrollTop = Math.min(max, Math.max(lo, Math.min(hi, want)));
+    if (box.classList.contains('pane-main')) markMore(box);
+  }
+  // flèche vers le bas sur le dernier réglage (ou vers le haut sur le premier) : le texte défile quand même
+  function scrollRest(dir) {
+    const box = scrollBox(state.pItems[state.pIdx]) || pane.querySelector('.pane-main');
+    if (!box) return;
+    box.scrollTop = dir > 0 ? Math.min(box.scrollHeight - box.clientHeight, box.scrollTop + box.clientHeight * 0.6) : 0;
+    if (box.classList.contains('pane-main')) markMore(box);
   }
   function openPanel(id) {
     // la liste Wi-Fi se met à jour d'elle-même à l'ouverture (au plus toutes les 20 s)
@@ -2247,11 +2278,14 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const device = target === 'bt' ? bt.name : AUDIO_NAMES[target];
     onAudio({ mode, target, device, changed: target !== state.audio.target || device !== state.audio.device });
   }
-  function btToast(st, name) {
+  function btToast(st, name, known) {
+    // appareil déjà mémorisé : surtout ne pas pousser à le réappairer
     const msg = {
       connecting: ['bluetooth', `Connexion à ${name}…`, 15000],
       connected: ['bluetooth', `${name} est connecté.`],
-      failed: ['alert', `Impossible de joindre ${name}. Vérifie qu’il est allumé et en mode appairage.`, 5200],
+      failed: known
+        ? ['alert', `Impossible de joindre ${name}. Allume-le près du PC (pas besoin de le réappairer : il est mémorisé). S’il est connecté à ton téléphone, déconnecte-le d’abord.`, 8000]
+        : ['alert', `Impossible de joindre ${name}. Vérifie qu’il est allumé et en mode appairage.`, 5200],
       noaudio: ['alert', `${name} ne peut pas recevoir le son : le module son Bluetooth manque. Lance scaros-update.`, 8000],
       unreachable: ['alert', `${name} est introuvable. Ouvre le boîtier près du PC, ou déconnecte-les de ton téléphone, puis réessaie.`, 8000],
       repair: ['alert', `${name} ne reconnaît plus Scaros. Choisis « Oublier cet appareil », puis appaire-le à nouveau.`, 8000],
@@ -2486,6 +2520,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         if (next) setPIdx(state.pItems.indexOf(next));
         else if (a === 'up' && state.pIdx > 0) setPIdx(state.pIdx - 1);
         else if (a === 'down' && state.pIdx < state.pItems.length - 1) setPIdx(state.pIdx + 1);
+        else if (a === 'down' || a === 'up') scrollRest(a === 'down' ? 1 : -1);
       }
       else if (a === 'ok') { const el = state.pItems[state.pIdx]; if (el) activate(el.dataset.act); }
       else if (a === 'back') backPanel();

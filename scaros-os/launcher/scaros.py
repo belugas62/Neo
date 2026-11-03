@@ -12,6 +12,7 @@ Bluetooth, et lit la manette.
 
 import argparse
 import glob
+import hashlib
 import io
 import json
 import logging
@@ -459,6 +460,7 @@ class Scaros:
                 "airplay": self.airplay_state(),
             }
         if lite:  # la télécommande n'a besoin que de ça : réponse immédiate
+            s["remoteBuild"] = remote_page()[1]
             return s
         # les appels lents (nmcli, bluetoothctl) se font hors du verrou, pour ne jamais retarder une touche
         nets = self.wifi_networks()
@@ -982,7 +984,7 @@ class Scaros:
         if code != 0 or "Device" not in out:
             return None
         info = {"mac": mac.upper(), "name": mac, "paired": False, "connected": False, "kind": "other",
-                "public": "(public)" in out.splitlines()[0]}
+                "trusted": False, "bonded": None, "public": "(public)" in out.splitlines()[0]}
         for line in out.splitlines():
             key, _, value = line.strip().partition(": ")
             if key in ("Name", "Alias") and value:
@@ -991,9 +993,56 @@ class Scaros:
                 info["paired"] = value == "yes"
             elif key == "Connected":
                 info["connected"] = value == "yes"
+            elif key == "Trusted":
+                info["trusted"] = value == "yes"
+            elif key == "Bonded":  # « mémorisé » : la clé est gardée après un redémarrage
+                info["bonded"] = value == "yes"
             elif key == "Icon":
                 info["kind"] = "audio" if value.startswith("audio") else "input" if value.startswith("input") else "other"
         return info
+
+    def _bt_power(self):
+        """Bluetooth allumé et appairable. Éteint (au démarrage, ou coupé par la touche « mode avion »),
+        les appareils déjà connus ne peuvent pas se reconnecter : on croit alors qu'il faut les réappairer."""
+        if DRY or not shutil.which("bluetoothctl"):
+            return True
+        out = run(["bluetoothctl", "show"], timeout=5, quiet=True)[1]
+        if "Controller" not in out:
+            return False  # pas d'adaptateur (ou bluetoothd arrêté)
+        if "Powered: yes" not in out:
+            if "blocked" in out and shutil.which("rfkill"):
+                run(["rfkill", "unblock", "bluetooth"], timeout=5, quiet=True)
+            log.info("Bluetooth éteint : rallumage (%s)", self._bt_cmd("power", "on", timeout=10))
+        if "Pairable: yes" not in out:
+            # sans « appairable », un appairage n'est pas mémorisé : l'appareil est oublié au redémarrage
+            self._bt_cmd("pairable", "on", timeout=10)
+        return True
+
+    def _bt_trust_all(self):
+        """Les appareils appairés passent « de confiance » : ils se reconnectent sans rien demander."""
+        if DRY or not shutil.which("bluetoothctl"):
+            return
+        out = run(["bluetoothctl", "devices", "Paired"], timeout=5, quiet=True)[1]
+        if "Device" not in out:  # anciennes versions : pas de filtre
+            out = run(["bluetoothctl", "devices"], timeout=5, quiet=True)[1]
+        for mac in re.findall(r"^Device (\S+)", out, re.M):
+            info = self._bt_info(mac)
+            if not info or not info["paired"]:
+                continue
+            if not info["trusted"]:
+                log.info("%s (%s) devient de confiance : %s", info["name"], mac, self._bt_cmd("trust", mac, timeout=10))
+            if info["bonded"] is False:
+                log.warning("%s (%s) est appairé sans être mémorisé : il faudra le réappairer une fois", info["name"], mac)
+
+    def _watch_bt(self):
+        time.sleep(4)
+        self._bt_power()
+        self._bt_trust_all()
+        self._bt_changed()
+        while True:
+            time.sleep(60)
+            if not self.bt_scanning and not self.pairing:
+                self._bt_power()
 
     def bt_devices(self, fresh=False):
         """Appareils appairés, plus les casques, enceintes et manettes repérés pendant une recherche."""
@@ -1044,7 +1093,7 @@ class Scaros:
                         self.dry_bt.append({"mac": mac, "name": name, "paired": False, "connected": False, "kind": "audio"})
                 seconds = 2
             else:
-                run(["bluetoothctl", "power", "on"], timeout=10, quiet=True)
+                self._bt_power()
                 if shutil.which("bluetoothctl"):
                     scan = subprocess.Popen(["bluetoothctl", "--timeout", str(seconds), "scan", "on"],
                                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -1074,8 +1123,10 @@ class Scaros:
             self.bt_busy.discard(mac)
 
     def _bt_connect(self, mac):
+        if not DRY:
+            self._bt_power()
         info = self._bt_info(mac) or {"name": mac, "paired": False, "kind": "other"}
-        self.bus.emit("btmsg", state="connecting", name=info["name"], mac=mac)
+        self.bus.emit("btmsg", state="connecting", name=info["name"], mac=mac, paired=info["paired"])
         out = ""
         if DRY:
             time.sleep(1.2)
@@ -1086,6 +1137,9 @@ class Scaros:
         else:
             if not info["paired"]:
                 log.info("appairage %s : %s", mac, self._bt_cmd("--agent", "NoInputNoOutput", "pair", mac))
+                after = self._bt_info(mac) or {}
+                if after.get("paired") and after.get("bonded") is False:
+                    log.warning("%s appairé mais pas mémorisé (Bonded: no)", mac)
             # « de confiance » : l'appareil pourra se reconnecter tout seul la prochaine fois
             self._bt_cmd("trust", mac, timeout=10)
             ok = False
@@ -1114,7 +1168,7 @@ class Scaros:
             state = "unreachable"
         else:
             state = "failed"
-        self.bus.emit("btmsg", state=state, name=info["name"], mac=mac)
+        self.bus.emit("btmsg", state=state, name=info["name"], mac=mac, paired=info["paired"])
         self._bt_changed()
 
     def _bt_cmd(self, *args, timeout=30):
@@ -1453,8 +1507,7 @@ class Scaros:
         self.pairing = True
         try:
             self.bus.emit("pair", state="scanning")
-            run(["bluetoothctl", "power", "on"], timeout=10)
-            run(["bluetoothctl", "pairable", "on"], timeout=10)
+            self._bt_power()
             scan = None
             if not DRY and shutil.which("bluetoothctl"):
                 scan = subprocess.Popen(["bluetoothctl", "--timeout", str(seconds), "scan", "on"],
@@ -1476,9 +1529,18 @@ class Scaros:
                 return False
             mac, name = found
             log.info("appairage de %s (%s)", name, mac)
-            run(["bluetoothctl", "--agent", "NoInputNoOutput", "pair", mac], timeout=30)
-            run(["bluetoothctl", "trust", mac], timeout=10)
-            ok = run(["bluetoothctl", "connect", mac], timeout=30)[0] == 0
+            log.info("appairage : %s", self._bt_cmd("--agent", "NoInputNoOutput", "pair", mac))
+            log.info("confiance : %s", self._bt_cmd("trust", mac, timeout=10))
+            after = self._bt_info(mac) or {}
+            if after.get("bonded") is False:
+                log.warning("%s appairée mais pas mémorisée (Bonded: no)", mac)
+            # une manette appairée se connecte souvent toute seule : on regarde avant de forcer
+            ok = bool(after.get("connected")) or run(["bluetoothctl", "connect", mac], timeout=30)[0] == 0
+            for _ in range(5):
+                if ok:
+                    break
+                time.sleep(1)
+                ok = bool((self._bt_info(mac) or {}).get("connected"))
             self.bus.emit("pair", state="done" if ok else "failed", name=name)
             return ok
         finally:
@@ -1965,6 +2027,7 @@ class Scaros:
         threading.Thread(target=self.apply_output, daemon=True).start()
         threading.Thread(target=self._watch_hdmi, daemon=True).start()
         threading.Thread(target=self._watch_audio, daemon=True).start()
+        threading.Thread(target=self._watch_bt, daemon=True).start()
         threading.Thread(target=self._airplay_loop, daemon=True).start()
         threading.Thread(target=self._watch_airplay_window, daemon=True).start()
         threading.Thread(target=self._watch_weather, daemon=True).start()
@@ -2141,8 +2204,30 @@ class DualStackServer(ThreadingHTTPServer):
         super().server_bind()
 
 
+_remote_cache = {}
+
+
+def remote_page():
+    """La page télécommande et son numéro (empreinte du fichier). Le téléphone la garde en cache :
+    elle s'affiche tout de suite, puis se recharge seule si Scaros a été mis à jour."""
+    f = UI / "remote.html"
+    try:
+        mtime = f.stat().st_mtime
+    except OSError:
+        return b"", ""
+    if _remote_cache.get("mtime") != mtime:
+        raw = f.read_bytes()
+        build = hashlib.sha1(raw).hexdigest()[:12]
+        _remote_cache.update(mtime=mtime, build=build,
+                             body=raw.replace(b'content="__BUILD__"', f'content="{build}"'.encode(), 1))
+    return _remote_cache["body"], _remote_cache["build"]
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "Scaros/" + VERSION
+    # connexions gardées ouvertes : chaque touche du téléphone part sans refaire de connexion
+    protocol_version = "HTTP/1.1"
+    timeout = 30
     TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",
              ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2",
              ".json": "application/json", ".txt": "text/plain; charset=utf-8",
@@ -2162,7 +2247,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(body)))
         # polices et icônes : gardées une semaine (la télécommande s'ouvre plus vite)
-        self.send_header("Cache-Control", "max-age=604800" if cache else "no-store")
+        if isinstance(cache, str):
+            self.send_header("Cache-Control", cache)
+        else:
+            self.send_header("Cache-Control", "max-age=604800" if cache else "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -2203,7 +2291,22 @@ class Handler(BaseHTTPRequestHandler):
             text = self.app.diag_report() or "Pas encore de diagnostic : lance-le dans Réglages › Wi-Fi › Diagnostic réseau.\n"
             return self.send(200, text.encode(), "text/plain; charset=utf-8")
         if path in ("/remote", "/remote/"):
-            return self.file(UI / "remote.html")
+            body, build = remote_page()
+            if build and self.headers.get("If-None-Match") == f'"{build}"':
+                self.send_response(304)
+                self.send_header("ETag", f'"{build}"')
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("ETag", f'"{build}"')
+            # gardée un jour : l'icône de l'écran d'accueil s'ouvre sans attendre le réseau
+            self.send_header("Cache-Control", "max-age=86400")
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if path == "/":
             return self.file(UI / "index.html")
         f = (UI / path.lstrip("/")).resolve()
@@ -2228,6 +2331,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "close")  # flux sans longueur : la connexion lui est réservée
+        self.close_connection = True
         self.end_headers()
         ip = self.address_string()
         q = self.app.bus.subscribe(ip)

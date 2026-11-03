@@ -83,6 +83,22 @@ if [ "$(cat /etc/modprobe.d/scaros-wifi.conf 2>/dev/null)" != "$wifi_modprobe" ]
   if grep -qE '^(rtw88_core|rtw89_core|iwlmvm) ' /proc/modules; then need_reboot=1; fi
 fi
 
+# Bluetooth : allumé au démarrage, reconnexion rapide, réappairage sans question des appareils connus
+main_conf=/etc/bluetooth/main.conf
+if [ -f "$main_conf" ]; then
+  sed -E 's/^#?[[:space:]]*FastConnectable[[:space:]]*=.*/FastConnectable = true/;
+          s/^#?[[:space:]]*JustWorksRepairing[[:space:]]*=.*/JustWorksRepairing = always/;
+          s/^#?[[:space:]]*AutoEnable[[:space:]]*=.*/AutoEnable=true/' "$main_conf" > "$main_conf.scaros"
+  if cmp -s "$main_conf" "$main_conf.scaros"; then
+    rm -f "$main_conf.scaros"
+  else
+    mv -f "$main_conf.scaros" "$main_conf"
+    systemctl restart bluetooth >/dev/null 2>&1 || true
+  fi
+fi
+[ -f /etc/modprobe.d/scaros-xbox.conf ] || echo "options bluetooth disable_ertm=Y" > /etc/modprobe.d/scaros-xbox.conf
+systemctl enable bluetooth >/dev/null 2>&1 || true
+
 # applis ajoutées depuis l'installation
 NEW_FLATPAKS=(com.valvesoftware.SteamLink)
 for app in "${NEW_FLATPAKS[@]}"; do
