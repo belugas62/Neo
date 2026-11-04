@@ -1,4 +1,9 @@
 {
+  "scarostv": {
+    "name": "Scaros TV",
+    "web": "http://176.142.205.87:8791/tv",
+    "profile": "scaros-tv"
+  },
   "youtube": {
     "name": "YouTube",
     "cmd": ["flatpak", "run", "rocks.shy.VacuumTube", "--fullscreen"],

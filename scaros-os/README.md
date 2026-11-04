@@ -1,7 +1,7 @@
 # Scaros OS
 
 Transforme un vieux PC portable en box TV. Au démarrage, l'animation Scaros se lance, puis
-un menu plein écran façon console : YouTube (interface TV), Jellyfin, Plex, Steam Link
+un menu plein écran façon console : Scaros TV, YouTube (interface TV), Jellyfin, Plex, Steam Link
 pour jouer aux jeux de ton PC sur la télé, et Twitch en interface télé.
 Tout se pilote à la manette Xbox ou depuis ton téléphone. Quand tu branches la télé en HDMI,
 l'image et le son passent dessus tout seuls.
@@ -99,6 +99,12 @@ reboot
 
   Pour te connecter à ton compte, YouTube affiche un code à entrer sur
   <https://youtube.com/activate> depuis ton téléphone.
+- **Scaros TV** : la première tuile du menu (chaîne 1 de la télécommande). Elle ouvre
+  `http://176.142.205.87:8791/tv` en plein écran, avec son propre profil de navigateur (une connexion
+  à un compte reste gardée), et se pilote aux flèches, à OK et à Retour. Si le serveur ne répond pas
+  (éteint, ou pas d'internet), Scaros le dit au lieu d'afficher une page d'erreur. Pour changer l'adresse :
+  `launcher/apps.json`, ligne `"web"` de `scarostv`, puis mise à jour (ou `/opt/scaros/launcher/apps.json`
+  sur le PC, puis redémarrer).
 - **Jellyfin** : entre l'adresse de ton serveur, puis dans
   **Paramètres > Affichage > Mode d'affichage**, choisis **TV**.
 - **Plex** : connecte-toi avec le code affiché, sur <https://plex.tv/link>.
@@ -124,7 +130,7 @@ reboot
 | ≡ (Menu) | centre de contrôle : volume, son, écran, Bluetooth, veille. Pendant une vidéo, l'appli reste ouverte derrière : B pour y revenir |
 
 Au clavier : flèches, Entrée, Échap ; la **touche Windows** ramène au menu ; **M** ouvre le centre de contrôle ;
-**1 à 5** ouvrent directement YouTube, Jellyfin, Plex, Steam Link et Twitch ; **+ / −** pour le volume, **0** coupe le son.
+**1 à 6** ouvrent directement Scaros TV, YouTube, Jellyfin, Plex, Steam Link et Twitch ; **+ / −** pour le volume, **0** coupe le son.
 
 **Télécommande du téléphone :** glisse sur le pavé pour te déplacer, touche OK pour valider. Sous le pavé, les
 touches sont rangées comme sur une télécommande Apple TV : **Retour**, **Accueil**, **Lecture** et **Menu** à gauche,
@@ -316,8 +322,9 @@ Au démarrage : GRUB (masqué), écran Plymouth Scaros, connexion automatique su
 puis `startx` lance `session.sh`. Le menu tourne dans Chromium en mode kiosque. Les applis sont des
 Flatpak de Flathub : VacuumTube (`rocks.shy.VacuumTube`) pour l'interface TV de YouTube,
 Jellyfin Desktop (`org.jellyfin.JellyfinDesktop`), Plex HTPC (`tv.plex.PlexHTPC`) et
-Steam Link (`com.valvesoftware.SteamLink`). Twitch est l'appli web SmartTwitchTV
-(<https://github.com/fgl27/SmartTwitchTV>), ouverte dans un Chromium plein écran avec son propre profil.
+Steam Link (`com.valvesoftware.SteamLink`). Scaros TV et Twitch (l'appli web SmartTwitchTV,
+<https://github.com/fgl27/SmartTwitchTV>) sont des applis web, ouvertes dans un Chromium plein écran avec
+leur propre profil ; Scaros vérifie que leur adresse répond avant de les ouvrir.
 
 `scaros.py` réserve la manette et la transforme en touches clavier, pour qu'elle marche pareil dans
 toutes les applis. En mode souris, il crée une souris virtuelle (uinput, avec repli sur `xdotool`) ; la télécommande

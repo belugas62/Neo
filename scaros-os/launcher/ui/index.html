@@ -196,6 +196,7 @@ html[data-look="light"] .dock-glass { background: #ffffff47; border-color: #ffff
 .icon-art svg { width: 46%; height: 52%; }
 .icon[data-id="youtube"] .icon-art svg { width: 40%; }
 .icon[data-id="twitch"] .icon-art svg { width: 40%; height: 48%; }
+.icon[data-id="scarostv"] .icon-art svg { width: 34%; height: 64%; filter: drop-shadow(0 .25rem .45rem #02143373); }
 .icon-art::after {
   content: ""; position: absolute; inset: -40%; pointer-events: none;
   background: linear-gradient(120deg, transparent 40%, #ffffff40 50%, transparent 60%);
@@ -884,6 +885,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       <button type="button" class="pbtn" data-pact="ch3">3</button>
       <button type="button" class="pbtn" data-pact="ch4">4</button>
       <button type="button" class="pbtn" data-pact="ch5">5</button>
+      <button type="button" class="pbtn" data-pact="ch6">6</button>
     </div>
     <p class="phone-addr" style="margin:0;text-align:center;font-size:.82rem;color:var(--muted)">scaros.local:8421</p>
   </div>
@@ -978,6 +980,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   // app artwork (drawn for the menu; the apps keep their own icons)
   const ART = {
+    // Scaros TV : le « s » à antennes du kit (le dégradé Océan est le fond de la tuile)
+    scarostv: () => '<svg viewBox="80.4 55.6 95.2 141.6" aria-hidden="true"><path d="M128 99.2 L112.2 66.8 M128 99.2 L146.5 75.5" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="112.2" cy="66.8" r="5.2" fill="#fff"/><circle cx="146.5" cy="75.5" r="5.2" fill="#fff"/><path d="M128.9 191.2C152.9 191.2 169.6 179.2 169.6 160.8C169.6 147.4 161.1 139.4 142.6 135.7L125.2 132.3C118.1 130.8 114 127.8 114 123.1C114 117.6 119.3 113.4 128.1 113.4C137.2 113.4 143.4 118.8 143.6 126.2H167.3C166.8 107.1 151.2 95.2 127.4 95.2C103.5 95.2 88.5 106.7 88.5 124C88.5 138.3 98 147.4 115.8 150.8L131.9 154C139.3 155.4 143.8 158.3 143.8 163.2C143.8 168.8 138 172.8 128.5 172.8C118.5 172.8 112.6 168 111.6 160H86.4C88 179.8 105.1 191.2 128.9 191.2Z" fill="#fff"/></svg>',
     youtube: () => '<svg viewBox="0 0 28 20" aria-hidden="true"><rect width="28" height="20" rx="5.6" fill="#ff0033"/><path d="M11.2 5.6v8.8l7.6-4.4z" fill="#fff"/></svg>',
     jellyfin: () => {
       const g = 'jf' + (++uid);
@@ -993,15 +997,18 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   // ---------- content ----------
   const APPS = [
-    { id: 'youtube', ch: 1, name: 'YouTube', bg: 'linear-gradient(160deg, #ffffff, #e9ebef)', fg: '#0b0d12', a: '#ff2a3d', b: '#3d0710',
+    { id: 'scarostv', ch: 1, name: 'Scaros TV',
+      bg: 'radial-gradient(75% 95% at 8% 8%, #00c2d1f2, #00c2d100 70%), radial-gradient(60% 85% at 92% 18%, #2f6bff, #2f6bff00 70%), radial-gradient(70% 95% at 82% 100%, #4b1fb8e6, #4b1fb800 72%), #06204a',
+      a: '#2f6bff', b: '#06204a', kicker: 'Ta télé', desc: 'Scaros TV en plein écran, pilotée à la manette et à la télécommande.' },
+    { id: 'youtube', ch: 2, name: 'YouTube', bg: 'linear-gradient(160deg, #ffffff, #e9ebef)', fg: '#0b0d12', a: '#ff2a3d', b: '#3d0710',
       kicker: 'Vidéos', desc: 'L’interface TV de YouTube, pilotée à la manette, sans publicité.' },
-    { id: 'jellyfin', ch: 2, name: 'Jellyfin', bg: 'radial-gradient(120% 120% at 30% 15%, #1a2752, #070b18)', a: '#9b5cff', b: '#0a5a86',
+    { id: 'jellyfin', ch: 3, name: 'Jellyfin', bg: 'radial-gradient(120% 120% at 30% 15%, #1a2752, #070b18)', a: '#9b5cff', b: '#0a5a86',
       kicker: 'Films et séries', desc: 'Ta médiathèque, lue depuis ton serveur Jellyfin.' },
-    { id: 'plex', ch: 3, name: 'Plex', bg: 'linear-gradient(160deg, #303236, #151618)', a: '#f2a516', b: '#4a2c00',
+    { id: 'plex', ch: 4, name: 'Plex', bg: 'linear-gradient(160deg, #303236, #151618)', a: '#f2a516', b: '#4a2c00',
       kicker: 'Médiathèque', desc: 'Tes films, séries et musique en plein écran avec Plex.' },
-    { id: 'steamlink', ch: 4, name: 'Steam Link', bg: 'linear-gradient(160deg, #2a475e, #1b2838 55%, #121821)', a: '#66c0f4', b: '#123049',
+    { id: 'steamlink', ch: 5, name: 'Steam Link', bg: 'linear-gradient(160deg, #2a475e, #1b2838 55%, #121821)', a: '#66c0f4', b: '#123049',
       kicker: 'Jeux', desc: 'Tes jeux PC sur la télé. Maintiens le bouton Xbox pour revenir ici.' },
-    { id: 'twitch', ch: 5, name: 'Twitch', bg: 'linear-gradient(160deg, #a970ff, #7c3aed 55%, #5b21b6)', a: '#9146ff', b: '#2a1060',
+    { id: 'twitch', ch: 6, name: 'Twitch', bg: 'linear-gradient(160deg, #a970ff, #7c3aed 55%, #5b21b6)', a: '#9146ff', b: '#2a1060',
       kicker: 'Directs', desc: 'Les directs Twitch dans une interface pensée pour la télé.' }
   ];
   const SETTINGS_APP = { id: 'settings', name: 'Réglages', bg: 'linear-gradient(160deg, #a7adb8, #5d636e)', a: '#8fa0c4', b: '#232a3a',
@@ -1015,7 +1022,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 
   const state = {
     live: false, dry: false, version: '0.7', lost: false, mouse: false,
-    focus: 'youtube', panel: null, pItems: [], pIdx: 0, panelStack: [], launched: null,
+    focus: APPS[0].id, panel: null, pItems: [], pIdx: 0, panelStack: [], launched: null,
     mode: 'auto', hdmi: false, output: 'pc', volume: 35, muted: false, booting: false, power: null,
     res: '1366×768', tvRes: '1080', shown: false,
     installed: {}, pad: null, padSupport: false, phones: 0, phoneDemo: false,
@@ -1229,7 +1236,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       if (m.state === 'missing') { state.installed[m.id] = false; renderTiles(); }
       toast('alert', m.state === 'missing'
         ? `${t.name} n’est pas installé. Lance scaros-update pour l’ajouter.`
-        : `${t.name} n’a pas pu démarrer.`, 5200);
+        : m.state === 'offline'
+          ? `${t.name} ne répond pas. Vérifie la connexion internet${t.id === 'scarostv' ? ', ou que le serveur de Scaros TV est allumé' : ''}.`
+          : `${t.name} n’a pas pu démarrer.`, 6000);
     }
   }
 
@@ -1819,7 +1828,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       body: `<div class="opts">${row('appsupdate', 'download', state.appsUpdating ? 'Mise à jour en cours…' : 'Mettre à jour les applis',
           state.appsUpdating ? 'Ça peut prendre quelques minutes.' : 'Télécharge les dernières versions de YouTube, Jellyfin, Plex et Steam Link.', state.appsUpdating ? '<span class="spin"></span>' : '')}</div>
         ${group('Applis du menu')}
-        <dl class="facts">${APPS.map(a => `<dt>${a.name}</dt><dd>${state.live && state.installed[a.id] === false ? 'À installer : lance scaros-update' : a.id === 'twitch' ? 'Appli web, toujours à jour' : 'Installée'}</dd>`).join('')}</dl>`
+        <dl class="facts">${APPS.map(a => `<dt>${a.name}</dt><dd>${state.live && state.installed[a.id] === false ? 'À installer : lance scaros-update' : a.id === 'twitch' ? 'Appli web, toujours à jour' : a.id === 'scarostv' ? 'Appli web, sur ton serveur' : 'Installée'}</dd>`).join('')}</dl>`
     }),
     power: () => ({
       title: 'Alimentation', icon: 'power', pa: '#ff6a4d', pb: '#8a2416', caption: 'Le PC peut rester fermé quand il est branché à la télé.',
@@ -2769,7 +2778,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     }
     if (a === 'up' || a === 'down' || a === 'left' || a === 'right') move(a);
     else if (a === 'ok') launch(state.focus);
-    else if (a === 'home') setFocus('youtube');
+    else if (a === 'home') setFocus(APPS[0].id);
     else if (a.startsWith('ch')) channel(a);
   }
 
@@ -2783,7 +2792,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok',
     Escape: 'back', Backspace: 'back', Home: 'home', '+': 'volup', '=': 'volup', '-': 'voldown',
     m: 'menu', M: 'menu', ContextMenu: 'menu', F1: 'menu', q: 'qr', Q: 'qr',
-    '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4', '5': 'ch5', '0': 'mute' };
+    '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4', '5': 'ch5', '6': 'ch6', '0': 'mute' };
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -2909,7 +2918,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   applyOutput(true);
   updateHints();
   renderStatus();
-  setFocus('youtube', false);
+  setFocus(APPS[0].id, false);
   renderShelf();
   boot();
   connect().then(live => {

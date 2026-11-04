@@ -31,6 +31,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import urllib.error
 import urllib.parse
 import urllib.request
 from urllib.parse import urlparse
@@ -537,6 +538,19 @@ class Scaros:
                 # décodage vidéo par la puce Intel (le nom du réglage a changé selon les versions)
                 "--enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxGL"]
 
+    @staticmethod
+    def web_reachable(url, timeout=4):
+        """L'adresse d'une appli web répond-elle ? Sinon Chromium n'afficherait que sa page d'erreur :
+        mieux vaut un message clair dans le menu (serveur éteint, pas d'internet)."""
+        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": f"Scaros/{VERSION}"})
+        try:
+            urllib.request.urlopen(req, timeout=timeout).close()
+            return True
+        except urllib.error.HTTPError:
+            return True  # le serveur répond, même avec une erreur : la page saura l'afficher
+        except (urllib.error.URLError, OSError, ValueError):
+            return False
+
     def launch(self, app_id, retry=True):
         conf = self.apps.get(app_id)
         if not conf:
@@ -545,6 +559,11 @@ class Scaros:
             self.refresh_installed()
         if not self.installed.get(app_id, True):
             self.bus.emit("app", id=app_id, state="missing")
+            return False
+        if conf.get("web") and not self.web_reachable(conf["web"]):
+            log.warning("%s : %s ne répond pas", app_id, conf["web"])
+            self.bus.emit("app", id=app_id, state="offline")
+            self.notify("alert", f"{conf['name']} ne répond pas. Vérifie la connexion internet.", 5000)
             return False
         if self.mirroring:
             self.stop_airplay()

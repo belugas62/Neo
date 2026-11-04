@@ -145,6 +145,11 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
 .chan .logo { height: 22px; width: auto; max-width: 34px; }
 .chan span { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11.5px; font-weight: 600; color: var(--text-2); }
 .chan[aria-disabled="true"] { opacity: .4; }
+/* 6 chaînes ou plus : un peu plus serrées, pour que les noms tiennent */
+.channels:has(> .chan:nth-child(6)) { gap: 6px; }
+.channels:has(> .chan:nth-child(6)) .chan { padding: 0 2px; }
+.channels:has(> .chan:nth-child(6)) .chan span { font-size: 10.5px; letter-spacing: -.01em; }
+@media (max-width: 380px) { .channels:has(> .chan:nth-child(6)) .chan span { font-size: 9.6px; } }
 .down { background: var(--key-2) !important; transform: scale(.95); }
 
 .toast {
@@ -223,6 +228,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon) + el.innerHTML; });
 
   const LOGOS = {
+    scarostv: '<svg class="logo" viewBox="0 0 256 256" style="aspect-ratio:1" aria-hidden="true"><defs><radialGradient id="stv0" cx=".1" cy=".1" r=".7"><stop offset="0" stop-color="#00c2d1" stop-opacity=".95"/><stop offset="1" stop-color="#00c2d1" stop-opacity="0"/></radialGradient><radialGradient id="stv1" cx=".9" cy=".2" r=".6"><stop offset="0" stop-color="#2f6bff"/><stop offset="1" stop-color="#2f6bff" stop-opacity="0"/></radialGradient><radialGradient id="stv2" cx=".8" cy=".95" r=".7"><stop offset="0" stop-color="#4b1fb8" stop-opacity=".9"/><stop offset="1" stop-color="#4b1fb8" stop-opacity="0"/></radialGradient></defs><rect width="256" height="256" rx="57" fill="#06204a"/><rect width="256" height="256" rx="57" fill="url(#stv0)"/><rect width="256" height="256" rx="57" fill="url(#stv1)"/><rect width="256" height="256" rx="57" fill="url(#stv2)"/><path d="M128 99.2 L112.2 66.8 M128 99.2 L146.5 75.5" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="112.2" cy="66.8" r="5.2" fill="#fff"/><circle cx="146.5" cy="75.5" r="5.2" fill="#fff"/><path d="M128.9 191.2C152.9 191.2 169.6 179.2 169.6 160.8C169.6 147.4 161.1 139.4 142.6 135.7L125.2 132.3C118.1 130.8 114 127.8 114 123.1C114 117.6 119.3 113.4 128.1 113.4C137.2 113.4 143.4 118.8 143.6 126.2H167.3C166.8 107.1 151.2 95.2 127.4 95.2C103.5 95.2 88.5 106.7 88.5 124C88.5 138.3 98 147.4 115.8 150.8L131.9 154C139.3 155.4 143.8 158.3 143.8 163.2C143.8 168.8 138 172.8 128.5 172.8C118.5 172.8 112.6 168 111.6 160H86.4C88 179.8 105.1 191.2 128.9 191.2Z" fill="#fff"/></svg>',
     youtube: '<svg class="logo" viewBox="0 0 28 20" style="aspect-ratio:28/20" aria-hidden="true"><rect width="28" height="20" rx="5.6" fill="#ff0033"/><path d="M11.2 5.6v8.8l7.6-4.4z" fill="#fff"/></svg>',
     jellyfin: '<svg class="logo" viewBox="20 18 483 483" style="aspect-ratio:1" aria-hidden="true"><defs><linearGradient id="jf" x1="110.25" y1="213.3" x2="496.14" y2="436.09" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aa5cc3"/><stop offset="1" stop-color="#00a4dc"/></linearGradient></defs><path fill="url(#jf)" d="M261.42 201.62c-20.44 0-86.24 119.29-76.2 139.43s142.48 19.92 152.4 0S281.86 201.63 261.42 201.62z"/><path fill="url(#jf)" d="M261.42 23.3C199.83 23.3 1.57 382.73 31.8 443.43s429.34 60 459.24 0S323 23.3 261.42 23.3zM411.9 390.76c-19.59 39.33-281.08 39.77-300.9 0S221.1 115.48 261.45 115.48 431.49 351.42 411.9 390.76z"/></svg>',
     plex: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1f1f1f"/><path d="M6.6 3.8h5.4l6 8.2-6 8.2H6.6l6-8.2z" fill="#ebaf00"/></svg>',
@@ -230,8 +236,8 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
     steamlink: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1b2838"/><circle cx="15" cy="9" r="3.7" fill="none" stroke="#fff" stroke-width="1.7"/><circle cx="15" cy="9" r="1.6" fill="#66c0f4"/><path d="M8.3 15.5l5-4.3" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/><circle cx="8.1" cy="15.7" r="2.3" fill="#fff"/></svg>'
   };
 
-  let apps = { youtube: { name: 'YouTube' }, jellyfin: { name: 'Jellyfin' }, plex: { name: 'Plex' }, steamlink: { name: 'Steam Link' }, twitch: { name: 'Twitch' } };
-  const SHORT = { steamlink: 'Steam' };  // 5 chaînes sur une ligne : noms courts
+  let apps = { scarostv: { name: 'Scaros TV' }, youtube: { name: 'YouTube' }, jellyfin: { name: 'Jellyfin' }, plex: { name: 'Plex' }, steamlink: { name: 'Steam Link' }, twitch: { name: 'Twitch' } };
+  const SHORT = { steamlink: 'Steam', scarostv: 'Scaros' };  // 6 chaînes sur une ligne : noms courts
   let current = null, shown = false, volume = null, muted = false, airplay = null;
 
   let toastTimer;
@@ -290,6 +296,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
         renderNow();
         if (m.state === 'missing') toast(`${(apps[m.id] || {}).name || m.id} n’est pas installé.`);
         else if (m.state === 'failed') toast(`${(apps[m.id] || {}).name || m.id} n’a pas pu démarrer.`);
+        else if (m.state === 'offline') toast(`${(apps[m.id] || {}).name || m.id} ne répond pas.`);
       }
       else if (m.type === 'home') { current = null; renderNow(); }
       else if (m.type === 'volume') { muted = !!m.muted; renderVol(m.level); }
