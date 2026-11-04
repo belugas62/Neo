@@ -163,28 +163,29 @@ html[data-look="light"] .stage[data-bg="apps"] .capsule { background: #ffffffa8;
 html[data-look="light"] .stage[data-bg="apps"] .wx-cap { background: #ffffff8c; color: var(--text-2); }
 
 .shelf-info {
-  position: absolute; z-index: 2; top: 9.4rem; max-width: 58rem;
+  position: absolute; z-index: 2; top: 8rem; max-width: 58rem;
   left: max(16px, env(safe-area-inset-left, 0px), 6rem);
 }
 .shelf-info.in { animation: infoIn .5s var(--ease); }
 @keyframes infoIn { from { opacity: 0; transform: translateY(.6rem); } }
-.kicker { margin: 0; font-size: calc(1.4rem * var(--fs)); font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--text-2); }
-.shelf-title { margin: .4rem 0 0; font-size: calc(6.2rem * var(--fs)); font-weight: 800; line-height: 1; letter-spacing: -.045em; }
-.shelf-desc { margin: 1.1rem 0 0; max-width: 46rem; font-size: calc(2rem * var(--fs)); font-weight: 500; line-height: 1.35; color: var(--text-2); text-wrap: balance; }
-.chips { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1.3rem 0 0; padding: 0; list-style: none; }
-.chips li { padding: .45rem 1.1rem; font-size: calc(1.35rem * var(--fs)); font-weight: 600; color: var(--text-2); background: var(--glass); border: 1px solid var(--line); border-radius: 99px; text-shadow: none; }
+.kicker { margin: 0; font-size: calc(1.4rem * min(var(--fs), 1.1)); font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--text-2); }
+/* le grand titre grossit peu avec la taille du texte : il laisse la place aux deux rangées de tuiles */
+.shelf-title { margin: .4rem 0 0; font-size: calc(5.6rem * min(var(--fs), 1.08)); font-weight: 800; line-height: 1; letter-spacing: -.045em; }
+.shelf-desc { margin: .9rem 0 0; max-width: 46rem; font-size: calc(1.85rem * min(var(--fs), 1.12)); font-weight: 500; line-height: 1.35; color: var(--text-2); text-wrap: balance; }
+.chips { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.chips li { padding: .4rem 1.1rem; font-size: calc(1.35rem * min(var(--fs), 1.1)); font-weight: 600; color: var(--text-2); background: var(--glass); border: 1px solid var(--line); border-radius: 99px; text-shadow: none; }
 .chips li.warn { color: #0b0d12; background: #f3f5f9; border-color: transparent; }
 
-/* dock : une barre translucide, comme sur l'Apple TV */
+/* dock : une barre translucide, comme sur l'Apple TV, avec les tuiles sur deux rangées de 4 */
 .dock {
-  position: absolute; z-index: 2; top: 32.4rem; left: 0; right: 0;
+  position: absolute; z-index: 2; bottom: 6rem; left: 0; right: 0;
   padding-left: max(16px, env(safe-area-inset-left, 0px), 4rem);
   padding-right: max(16px, env(safe-area-inset-right, 0px), 4rem);
 }
-.dock-glass { padding: 1.9rem 2.1rem; border-radius: 3.2rem; background: #12151c61; border: 1px solid #ffffff1f; box-shadow: 0 2rem 4rem -2rem #0000008c; }
+.dock-glass { width: fit-content; max-width: 100%; box-sizing: border-box; margin: 0 auto; padding: 1.6rem 2.1rem; border-radius: 3.2rem; background: #12151c61; border: 1px solid #ffffff1f; box-shadow: 0 2rem 4rem -2rem #0000008c; }
 html[data-look="light"] .dock-glass { background: #ffffff47; border-color: #ffffff80; }
 .stage[data-bg="apps"] .dock-glass { background: var(--glass); border-color: var(--line); box-shadow: none; }
-.icons { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: 2rem; perspective: 60rem; }
+.icons { display: grid; grid-template-columns: repeat(var(--n, 4), 14rem); gap: 1.9rem 2rem; perspective: 60rem; }
 .icon { position: relative; min-width: 0; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; }
 .icon:focus { outline: none; }
 .icon-art {
@@ -667,7 +668,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .shelf-title { font-size: calc(4rem * var(--fs)); }
   .shelf-desc { font-size: calc(1.5rem * var(--fs)); }
   .dock { margin-top: 3rem; }
-  .dock-glass { padding: 1.4rem; border-radius: 2.2rem; }
+  .dock-glass { width: auto; padding: 1.4rem; border-radius: 2.2rem; }
   .icons { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem 1.2rem; }
   .icon-name { display: none; }
   .icon.is-focus .icon-art { transform: scale(1.05); animation: none; }
@@ -1050,7 +1051,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   let audioReady = false, displayToastAt = 0, lastOut = 'pc';
   const computeOutput = () => state.mode === 'pc' ? 'pc' : (state.hdmi ? 'tv' : 'pc');
 
-  $('#icons').style.setProperty('--n', DOCK.length);
+  $('#icons').style.setProperty('--n', Math.ceil(DOCK.length / 2));  // deux rangées
   $('#icons').innerHTML = DOCK.map(t => `<button type="button" class="icon" role="listitem" id="t-${t.id}" data-id="${t.id}" tabindex="-1" aria-label="${t.name}" style="--glow:${t.a}">`
     + `<span class="icon-art" style="--bg:${t.bg}">${ART[t.id]()}<span class="badge" hidden>À installer</span></span>`
     + `<span class="icon-name">${t.name}</span></button>`).join('');
