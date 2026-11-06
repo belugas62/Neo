@@ -1992,7 +1992,8 @@ class Scaros:
         st = self._update_status_file()
         at = st.get("at", 0)
         if st.get("step") == "done" and time.time() - at < 900 and self.settings.get("update_seen") != at:
-            return self.settings.get("update_message") or "Scaros est à jour."
+            msg = self.settings.get("update_message")
+            return f"Scaros est à jour. {msg}" if msg else "Scaros est à jour."
         return None
 
     def ack_update(self):

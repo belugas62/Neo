@@ -1098,7 +1098,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         applyState(s);
         firstState = s;
         if (s.justUpdated) setTimeout(() => {
-          toast('download', `Scaros est à jour. ${s.justUpdated}`, 9000);
+          toast('download', s.justUpdated, 9000);
           api('/api/update/ack', {}).catch(() => {});
         }, 3600);
         return true;
