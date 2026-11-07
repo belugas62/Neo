@@ -8,6 +8,7 @@ le bloc de TNT de la machine est dupliqué à chaque déplacement.
 - Coût : 1 seule TNT (réutilisée à l'infini), 14 blocs de slime, 2 pistons collants,
   2 observateurs, 1 rail détecteur + 1 wagonnet, 1 éventail de corail mort.
 - Taille : 6 × 5 × 4 blocs, 23 blocs en tout.
+- Schématique Litematica prête à charger : [`schematique/bombardier_tnt_volant.litematic`](schematique/bombardier_tnt_volant.litematic).
 
 > ⚠️ **Java Edition uniquement.** La duplication de TNT n'existe pas en Bedrock.
 > Elle fonctionne en solo, sur un serveur vanilla ou Fabric, mais **pas sur Paper/Spigot**
@@ -82,6 +83,31 @@ Le fichier [`commandes-creatif.txt`](commandes-creatif.txt) contient toutes les 
 2. Éloigne-toi (pas devant la machine, pas en dessous), puis lance les 2 commandes de
    démarrage : la première pose le bouton qui déclenche l'observateur avant, la seconde
    supprime le repère.
+
+## 4 bis. Schématique Litematica
+
+Fichier : [`schematique/bombardier_tnt_volant.litematic`](schematique/bombardier_tnt_volant.litematic)
+(23 blocs + le wagonnet, sans le bouton de démarrage).
+
+1. Copie le fichier dans le dossier `schematics` de ton jeu : `.minecraft/schematics/`,
+   ou celui de ton instance si tu utilises un launcher comme Prism ou Modrinth.
+2. En jeu : `M` → *Load Schematics* → choisis `bombardier_tnt_volant` → *Load Schematic*.
+3. Place-la **en l'air, à 20 blocs ou plus au-dessus du sol**, sans rien en dessous.
+   Sans rotation, elle vole vers l'**est**. Tu peux la tourner ou la retourner en miroir
+   dans Litematica : elle volera alors dans la nouvelle direction (vérifié dans le
+   simulateur pour les 4 rotations et les 2 miroirs).
+4. Construis-la :
+   - **Créatif** : colle-la avec l'outil de collage de Litematica. Si le wagonnet n'apparaît
+     pas (le collage des entités peut être désactivé), pose-le toi-même sur le rail détecteur.
+   - **Survie** : sers-toi de l'hologramme comme guide (le mode *Easy Place* aide beaucoup),
+     puis pose le wagonnet sur le rail détecteur **en dernier**.
+5. Démarre en posant un **bouton** sur la face visage de l'observateur avant
+   (voir section 6). Le bouton n'est pas dans la schématique exprès : sinon la machine
+   démarrerait pendant le collage, avant d'être finie.
+
+La schématique est construite avec l'écart d'un bloc entre les deux modules : c'est voulu,
+ne le « répare » pas. Pour la régénérer : `pip install litemapy`, puis
+`python3 schematique/generer_litematic.py`.
 
 ## 5. Construction à la main (survie)
 
