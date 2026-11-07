@@ -1,0 +1,26 @@
+# Bombardier volant a TNT - Minecraft Java 26.2 - construction en creatif
+# 1) Vole a ~20+ blocs au-dessus du sol, regarde vers l'EST (F3 : "Facing: east"), ne bouge plus.
+# 2) Copie-colle ces commandes UNE PAR UNE dans le chat, dans l'ordre.
+#    La premiere pose un repere invisible : tu peux ensuite bouger entre les commandes.
+
+/execute align xyz run summon minecraft:marker ~ ~ ~ {Tags:["bombardier"]}
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run fill ~3 ~5 ~ ~3 ~6 ~ minecraft:slime_block
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~3 ~5 ~-1 minecraft:slime_block
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run fill ~4 ~3 ~-1 ~4 ~5 ~-1 minecraft:slime_block
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~4 ~3 ~ minecraft:slime_block
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~3 ~4 ~ minecraft:glass
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run fill ~5 ~7 ~ ~5 ~7 ~1 minecraft:slime_block
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run fill ~5 ~3 ~2 ~5 ~7 ~2 minecraft:slime_block
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~7 ~3 ~1 minecraft:stone
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~3 ~7 ~ minecraft:sticky_piston[facing=east]
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~5 ~6 ~ minecraft:sticky_piston[facing=west]
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~2 ~6 ~ minecraft:observer[facing=west]
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~6 ~7 ~ minecraft:observer[facing=east]
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~4 ~4 ~ minecraft:detector_rail[shape=east_west]
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~5 ~3 ~1 minecraft:tnt
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~6 ~3 ~1 minecraft:dead_tube_coral_wall_fan[facing=west]
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run summon minecraft:minecart ~4.5 ~4 ~0.5
+
+# 3) DEMARRAGE (eloigne-toi d'abord : la machine part vers l'est et lache de la TNT en dessous)
+/execute at @e[type=minecraft:marker,tag=bombardier,limit=1] run setblock ~7 ~7 ~ minecraft:stone_button[face=wall,facing=east]
+/kill @e[type=minecraft:marker,tag=bombardier]
