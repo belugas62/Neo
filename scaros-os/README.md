@@ -192,13 +192,14 @@ pour le désactiver.
 **Volume par-dessus les applis :** pendant une vidéo, le volume, le son coupé, la manette ou les AirPods qui se
 connectent s'affichent en haut de l'écran, sans interrompre l'appli.
 
-**Accueil :** en haut à gauche l'heure et la date, puis les onglets **Reprendre**, **Ajoutés récemment**,
-**Tendances** et **Mes demandes** ; à droite le score du moment, la météo et quatre boutons ronds (centre de contrôle,
-AirPlay, Wi-Fi, Réglages). Au milieu, les affiches de l'onglet choisi : la première en grand, avec la progression de
-ce que tu as commencé et l'état des demandes (« Disponible », « Téléchargement · 62 % »…). En bas, la bande des applis.
-**Haut** et **bas** passent d'une rangée à l'autre ; **gauche** et **droite** avancent dans la rangée ; un onglet
-s'affiche dès que tu le choisis. Le fond reprend l'affiche choisie, floutée. Tant qu'un compte n'est pas relié,
-l'onglet le dit ; OK ouvre **Réglages > Comptes**.
+**Accueil :** en haut à gauche l'heure et la date ; à droite, de grandes cartes (**widgets**) : le match de ton
+équipe (logos, score, minute), la météo, la musique en cours, l'air et les UV. Dessous, les onglets **Reprendre**,
+**Ajoutés récemment**, **Tendances**, **Mes demandes** et **Matchs**, et quatre boutons ronds (centre de contrôle,
+AirPlay, Wi-Fi, Réglages). Au milieu, les affiches de l'onglet choisi, avec la progression de ce que tu as commencé et
+l'état des demandes ; en bas, la bande des applis. **Haut** et **bas** passent d'une rangée à l'autre (tout en haut :
+les widgets ; OK sur le match ouvre sa fiche, OK sur la musique met en pause), **gauche** et **droite** avancent dans la
+rangée ; un onglet s'affiche dès que tu le choisis. Le fond reprend l'affiche choisie, floutée. Tant qu'un compte n'est
+pas relié, l'onglet le dit ; OK ouvre **Réglages > Comptes**.
 
 **App Store :** la tuile **App Store**, au bout de la bande des applis (ou **Réglages > App Store**), installe en un appui
 des applis qui se pilotent bien à la télé, venues de Flathub : Kodi, Stremio, FreeTube, Grayjay, VLC, Plexamp, Spotify,
@@ -210,7 +211,8 @@ se pilotent mieux avec le mode souris. **Ajouter un site web** en fait une appli
 Tout se fait aussi depuis la télécommande du téléphone (le sac en haut), plus pratique pour taper une adresse.
 Les touches **1 à 9** ouvrent les applis dans l'ordre de la bande ; la télécommande du téléphone garde les 6 premières.
 
-**Personnaliser :** **Réglages > Accueil** : les onglets affichés et leur ordre, les applis de la bande et leur ordre
+**Personnaliser :** **Réglages > Accueil** : les **widgets du haut** (match, météo, musique, air et UV : lesquels, et
+dans quel ordre), les onglets affichés et leur ordre, les applis de la bande et leur ordre
 (OK affiche ou masque, gauche et droite déplacent), le fond (**Affiche** du programme choisi, **Paysage** animé qui suit
 la météo, ou **Uni**, le plus léger) et la couleur d'accent. **Réglages > Affichage** : sombre, clair ou automatique pour
 les réglages, la taille du texte, l'horloge sur **24 h** ou **12 h**, et la veille automatique. **Réglages > Fond et
@@ -218,8 +220,11 @@ météo** : le paysage (temps réel, nuit étoilée, aurore, pluie, neige) et la
 démarrage grâce à l'adresse internet de la box ; la météo et la qualité de l'air viennent d'Open-Meteo (gratuit,
 sans compte).
 
-**Scores :** en haut à droite, le match de tes équipes passe en premier (en direct, du jour, sinon le prochain), puis
-les autres matchs en cours des compétitions suivies, un à la fois. Ils viennent d'ESPN, sans compte.
+**Matchs :** l'onglet **Matchs** montre en grandes cartes les matchs des compétitions suivies : en direct d'abord,
+puis les prochains (tes équipes en tête), puis les résultats de la veille. OK ouvre la **fiche du match** : le score,
+les buts, les cartons et les remplacements minute par minute, et les statistiques (possession, tirs, corners…), mise
+à jour toute seule pendant le direct. Le widget du haut montre le match de tes équipes en priorité (en direct, du jour,
+sinon le prochain), puis les autres matchs en cours. Tout vient d'ESPN, sans compte.
 
 **Écran de veille :** après 5 minutes sans toucher au menu. Par défaut, le style **Widgets**, sur fond noir : une grande
 horloge à aiguilles, l'heure en chiffres fins, la météo (lever et coucher du soleil), la qualité de l'air, l'indice UV,

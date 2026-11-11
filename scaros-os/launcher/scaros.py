@@ -48,7 +48,7 @@ try:
 except ImportError:
     qrcode = None
 
-VERSION = "0.9"
+VERSION = "0.10"
 ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
 CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "scaros"
@@ -1742,7 +1742,8 @@ class Scaros:
         if len(set(value)) != len(value):
             return False
         allowed = {"tabs": set(TABS), "appOrder": set(self.apps) | {"settings", "store"}, "appHidden": set(self.apps),
-                   "ssWidgets": set(self.SAVER_WIDGETS), "sportLeagues": set(LEAGUES)}.get(key)
+                   "ssWidgets": set(self.SAVER_WIDGETS), "sportLeagues": set(LEAGUES),
+                   "topWidgets": {"match", "weather", "music", "air"}}.get(key)
         if allowed is not None:
             return set(value) <= allowed
         if key == "sportTeams":
@@ -3069,6 +3070,15 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, data, image_type(data) or "image/jpeg", cache="max-age=3600")
         if path == "/api/accounts":
             return self.json({**self.app.media.public(), "leagues": {k: v[0] for k, v in LEAGUES.items()}})
+        if path == "/api/sport/match":
+            q = urllib.parse.parse_qs(url.query)
+            try:
+                return self.json(self.app.media.sports.summary(q.get("league", [""])[0], q.get("id", [""])[0]))
+            except ValueError as e:
+                return self.json({"error": str(e)}, 400)
+            except OSError as e:
+                log.info("fiche du match indisponible : %s", e)
+                return self.json({"error": "offline"}, 502)
         if path == "/api/sport/teams":
             league = urllib.parse.parse_qs(url.query).get("league", [""])[0]
             try:

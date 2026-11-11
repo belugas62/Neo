@@ -144,17 +144,19 @@ button { font: inherit; color: inherit; }
     radial-gradient(90% 60% at 0% 0%, #05070b80, transparent 70%); }
 .stage[data-bg="decor"] .home-scrim { background: linear-gradient(180deg, #00000085 0%, #00000038 28%, #0000004d 55%, #000000b8 100%); }
 
-/* barre du haut */
-.topbar { position: absolute; z-index: 3; top: 2.4rem; left: 0; right: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 2rem;
+/* barre du haut : à gauche l'heure et la date, à droite les widgets (grandes cartes, au choix dans
+   Réglages › Accueil › Widgets du haut) ; dessous, les onglets à gauche et les boutons ronds à droite */
+.topbar { position: absolute; z-index: 3; top: 2.2rem; left: 0; right: 0; display: flex; align-items: center; gap: 2.4rem; height: 6.4rem;
   padding: 0 max(16px, env(safe-area-inset-right, 0px), 4.6rem) 0 var(--side); }
+.tb-left { flex: none; }
 .tb-time { display: flex; align-items: center; gap: 1.3rem; }
-.tb-clock { font-size: calc(3.7rem * min(var(--fs), 1.1)); font-weight: 250; letter-spacing: -.035em; line-height: 1; font-variant-numeric: tabular-nums; font-variation-settings: "opsz" 32; }
-.tb-ampm { align-self: flex-end; margin: 0 0 .3rem -.8rem; font-size: calc(1.2rem * var(--fs)); font-weight: 600; letter-spacing: .06em; }
+.tb-clock { font-size: calc(4rem * min(var(--fs), 1.1)); font-weight: 250; letter-spacing: -.035em; line-height: 1; font-variant-numeric: tabular-nums; font-variation-settings: "opsz" 32; }
+.tb-ampm { align-self: flex-end; margin: 0 0 .4rem -.8rem; font-size: calc(1.2rem * var(--fs)); font-weight: 600; letter-spacing: .06em; }
 .tb-ampm:empty { display: none; }
-.tb-sep { width: 1px; height: 2.6rem; background: currentColor; opacity: .28; }
-.tb-date { font-size: calc(1.12rem * min(var(--fs), 1.15)); font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--text-2); }
-/* les onglets passent sous la barre de droite (plus bas qu'elle) : ils ne la poussent pas */
-.tabs { position: absolute; top: 4.95rem; left: calc(var(--side) - 1.1rem); display: flex; gap: .3rem; white-space: nowrap; }
+.tb-sep { width: 1px; height: 3rem; background: currentColor; opacity: .28; }
+.tb-date { display: flex; flex-direction: column; gap: .2rem; font-size: calc(1.12rem * min(var(--fs), 1.15)); font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); line-height: 1.15; }
+.tb-date b { font-weight: 600; color: var(--muted); }
+.tabs { position: absolute; top: 7.6rem; left: calc(var(--side) - 1.1rem); display: flex; gap: .3rem; white-space: nowrap; }
 .tab { position: relative; padding: .5rem 1.1rem .7rem; margin: 0; border: 0; border-radius: 99px; background: none; cursor: pointer;
   font-size: calc(1.42rem * min(var(--fs), 1.15)); font-weight: 500; color: var(--muted); transition: color .2s ease, background .2s ease, transform .25s var(--spring); }
 .tab:focus { outline: none; }
@@ -162,42 +164,73 @@ button { font: inherit; color: inherit; }
 .tab.on::after { content: ""; position: absolute; left: 1.1rem; right: 1.1rem; bottom: .12rem; height: .2rem; border-radius: 2px; background: var(--accent); }
 .tab.is-focus { background: var(--text); color: #0b0d12; transform: scale(1.05); }
 .tab.is-focus::after { display: none; }
-.tb-left { flex: none; }
-.tb-right { display: flex; align-items: center; gap: .8rem; min-width: 0; }
+.tb-tools { position: absolute; top: 7.25rem; right: max(16px, env(safe-area-inset-right, 0px), 4.6rem); display: flex; align-items: center; gap: .8rem; }
 .round { display: grid; place-items: center; flex: none; width: 3.6rem; height: 3.6rem; padding: 0; margin: 0; border-radius: 50%; cursor: pointer;
   border: 1px solid #ffffff21; background: #ffffff12; color: var(--text); transition: transform .25s var(--spring), background .2s ease, color .2s ease; }
 .round:focus { outline: none; }
 .round .ic { width: 1.65rem; height: 1.65rem; }
 .round.dim { color: var(--muted); }
 .round.is-focus { background: var(--text); color: #0b0d12; transform: scale(1.14); }
-.wx-chip { display: flex; align-items: center; gap: .55rem; padding: 0 .4rem; font-size: calc(1.45rem * min(var(--fs), 1.15)); font-weight: 500; white-space: nowrap; }
-.wx-chip .ic { width: 1.9rem; height: 1.9rem; }
 .st { display: grid; place-items: center; color: var(--text-2); }
 .st .ic { width: 1.6rem; height: 1.6rem; }
 .st.dim { opacity: .45; }
 .cap-icons { display: flex; align-items: center; gap: .8rem; padding: 0 .3rem; }
 .cap-icons:empty { display: none; }
-/* scores : un match à la fois, qui défile */
-.ticker { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; height: 3.6rem; max-width: 34rem; padding: 0 1.3rem; box-sizing: border-box; border-radius: 99px; overflow: hidden;
-  background: #ffffff12; border: 1px solid #ffffff1c; font-size: calc(1.3rem * min(var(--fs), 1.1)); font-weight: 600; white-space: nowrap; }
-.ticker[hidden] { display: none; }
-.tk { display: flex; align-items: center; gap: .6rem; min-width: 0; animation: tkIn .5s var(--ease); }
-@keyframes tkIn { from { opacity: 0; transform: translateY(.8rem); } }
-.tk img, .tk .tk-ph { flex: none; width: 1.9rem; height: 1.9rem; object-fit: contain; }
-.tk .tk-ph { display: grid; place-items: center; border-radius: 50%; background: #ffffff24; font-size: .8rem; font-weight: 800; }
-.tk-sc { font-variant-numeric: tabular-nums; font-weight: 750; }
-.tk-cl { color: var(--muted); font-weight: 500; }
-.tk-live { flex: none; width: .6rem; height: .6rem; border-radius: 50%; background: #ff453a; box-shadow: 0 0 .6rem #ff453a; animation: live 1.6s ease-in-out infinite; }
+/* widgets : de vraies cartes, lisibles depuis le canapé */
+.widgets { flex: 1; min-width: 0; display: flex; justify-content: flex-start; align-items: center; gap: 1rem; overflow: hidden; padding: .6rem; margin: -.6rem; }
+.widgets > :first-child { margin-left: auto; }
+/* le match et la météo gardent leur taille ; la musique et l'air se raccourcissent s'il manque de la place */
+.wg.wg-match, .wg.wg-wx { flex: none; }
+.wg.wg-match .wg-col, .wg.wg-wx .wg-col { flex: none; }
+.wg.wg-music { min-width: 15rem; }
+.wg.wg-air { flex: none; }
+.wg { display: flex; align-items: center; gap: 1.1rem; flex: 0 1 auto; min-width: 0; height: 6.2rem; padding: 0 1.6rem; margin: 0; box-sizing: border-box;
+  border-radius: 1.6rem; border: 1px solid #ffffff1f; background: #12151ca6; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+  box-shadow: 0 1rem 2rem -1.4rem #000; transition: transform .25s var(--spring), background .2s ease, color .2s ease; animation: wgIn .5s var(--ease); }
+.wg:focus { outline: none; }
+.wg.is-focus { background: var(--text); color: #0b0d12; transform: scale(1.05); }
+.wg.is-focus .wg-sub, .wg.is-focus .wg-k { color: #4c5260; }
+@keyframes wgIn { from { opacity: 0; transform: translateY(-.6rem); } }
+.wg-sub { font-size: calc(1.12rem * min(var(--fs), 1.1)); font-weight: 550; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wg-k { font-size: calc(.95rem * min(var(--fs), 1.1)); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.wg-col { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+.wg-big { font-size: calc(2.6rem * min(var(--fs), 1.1)); font-weight: 300; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.wg-match { gap: .9rem; padding: 0 1.3rem; }
+.wg-match .lg { flex: none; width: 3.2rem; height: 3.2rem; object-fit: contain; }
+.wg-match .tk-ph { flex: none; display: grid; place-items: center; width: 3.1rem; height: 3.1rem; border-radius: 50%; background: #ffffff24; font-size: 1rem; font-weight: 800; }
+.wg-match .wg-col { align-items: center; }
+.wgm-line { display: flex; align-items: center; gap: .7rem; font-size: calc(1.45rem * min(var(--fs), 1.1)); font-weight: 700; white-space: nowrap; }
+.wgm-line .wg-big { font-size: calc(2.2rem * min(var(--fs), 1.1)); }
+.wgm-sub { display: flex; align-items: center; gap: .5rem; }
+.wg-wx .ic { flex: none; width: 3.2rem; height: 3.2rem; color: #ffd36b; stroke-width: 1.6; }
+.wg.is-focus.wg-wx .ic { color: #c98a00; }
+.wg-cover { position: relative; flex: none; width: 4.4rem; height: 4.4rem; overflow: hidden; border-radius: .9rem;
+  background: linear-gradient(150deg, hsl(var(--h, 270) 60% 45%), hsl(calc(var(--h, 270) + 60) 55% 16%)); display: grid; place-items: center; }
+.wg-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.wg-cover .ic { width: 2rem; height: 2rem; color: #ffffffb3; }
+.wg-music .wg-col { max-width: 17rem; }
+.wg-title { font-size: calc(1.4rem * min(var(--fs), 1.1)); font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eq { display: inline-flex; align-items: flex-end; gap: .18rem; height: 1rem; margin-right: .4rem; }
+.eq i { width: .22rem; height: 100%; border-radius: 1px; background: var(--accent); animation: eq 1s ease-in-out infinite; }
+.eq i:nth-child(2) { animation-delay: -.3s; } .eq i:nth-child(3) { animation-delay: -.6s; }
+@keyframes eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+.eq { transform-origin: bottom; }
+.eq i { transform-origin: bottom; }
+.wg-air { gap: 1.6rem; }
+.wg-air .wg-big { font-size: calc(2.3rem * min(var(--fs), 1.1)); }
+.wg-air .lvl { display: inline-block; width: .8rem; height: .8rem; margin-right: .4rem; border-radius: 50%; background: var(--lvl, #3fcf7a); }
+.tk-live { flex: none; width: .65rem; height: .65rem; border-radius: 50%; background: #ff453a; box-shadow: 0 0 .6rem #ff453a; animation: live 1.6s ease-in-out infinite; }
 .tk-fav { flex: none; width: .55rem; height: .55rem; border-radius: 50%; background: var(--accent); }
+.tk-ph { display: grid; place-items: center; border-radius: 50%; background: #ffffff24; font-weight: 800; }
 @keyframes live { 50% { opacity: .35; } }
 
 /* rangée d'affiches */
-.rail { position: absolute; z-index: 2; left: 0; right: 0; top: 11.1rem; height: 23.8rem; overflow: hidden; padding: 1rem 0 0 var(--side); box-sizing: border-box; }
+.rail { position: absolute; z-index: 2; left: 0; right: 0; top: 12.6rem; height: 23rem; overflow: hidden; padding: 1rem 0 0 var(--side); box-sizing: border-box; }
 .rail-track { display: flex; align-items: flex-start; gap: 1.6rem; transition: transform .5s var(--ease); will-change: transform; }
-.pc { flex: none; display: flex; flex-direction: column; width: 11.8rem; padding: 0; margin: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.pc { flex: none; display: flex; flex-direction: column; width: 11.33rem; padding: 0; margin: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }
 .pc:focus { outline: none; }
-.pc.wide { width: 31.4rem; }
-.pc-img { position: relative; display: block; height: 17.7rem; overflow: hidden; border-radius: 1.1rem; background: #ffffff10;
+.pc.wide { width: 30.2rem; }
+.pc-img { position: relative; display: block; height: 17rem; overflow: hidden; border-radius: 1.1rem; background: #ffffff10;
   box-shadow: 0 1.2rem 2.2rem -1.4rem #000000d0; transition: transform .32s var(--spring), box-shadow .32s ease; }
 .pc-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s ease; }
 .pc-img img.ok { opacity: 1; }
@@ -217,7 +250,7 @@ button { font: inherit; color: inherit; }
 .pc.is-focus .pc-sub { color: var(--text-2); }
 /* carte « message » : compte à relier, serveur muet, rangée vide */
 .pc.msg { width: 52rem; }
-.pc-msg { display: flex; flex-direction: column; justify-content: center; gap: .7rem; height: 17.7rem; padding: 2.4rem 3rem; box-sizing: border-box; border-radius: 1.1rem;
+.pc-msg { display: flex; flex-direction: column; justify-content: center; gap: .7rem; height: 17rem; padding: 2.4rem 3rem; box-sizing: border-box; border-radius: 1.1rem;
   background: #ffffff0d; border: 1px solid #ffffff1f; transition: transform .32s var(--spring), background .2s ease; }
 .pc-msg .ic { width: 3rem; height: 3rem; color: var(--accent); }
 .pc-msg b { font-size: calc(2.1rem * min(var(--fs), 1.1)); font-weight: 700; letter-spacing: -.02em; }
@@ -228,7 +261,7 @@ button { font: inherit; color: inherit; }
 @keyframes skel { from { background-position: 100% 0; } to { background-position: 0 0; } }
 
 /* bande des applis */
-.apps { position: absolute; z-index: 2; left: 0; right: 0; top: 34.9rem; padding: 1.3rem 0 1rem var(--side); overflow: hidden; }
+.apps { position: absolute; z-index: 2; left: 0; right: 0; top: 35.4rem; padding: 1.3rem 0 1rem var(--side); overflow: hidden; }
 .icons { display: flex; gap: 1.8rem; transition: transform .5s var(--ease); will-change: transform; }
 .icon { position: relative; flex: none; width: 15.8rem; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; color: inherit; font: inherit; }
 .icon:focus { outline: none; }
@@ -480,6 +513,46 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .code-box .k { margin-bottom: .6rem; font-size: calc(1.3rem * var(--fs)); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
 .code-box .t { font-size: calc(1.6rem * var(--fs)); color: var(--text-2); }
 .code-box .code { margin: .6rem 0 .8rem; font-size: calc(5.6rem * var(--fs)); font-weight: 700; letter-spacing: .32em; font-variant-numeric: tabular-nums; }
+.pc.mcard { width: 24rem; }
+.mc { display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem 1.7rem 1.7rem; box-sizing: border-box;
+  background: radial-gradient(120% 90% at 0% 0%, #2a3448, #121620 70%); border: 1px solid #ffffff14; }
+.pc.mcard.fav .mc { background: radial-gradient(120% 90% at 0% 0%, color-mix(in oklab, var(--accent) 38%, #1a2030), #121620 72%); }
+.mc-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: calc(1.08rem * min(var(--fs), 1.1)); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text-2); }
+.mc-lg { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mc-st { display: flex; align-items: center; gap: .5rem; flex: none; white-space: nowrap; letter-spacing: .04em; text-transform: none; font-size: calc(1.2rem * min(var(--fs), 1.1)); }
+.mc-st.onair { color: #ff6b61; }
+.mc-team { display: flex; align-items: center; gap: 1.1rem; font-size: calc(1.7rem * min(var(--fs), 1.1)); font-weight: 650; }
+.mc-team img, .mc-team .tk-ph { flex: none; width: 3.8rem; height: 3.8rem; object-fit: contain; }
+.mc-team .tk-ph { font-size: 1.1rem; }
+.mc-team .nm { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mc-team .sc { font-size: calc(3rem * min(var(--fs), 1.1)); font-weight: 300; font-variant-numeric: tabular-nums; }
+.mh { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 2rem; margin: .4rem 0 1.4rem; padding: 2rem; border-radius: 1.6rem; background: var(--glass); border: 1px solid var(--line); }
+.mh.onair { border-color: #ff453a66; }
+.mh:focus { outline: none; }
+.mh.is-focus { border-color: color-mix(in oklab, var(--text) 50%, transparent); }
+.mh-t { display: flex; flex-direction: column; align-items: center; gap: .8rem; text-align: center; font-size: calc(1.7rem * var(--fs)); }
+.mh-t img, .mh-t .tk-ph { width: 6rem; height: 6rem; object-fit: contain; }
+.mh-t .tk-ph { font-size: 1.6rem; }
+.mh-mid { text-align: center; }
+.mh-mid p { margin: 0; }
+.mh-sc { font-size: calc(5rem * min(var(--fs), 1.1)); font-weight: 250; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.mh-st { display: flex; align-items: center; justify-content: center; gap: .5rem; margin-top: .6rem !important; font-size: calc(1.4rem * var(--fs)); color: var(--text-2); }
+.ev-list { display: flex; flex-direction: column; gap: .5rem; }
+.ev { display: grid; grid-template-columns: 5rem 2.4rem 1fr; align-items: center; gap: .6rem; font-size: calc(1.5rem * var(--fs)); color: var(--text-2); }
+.ev.away { grid-template-columns: 1fr 2.4rem 5rem; text-align: right; }
+.ev.away .ev-t { order: 3; } .ev.away .ev-i { order: 2; } .ev.away .ev-x { order: 1; }
+.ev.goal { color: var(--text); font-weight: 650; }
+.ev-t { font-variant-numeric: tabular-nums; color: var(--muted); }
+.ev.away .ev-t { text-align: right; }
+.ev-i { text-align: center; }
+.fcard { display: inline-block; width: .9rem; height: 1.25rem; border-radius: .15rem; vertical-align: -.15rem; }
+.fcard.y { background: #ffd23f; } .fcard.r { background: #ff453a; }
+.ev-half { margin: .3rem 0; text-align: center; font-size: calc(1.15rem * var(--fs)); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.stat { display: grid; grid-template-columns: 6rem 1fr 6rem; align-items: center; row-gap: .3rem; margin: .6rem 0; font-size: calc(1.5rem * var(--fs)); }
+.stat p { margin: 0; text-align: center; color: var(--text-2); font-size: calc(1.3rem * var(--fs)); }
+.stat span:last-of-type { text-align: right; }
+.stat .bar { grid-column: 1 / -1; display: block; height: .4rem; border-radius: 99px; background: color-mix(in oklab, var(--text) 18%, transparent); overflow: hidden; }
+.stat .bar b { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .store-row .st-ico { position: relative; flex: none; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; overflow: hidden; border-radius: 1.1rem;
   background: linear-gradient(160deg, color-mix(in oklab, var(--c) 85%, #fff), color-mix(in oklab, var(--c) 70%, #000)); color: #fff; font-size: 2rem; }
 .store-row .st-ico img { position: absolute; inset: .5rem; width: calc(100% - 1rem); height: calc(100% - 1rem); object-fit: contain; }
@@ -717,7 +790,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .topbar, .rail, .apps, .foot { position: relative; top: auto; bottom: auto; left: auto; right: auto; }
   .topbar { flex-direction: column; gap: 1.2rem; margin-top: 1.4rem; padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); }
   .tb-right { flex-wrap: wrap; }
-  .tabs { position: static; flex-wrap: wrap; margin: 0 0 0 -1.1rem; white-space: normal; }
+  .tabs, .tb-tools { position: static; flex-wrap: wrap; margin: 0 0 0 -1.1rem; white-space: normal; }
+  .topbar { height: auto; align-items: flex-start; }
+  .widgets { flex-wrap: wrap; justify-content: flex-start; }
   .ticker { max-width: 100%; }
   .rail { height: auto; margin-top: 1.4rem; padding: .6rem 0 1rem max(16px, env(safe-area-inset-left, 0px)); overflow-x: auto; scrollbar-width: none; }
   .rail::-webkit-scrollbar { display: none; }
@@ -893,11 +968,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     <header class="topbar">
       <div class="tb-left">
         <div class="tb-time"><span class="tb-clock" id="clock">--:--</span><span class="tb-ampm" id="clock-ap"></span><span class="tb-sep"></span><span class="tb-date" id="tb-date"></span></div>
-        <nav class="tabs" id="tabs" aria-label="Rangées"></nav>
       </div>
-      <div class="tb-right">
-        <div class="ticker" id="ticker" hidden aria-live="polite"></div>
-        <span class="wx-chip" id="st-wx" hidden></span>
+      <div class="widgets" id="widgets" aria-live="polite"></div>
+      <nav class="tabs" id="tabs" aria-label="Rangées"></nav>
+      <div class="tb-tools">
         <span class="cap-icons">
           <span class="st" id="st-mute" title="Son coupé" data-icon="mute" hidden></span>
           <span class="st" id="st-audio" data-icon="headphones" hidden></span>
@@ -1187,7 +1261,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const BT_KIND = { audio: 'Casque ou enceinte', input: 'Manette', other: 'Appareil Bluetooth' };
 
   const state = {
-    live: false, dry: false, version: '0.9', lost: false, mouse: false,
+    live: false, dry: false, version: '0.10', lost: false, mouse: false,
     focus: APPS[0].id, panel: null, pItems: [], pIdx: 0, panelStack: [], launched: null,
     mode: 'auto', hdmi: false, output: 'pc', volume: 35, muted: false, booting: false, power: null,
     res: '1366×768', tvRes: '1080', shown: false,
@@ -1210,6 +1284,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     leagues: { 'fra.1': 'Ligue 1', 'uefa.champions': 'Ligue des champions', 'eng.1': 'Premier League', 'esp.1': 'Liga', 'ita.1': 'Serie A',
       'ger.1': 'Bundesliga', 'uefa.europa': 'Ligue Europa', 'fra.2': 'Ligue 2', 'fifa.world': 'Coupe du monde', 'uefa.euro': 'Euro', nba: 'NBA' },
     sportLeague: null, sportTeams: {}, moving: null, store: null, storeSel: null, webUrl: '', webName: '',
+    widIdx: 0, wgMatch: null, matchSel: null, matchDetail: null,
     // maquette : valeurs d'exemple (sur le PC, elles viennent du serveur)
     weather: { city: 'Lille', temp: 14, kind: 'rain', label: 'Pluie', day: true, max: 16, min: 9 },
     place: { city: 'Lille', auto: true },
@@ -1227,6 +1302,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const fT = { format: d => { const c = clockParts(d); return `${c.h}:${c.m}${c.ap ? ' ' + c.ap : ''}`; } };
   const fDay = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
   const fD = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const fWeekday = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' });
   // maquette : de quoi remplir l'accueil (sur le PC, tout vient du serveur)
   (() => {
     const it = (i, title, sub, kind, extra = {}) => ({ id: `demo:${i}`, title, sub, kind, meta: kind, poster: null, art: null, hue: (i * 47) % 360, open: { plex: String(i) }, ...extra });
@@ -1250,6 +1326,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       { id: 'd1', league: 'fra.1', leagueName: 'Ligue 1', state: 'in', clock: "67'", start: now, fav: true, home: { id: 'fra.1:0', name: 'Lyon', abbr: 'OL', score: '2' }, away: { id: 'fra.1:1', name: 'Marseille', abbr: 'OM', score: '1' } },
       { id: 'd2', league: 'eng.1', leagueName: 'Premier League', state: 'in', clock: 'MT', start: now, home: { id: 'eng.1:0', name: 'Arsenal', abbr: 'ARS', score: '0' }, away: { id: 'eng.1:1', name: 'Liverpool', abbr: 'LIV', score: '0' } }
     ];
+    const later = h => new Date(Date.now() + h * 3600000).toISOString();
+    state.media.board = [...state.media.sport,
+      { id: 'b3', league: 'fra.1', leagueName: 'Ligue 1', state: 'pre', clock: '', start: later(27), home: { id: 'fra.1:4', name: 'Paris SG', abbr: 'PSG' }, away: { id: 'fra.1:5', name: 'Lens', abbr: 'RCL' } },
+      { id: 'b4', league: 'uefa.champions', leagueName: 'Ligue des champions', state: 'pre', clock: '', start: later(120), home: { id: 'x:6', name: 'Real Madrid', abbr: 'RMA' }, away: { id: 'x:7', name: 'PSV', abbr: 'PSV' } },
+      { id: 'b5', league: 'fra.1', leagueName: 'Ligue 1', state: 'post', clock: 'Terminé', start: later(-20), home: { id: 'fra.1:8', name: 'Monaco', abbr: 'ASM', score: '3' }, away: { id: 'fra.1:9', name: 'Nice', abbr: 'OGCN', score: '2' } }];
   })();
   let lastInputAt = Date.now(), lastWifiScan = 0;
   let audioReady = false, displayToastAt = 0, lastOut = 'pc';
@@ -1454,8 +1535,13 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       renderRail();
       if (['accounts', 'settings'].includes(state.panel)) rerenderPane();
     } else if (m.type === 'sport') {
-      state.media = { ...state.media, sport: m.ticker || [] };
+      state.media = { ...state.media, sport: m.ticker || [], board: m.board || state.media.board || [] };
       renderTicker();
+      if (state.tab === 'matches') renderRail();
+      if (state.panel === 'match' && state.matchSel) {
+        const fresh = (m.board || []).concat(m.ticker || []).find(x => x.id === state.matchSel.id);
+        if (fresh) { state.matchSel = fresh; rerenderPane(); }
+      }
       if (state.saver) renderWidgets();
     } else if (m.type === 'toast') {
       toast(m.icon || 'info', m.text || '', m.ms || 4000);
@@ -1499,7 +1585,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     continue: { name: 'Reprendre', src: 'plex', empty: ['Rien en cours', 'Lance un film ou une série dans Plex : il t’attendra ici.'] },
     recent: { name: 'Ajoutés récemment', src: 'plex', empty: ['Rien de nouveau', 'Les derniers films et séries de ton serveur Plex arriveront ici.'] },
     trending: { name: 'Tendances', src: 'overseerr', empty: ['Pas de tendances', 'Overseerr n’a rien renvoyé pour l’instant.'] },
-    requests: { name: 'Mes demandes', src: 'overseerr', empty: ['Aucune demande', 'Choisis un film dans Tendances : un appui sur OK le demande.'] }
+    requests: { name: 'Mes demandes', src: 'overseerr', empty: ['Aucune demande', 'Choisis un film dans Tendances : un appui sur OK le demande.'] },
+    matches: { name: 'Matchs', src: 'sport', empty: ['Pas de match en vue', 'Aucun match prévu prochainement dans tes compétitions. Choisis-les dans Réglages › Sport.'] }
   };
   const SRC = { plex: 'Plex', overseerr: 'Overseerr' };
   const ALL_TABS = Object.keys(TAB_INFO);
@@ -1523,12 +1610,18 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const headEls = () => [...document.querySelectorAll('#tabs .tab, .topbar .round')];
   const railEls = () => [...document.querySelectorAll('#rail-track .pc:not(.skel)')];
   const appEls = () => [...document.querySelectorAll('#icons .icon')];
-  const zoneEls = z => z === 'head' ? headEls() : z === 'rail' ? railEls() : appEls();
+  const widEls = () => [...document.querySelectorAll('#widgets .wg')];
+  const zoneEls = z => z === 'head' ? headEls() : z === 'wid' ? widEls() : z === 'rail' ? railEls() : appEls();
   const tabIndex = () => Math.max(0, headEls().findIndex(el => el.dataset.tab === state.tab));
   const hashHue = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
 
   function railModel(tab) {
     const info = TAB_INFO[tab], m = state.media, acc = (m.accounts || {})[info.src] || {};
+    if (info.src === 'sport') {
+      const board = m.board || [];
+      return board.length ? { items: board, kind: 'match' }
+        : { msg: { icon: 'trophy', title: info.empty[0], text: info.empty[1], hint: 'OK : Réglages › Sport', act: 'sport' } };
+    }
     const st = (m.status || {})[tab], items = (m.rows || {})[tab];
     if (!acc.connected) return { msg: { icon: info.src === 'plex' ? 'film' : 'download', title: `Connecte ${SRC[info.src]}`,
       text: info.src === 'plex' ? 'Tes films et séries en cours, et les derniers ajouts de ton serveur, s’afficheront ici.'
@@ -1538,6 +1631,18 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (!items) return { skel: true };
     if (!items.length) return { msg: { icon: 'info', title: info.empty[0], text: info.empty[1], hint: '', act: '' } };
     return { items };
+  }
+  // carte d'un match (onglet Matchs) : compétition, état, les deux équipes et le score
+  const fDayShort = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+  function matchCardHTML(mt, i) {
+    const st = mt.state === 'in' ? `<span class="mc-st onair"><span class="tk-live"></span><span>${esc(mt.clock || 'En direct')}</span></span>`
+      : mt.state === 'post' ? `<span class="mc-st"><span>${esc(mt.clock || 'Terminé')}</span></span>` : `<span class="mc-st soon"><span>${esc(matchWhen(mt))}</span></span>`;
+    const team = t => `<span class="mc-team">${tkTeam(t)}<span class="nm">${esc(t.name)}</span><b class="sc">${mt.state === 'pre' ? '' : esc(t.score ?? 0)}</b></span>`;
+    const d = new Date(mt.start);
+    return `<button type="button" class="pc mcard${mt.fav ? ' fav' : ''}" data-i="${i}" role="listitem" tabindex="-1" aria-label="${esc(mt.home.name)} contre ${esc(mt.away.name)}">`
+      + `<span class="pc-img mc"><span class="mc-top"><span class="mc-lg">${esc(mt.leagueName || '')}</span>${st}</span>${team(mt.home)}${team(mt.away)}</span>`
+      + `<span class="pc-title">${esc(mt.home.name)} – ${esc(mt.away.name)}</span>`
+      + `<span class="pc-sub">${mt.fav ? '★ ' : ''}${isNaN(d) ? '' : esc(fDayShort.format(d))}</span></button>`;
   }
   function cardHTML(it, i, wide) {
     const img = wide ? (it.art || it.poster) : (it.poster || it.art);
@@ -1556,7 +1661,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const sameTab = railKey.split('|')[0] === tab;
     railKey = key;
     state.railModel = m;
-    if (m.items) track.innerHTML = m.items.map((it, i) => cardHTML(it, i, i === 0)).join('');
+    if (m.items && m.kind === 'match') track.innerHTML = m.items.map(matchCardHTML).join('');
+    else if (m.items) track.innerHTML = m.items.map((it, i) => cardHTML(it, i, i === 0)).join('');
     else if (m.skel) track.innerHTML = Array.from({ length: 7 }, (_, i) => `<div class="pc skel${i ? '' : ' wide'}"><span class="pc-img"></span></div>`).join('');
     else track.innerHTML = `<button type="button" class="pc msg" data-i="0" tabindex="-1"><span class="pc-msg">${icon(m.msg.icon)}<b>${esc(m.msg.title)}</b>`
       + `<span>${esc(m.msg.text)}</span>${m.msg.hint ? `<em>${esc(m.msg.hint)}</em>` : ''}</span></button>`;
@@ -1617,6 +1723,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   function curEl() {
     const els = zoneEls(state.zone);
     if (state.zone === 'apps') return els.find(el => el.dataset.id === state.focus) || els[0];
+    if (state.zone === 'wid') return els[Math.min(state.widIdx || 0, els.length - 1)];
     return els[state.zone === 'head' ? state.headIdx : (state.railIdx[state.tab] || 0)] || els[0];
   }
   function paintFocus(takeDom = true) {
@@ -1671,7 +1778,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (dir === 'left' || dir === 'right') {
       const j = i + (dir === 'right' ? 1 : -1);
       if (j < 0 || j >= els.length) return bumpEl(el, dir);
-      if (z === 'head') {
+      if (z === 'wid') state.widIdx = j;
+      else if (z === 'head') {
         state.headIdx = j;
         const t = els[j].dataset.tab;
         if (t && t !== state.tab) { state.tab = t; renderTabs(); renderRail(); }
@@ -1682,8 +1790,16 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     if (dir === 'up') {
       if (z === 'apps') return railEls().length ? focusZone('rail') : focusZone('head', tabIndex());
       if (z === 'rail') return focusZone('head', tabIndex());
+      if (z === 'head' && widEls().length) {  // vers les widgets : celui qui est au-dessus
+        const r = el.getBoundingClientRect(), x = r.left + r.width / 2, ws = widEls();
+        let best = 0, bd = Infinity;
+        ws.forEach((w, k) => { const b = w.getBoundingClientRect(), dd = Math.abs(b.left + b.width / 2 - x); if (dd < bd) { bd = dd; best = k; } });
+        state.widIdx = best;
+        return focusZone('wid');
+      }
       return bumpEl(el, dir);
     }
+    if (z === 'wid') return focusZone('head', tabIndex());
     if (z === 'head') return railEls().length ? focusZone('rail') : focusZone('apps');
     if (z === 'rail') return focusZone('apps');
     return bumpEl(el, dir);
@@ -1692,14 +1808,22 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const el = curEl();
     if (!el) return;
     if (state.zone === 'apps') return launch(el.dataset.id);
+    if (state.zone === 'wid') {
+      const w = el.dataset.wg;
+      if (w === 'match' && state.wgMatch) return openMatch(state.wgMatch);
+      if (w === 'music') return npControl('toggle');
+      return openPanel('ambiance');
+    }
     if (state.zone === 'head') {
       if (el.dataset.tab) return railEls().length ? focusZone('rail') : focusZone('apps');
       const r = el.dataset.round;
       return r === 'control' ? toggleControl() : openPanel(r);
     }
     const m = state.railModel || {};
+    if (m.kind === 'match') return openMatch(m.items[Number(el.dataset.i)]);
     if (m.msg) {
       if (m.msg.act === 'accounts') openPanel('accounts');
+      else if (m.msg.act === 'sport') openPanel('sport');
       else if (m.msg.act === 'retry') { refreshMedia(true); toast('replay', 'Nouvel essai…', 2000); }
       return;
     }
@@ -1766,26 +1890,72 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   }
   const matchScore = m => m.state === 'pre' ? '–' : `${m.home.score ?? 0} – ${m.away.score ?? 0}`;
   const matchClock = m => m.state === 'pre' ? matchWhen(m) : m.clock;
-  function renderTicker() {
-    const list = state.media.sport || [], el = $('#ticker');
-    if (!list.length) { el.hidden = true; el.innerHTML = ''; return; }
-    el.hidden = false;
-    const m = list[tkIdx % list.length];
-    el.title = m.leagueName || '';
-    el.innerHTML = `<span class="tk">${m.state === 'in' ? '<span class="tk-live"></span>' : m.fav ? '<span class="tk-fav"></span>' : ''}`
-      + `${tkTeam(m.home)}<span>${tkName(m.home)}</span><span class="tk-sc">${matchScore(m)}</span><span>${tkName(m.away)}</span>${tkTeam(m.away)}`
-      + `<span class="tk-cl">· ${esc(matchClock(m))}</span></span>`;
+  // widgets du haut : grandes cartes, choisies et rangées dans Réglages › Accueil › Widgets du haut
+  const WIDGET_NAMES = { match: 'Match en direct ou prochain', weather: 'Météo', music: 'Musique en cours', air: 'Air et UV' };
+  const topWidgets = () => { const v = state.prefs.topWidgets; return Array.isArray(v) ? v.filter(k => WIDGET_NAMES[k]) : ['match', 'weather', 'music']; };
+  function widgetHTML(k) {
+    const w = state.weather;
+    if (k === 'match') {
+      const list = state.media.sport || [];
+      if (!list.length) return '';
+      const mt = state.wgMatch = list[tkIdx % list.length];
+      const lead = mt.state === 'in' ? '<span class="tk-live"></span>' : mt.fav ? '<span class="tk-fav"></span>' : '';
+      const name = t => esc(String(t.name || '').length > 9 ? (t.abbr || t.name) : t.name);
+      const logo = t => t.logo ? `<img class="lg" src="${esc(t.logo)}" alt="">` : `<span class="tk-ph">${esc((t.abbr || t.name || '?').slice(0, 3))}</span>`;
+      return `<button type="button" class="wg wg-match" data-wg="match" tabindex="-1" aria-label="Match">${logo(mt.home)}<span class="wg-col">`
+        + `<span class="wgm-line"><span>${name(mt.home)}</span><span class="wg-big">${matchScore(mt)}</span><span>${name(mt.away)}</span></span>`
+        + `<span class="wgm-sub wg-sub">${lead}${esc(matchClock(mt))}${mt.leagueName ? ' · ' + esc(mt.leagueName) : ''}</span></span>${logo(mt.away)}</button>`;
+    }
+    if (k === 'weather' && w) {
+      return `<button type="button" class="wg wg-wx" data-wg="weather" tabindex="-1" aria-label="Météo : ${esc(w.label)}" title="${esc(w.label)}">${icon(wxIcon(w))}<span class="wg-big">${w.temp}°</span>`
+        + `<span class="wg-col"><span class="wg-k">${esc(w.city || 'Météo')}</span><span class="wg-sub">${w.max != null ? `${w.max}° / ${w.min}°` : esc(w.label)}</span></span></button>`;
+    }
+    if (k === 'music' && state.np) {
+      const np = state.np;
+      return `<button type="button" class="wg wg-music" data-wg="music" tabindex="-1" aria-label="Musique en cours">`
+        + `<span class="wg-cover" style="--h:${hashHue(np.album || np.title)}">${icon('music')}${np.cover ? `<img src="${esc(np.cover)}" alt="" onerror="this.remove()">` : ''}</span>`
+        + `<span class="wg-col"><span class="wg-title">${np.playing ? '<span class="eq"><i></i><i></i><i></i></span>' : ''}${esc(np.title)}</span>`
+        + `<span class="wg-sub">${esc(np.artist || '')}</span></span></button>`;
+    }
+    if (k === 'air' && w && (w.aqi != null || w.uv != null)) {
+      return `<button type="button" class="wg wg-air" data-wg="air" tabindex="-1" aria-label="Air et UV">`
+        + (w.aqi != null ? `<span class="wg-col"><span class="wg-k">Air</span><span class="wg-big">${w.aqi}</span><span class="wg-sub"><span class="lvl" style="--lvl:${aqiColor(w.aqi)}"></span>${esc(w.aqiLabel || '')}</span></span>` : '')
+        + (w.uv != null ? `<span class="wg-col"><span class="wg-k">UV</span><span class="wg-big">${w.uv}</span><span class="wg-sub">${uvLabel(w.uv)}</span></span>` : '')
+        + '</button>';
+    }
+    return '';
   }
-  setInterval(() => { if ((state.media.sport || []).length > 1 && !state.launched) { tkIdx++; renderTicker(); } }, 7000);
+  function renderTicker() {
+    const box = $('#widgets');
+    if (!box) return;
+    state.wgMatch = null;
+    box.innerHTML = topWidgets().map(widgetHTML).join('');
+    const ws = [...box.children];
+    for (let k = ws.length - 1; k > 0 && box.scrollWidth > box.clientWidth + 2; k--) ws[k].remove();
+    if (state.zone === 'wid') {
+      if (!widEls().length) state.zone = 'head';
+      paintFocus(false);
+    }
+  }
+  setInterval(() => { if ((state.media.sport || []).length > 1 && !state.launched && state.zone !== 'wid') { tkIdx++; renderTicker(); } }, 7000);
+  // musique en cours sur l'accueil (si le widget est affiché)
+  setInterval(() => {
+    if (!topWidgets().includes('music') || state.launched || state.saver || state.power) return;
+    if (!state.live) { if (!state.np) { state.np = { ...DEMO_NP }; state.npAt = Date.now(); renderTicker(); } return; }
+    api('/api/np').then(r => {
+      const before = JSON.stringify([state.np && state.np.title, state.np && state.np.playing, state.np && state.np.cover]);
+      state.np = r.np || null; state.npAt = Date.now();
+      if (JSON.stringify([state.np && state.np.title, state.np && state.np.playing, state.np && state.np.cover]) !== before) renderTicker();
+    }).catch(() => {});
+  }, 6000);
 
   function renderStatus() {
     $('#st-pad').hidden = !state.pad;
     $('#st-phone').hidden = !(state.live ? state.phones > 0 : state.phoneDemo);
     $('#st-mute').hidden = !state.muted;
     $('#st-airplay').hidden = !mirroring();
-    const wx = $('#st-wx'), w = state.weather;
-    wx.hidden = !w;
-    if (w) { wx.innerHTML = `${icon(wxIcon(w))}<span>${w.temp}°</span>`; wx.title = `${w.label} · ${w.city || ''}`; }
+    const w = state.weather;
+    renderTicker();
     $('#sleep-wx').innerHTML = w ? wxLine(w, true) : '';
     const sa = $('#st-audio');
     sa.hidden = state.audio.target !== 'bt';
@@ -1842,6 +2012,40 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const f = sportFavs();
     return f.length ? f.map(teamName).slice(0, 2).join(', ') + (f.length > 2 ? '…' : '') : `${sportLeagues().length} compétition${sportLeagues().length > 1 ? 's' : ''}`;
   }
+  // ---------- fiche d'un match ----------
+  let matchTimer = null;
+  function openMatch(mt) {
+    if (!mt) return;
+    state.matchSel = mt; state.matchDetail = null;
+    openPanel('match');
+    loadMatch();
+    clearInterval(matchTimer);
+    matchTimer = setInterval(() => {
+      if (state.panel !== 'match') { clearInterval(matchTimer); return; }
+      if (state.matchSel && state.matchSel.state === 'in') loadMatch();
+    }, 30000);
+  }
+  function loadMatch() {
+    const mt = state.matchSel;
+    if (!mt) return;
+    if (!state.live) {
+      state.matchDetail = { id: mt.id, venue: 'Groupama Stadium', stats: mt.state === 'pre' ? [] : [{ label: 'Possession', home: '54.2', away: '45.8' }, { label: 'Tirs', home: '14', away: '9' },
+        { label: 'Tirs cadrés', home: '6', away: '3' }, { label: 'Corners', home: '5', away: '4' }, { label: 'Fautes', home: '11', away: '13' }],
+        events: mt.state === 'pre' ? [] : [{ clock: "12'", kind: 'goal', text: 'A. Lacazette', side: 'home' }, { clock: "28'", kind: 'yellow', text: 'L. Balerdi', side: 'away' },
+          { clock: "41'", kind: 'goal', text: 'M. Greenwood (pén.)', side: 'away' }, { clock: "45'+2'", kind: 'half', text: 'Mi-temps' },
+          { clock: "58'", kind: 'sub', text: 'E. Mikautadze ← A. Lacazette', side: 'home' }, { clock: "63'", kind: 'goal', text: 'R. Cherki', side: 'home' }] };
+      if (state.panel === 'match') renderPanel();
+      return;
+    }
+    fetch(`/api/sport/match?league=${encodeURIComponent(mt.league)}&id=${encodeURIComponent(mt.id)}`, { cache: 'no-store' })
+      .then(r => r.json()).then(d => {
+        if (d.error || state.matchSel !== mt) return;
+        const first = !state.matchDetail;
+        state.matchDetail = d;
+        if (state.panel === 'match') { if (first) renderPanel(); else rerenderPane(); }
+      }).catch(() => {});
+  }
+
   // ---------- App Store ----------
   const DEMO_STORE = {
     categories: [['video', 'Vidéo'], ['music', 'Musique'], ['games', 'Jeux']],
@@ -1890,11 +2094,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const toggled = (list, v) => list.includes(v) ? list.filter(x => x !== v) : [...list, v];
   function reorder(spec, d) {
     const [, kind, id] = spec.split(':');
-    if (kind === 'tabs') {
-      const l = visibleTabs().slice(), i = l.indexOf(id), j = i + d;
+    if (kind === 'tabs' || kind === 'widgets') {
+      const l = (kind === 'tabs' ? visibleTabs() : topWidgets()).slice(), i = l.indexOf(id), j = i + d;
       if (i < 0 || j < 0 || j >= l.length) return false;
       [l[i], l[j]] = [l[j], l[i]];
-      setPref('tabs', l);
+      setPref(kind === 'tabs' ? 'tabs' : 'topWidgets', l);
     } else {
       const l = appOrder(), hid = appHidden(), vis = l.filter(x => x === 'settings' || !hid.has(x)), i = vis.indexOf(id), j = i + d;
       if (i < 0 || j < 0 || j >= vis.length) return false;
@@ -2480,6 +2684,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         title: 'Accueil', icon: 'home', pa: '#ff7a3d', pb: '#8a3412', caption: 'Ce que tu vois en allumant la télé.',
         body: `${group('Rangées et applis')}<div class="opts">
             ${row('panel:hometabs', 'film', 'Onglets des affiches', esc(visibleTabs().map(t => TAB_INFO[t].name).join(' · ')))}
+            ${row('panel:homewidgets', 'sliders', 'Widgets du haut', esc(topWidgets().map(k => WIDGET_NAMES[k].split(' ')[0]).join(' · ') || 'Aucun'))}
             ${row('panel:homeapps', 'apps', 'Applis de la bande', `${dockList().length - 1} sur ${APPS.length} affichées`)}
           </div>
           ${group('Fond de l’accueil')}<div class="opts" role="radiogroup" aria-label="Fond de l’accueil">
@@ -2619,6 +2824,45 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       lead: `Le nom affiché sous la tuile, pour ${esc(state.webUrl)}.`,
       body: `<div class="pw-field">${state.webName ? esc(state.webName) : '<span class="ph">Nom</span>'}<span class="caret"></span></div>${keyboardHTML()}`
     }),
+    match: () => {
+      const mt = state.matchSel || { home: {}, away: {} }, d = state.matchDetail && state.matchDetail.id === mt.id ? state.matchDetail : null;
+      const src = d ? { ...mt, ...d } : mt;
+      const logo = t => t.logo ? `<img src="${esc(t.logo)}" alt="">` : `<span class="tk-ph">${esc((t.abbr || t.name || '?').slice(0, 3))}</span>`;
+      const status = src.state === 'in' ? `<span class="tk-live"></span>En direct · ${esc(src.clock || '')}` : src.state === 'post' ? esc(src.clock || 'Terminé')
+        : esc(matchWhen(src) || 'À venir');
+      const head = `<div class="mh${src.state === 'in' ? ' onair' : ''}" data-act="matchsec:head" tabindex="-1"><div class="mh-t">${logo(src.home)}<b>${esc(src.home.name)}</b></div>`
+        + `<div class="mh-mid"><p class="mh-sc">${src.state === 'pre' ? 'vs' : `${esc(src.home.score ?? 0)} – ${esc(src.away.score ?? 0)}`}</p><p class="mh-st">${status}</p></div>`
+        + `<div class="mh-t">${logo(src.away)}<b>${esc(src.away.name)}</b></div></div>`;
+      const ICO = { goal: '⚽', yellow: '<span class="fcard y"></span>', red: '<span class="fcard r"></span>', sub: '⇄' };
+      const evs = d && d.events && d.events.length ? d.events.map(e => e.kind === 'half'
+        ? `<p class="ev-half">${esc(e.text)}${e.clock ? ` · ${esc(e.clock)}` : ''}</p>`
+        : `<div class="ev ${e.side === 'away' ? 'away' : 'home'} ${e.kind}"><span class="ev-t">${esc(e.clock)}</span><span class="ev-i">${ICO[e.kind] || ''}</span><span class="ev-x">${esc(e.text)}</span></div>`).join('') : '';
+      const num = v => parseFloat(String(v).replace(',', '.')) || 0;
+      const stats = d && d.stats && d.stats.length ? d.stats.map(st => {
+        const h = num(st.home), a = num(st.away), tot = h + a || 1;
+        return `<div class="stat"><span>${esc(st.home)}${st.label === 'Possession' ? ' %' : ''}</span><p>${esc(st.label)}</p><span>${esc(st.away)}${st.label === 'Possession' ? ' %' : ''}</span>`
+          + `<i class="bar"><b style="width:${Math.round(h / tot * 100)}%"></b></i></div>`;
+      }).join('') : '';
+      return {
+        title: `${esc(mt.home.name)} – ${esc(mt.away.name)}`, icon: 'trophy', pa: '#2fbf71', pb: '#0f5a33',
+        caption: `${esc(mt.leagueName || '')}${d && d.venue ? ` · ${esc(d.venue)}` : ''}`,
+        body: `${head}
+          ${!d && state.live ? '<p class="note"><span class="spin"></span> Chargement de la fiche…</p>' : ''}
+          ${evs ? `${group('Temps forts')}<div class="diag-sec ev-list" data-act="matchsec:ev" tabindex="-1">${evs}</div>` : d && src.state !== 'pre' ? '<p class="note">Pas encore de temps fort.</p>' : ''}
+          ${stats ? `${group('Statistiques')}<div class="diag-sec" data-act="matchsec:st" tabindex="-1">${stats}</div>` : ''}
+          ${src.state === 'pre' ? `<p class="note" style="margin-top:1.2rem">Coup d’envoi ${esc(matchWhen(src))}${d && d.venue ? ` · ${esc(d.venue)}` : ''}. La fiche se remplit pendant le match.</p>` : ''}
+          <div class="opts" style="margin-top:1.2rem">${row('back', 'back', 'Retour', '')}</div>`
+      };
+    },
+    homewidgets: () => {
+      const vis = topWidgets(), hidden = Object.keys(WIDGET_NAMES).filter(k => !vis.includes(k));
+      const r = (k, on, i) => toggle(`wgtoggle:${k}`, WIDGET_NAMES[k], on ? `Position ${i + 1} sur ${vis.length} · ◀ plus à gauche, ▶ plus à droite` : 'Masqué', on, on ? `order:widgets:${k}` : '');
+      return {
+        title: 'Widgets du haut', icon: 'sliders', pa: '#ff7a3d', pb: '#8a3412', caption: 'Les cartes en haut à droite de l’accueil.',
+        lead: 'OK affiche ou masque un widget, gauche et droite changent sa place. La musique n’apparaît que quand quelque chose joue, le match seulement s’il y en a un (tes équipes d’abord). S’ils ne tiennent pas tous, les derniers de la liste ne s’affichent pas. À l’accueil, monte jusqu’à eux : OK sur le match ouvre sa fiche, OK sur la musique met en pause.',
+        body: `<div class="opts">${vis.map((k, i) => r(k, true, i)).join('')}${hidden.map(k => r(k, false)).join('')}</div>`
+      };
+    },
     control: () => {
       const d = new Date(), app = mirroring() ? null : state.launched && byId[state.launched];
       // ouvert pendant une appli : elle reste ouverte derrière, on peut y revenir ou la fermer
@@ -2652,7 +2896,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     airplay: 'AirPlay', update: 'Mise à jour', netdiag: 'Diagnostic réseau', wifinetwork: 'Réseau', wifipass: 'Mot de passe', general: 'Affichage', apps: 'Applis',
     accounts: 'Comptes', home: 'Accueil', hometabs: 'Onglets', homeapps: 'Applis de la bande', saver: 'Écran de veille', sport: 'Sport',
     sportpick: 'Ajouter une équipe', sportteams: 'Équipes', item: 'Fiche',
-    store: 'App Store', storeapp: 'Appli', weburl: 'Site web', webname: 'Nom',
+    store: 'App Store', storeapp: 'Appli', weburl: 'Site web', webname: 'Nom', match: 'Match', homewidgets: 'Widgets du haut',
     power: 'Alimentation', about: 'À propos', control: 'Centre de contrôle' };
 
   const currentAct = () => state.pItems[state.pIdx] && state.pItems[state.pIdx].dataset.act;
@@ -2938,6 +3182,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       setPref('tabs', next);
     }
     else if (k === 'apptoggle') setPref('appHidden', toggled([...appHidden()], v));
+    else if (k === 'wgtoggle') setPref('topWidgets', toggled(topWidgets(), v));
+    else if (k === 'matchsec') { /* bloc de la fiche : focusable pour défiler à la manette */ }
     else if (k === 'appsettings') toast('info', 'Réglages reste toujours dans la bande. Gauche et droite changent sa place.');
     else if (k === 'widget') setPref('ssWidgets', toggled(Object.keys(WIDGETS).filter(widgetOn), v));
     else if (k === 'league') setPref('sportLeagues', toggled(sportLeagues(), v));
@@ -3935,7 +4181,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const d = new Date(), c = clockParts(d);
     $('#clock').textContent = `${c.h}:${c.m}`;
     $('#clock-ap').textContent = c.ap;
-    $('#tb-date').textContent = fD.format(d);
+    $('#tb-date').innerHTML = `<b>${esc(fWeekday.format(d))}</b>${esc(fDay.format(d))}`;
     $('#sleep-clock').textContent = fT.format(d);
     $('#sleep-date').textContent = fD.format(d);
     const cc = pane.querySelector('.cc-time');

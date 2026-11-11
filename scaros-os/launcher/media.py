@@ -49,7 +49,10 @@ LEAGUES = {
     "uefa.euro": ("Euro", "soccer"), "nba": ("NBA", "basketball"),
 }
 DEFAULT_LEAGUES = ["fra.1", "uefa.champions", "eng.1"]
-TABS = ("continue", "recent", "trending", "requests")
+TABS = ("continue", "recent", "trending", "requests", "matches")
+STAT_FR = {"Possession": "Possession", "SHOTS": "Tirs", "Shots": "Tirs", "ON GOAL": "Tirs cadrés", "Shots on Target": "Tirs cadrés",
+           "Corner Kicks": "Corners", "Fouls": "Fautes", "Yellow Cards": "Cartons jaunes", "Red Cards": "Cartons rouges",
+           "Offsides": "Hors-jeu", "Saves": "Arrêts"}
 MAX_ITEMS = 24
 
 
@@ -884,6 +887,10 @@ class Sports:
     def __init__(self, media):
         self.m = media
         self.ticker = []
+        self.board = []             # onglet « Matchs » : en direct, à venir (7 jours), résultats récents
+        self.days = {}              # (ligue, jour) -> (moment, matchs)
+        self.cal_cache = {}         # ligue -> (moment, (jours de match à venir, matchs de la journée en cours))
+        self.summaries = {}         # (ligue, match) -> (moment, fiche)
         self.teams_cache = {}       # ligue -> (moment, équipes)
         self.next_cache = {}        # ligue:équipe -> (moment, prochain match)
         self.live = False
@@ -930,9 +937,124 @@ class Sports:
         return {"id": str(e.get("id")), "league": league, "leagueName": LEAGUES[league][0], "state": state,
                 "clock": clock, "start": e.get("date"), "home": side["home"], "away": side["away"]}
 
-    def scoreboard(self, league):
-        d = http(f"{ESPN}/{self.path(league)}/scoreboard", timeout=10) or {}
+    def scoreboard(self, league, day=None):
+        q = f"?dates={day:%Y%m%d}" if day else ""
+        d = http(f"{ESPN}/{self.path(league)}/scoreboard{q}", timeout=10) or {}
         return [m for m in (self.match(e, league) for e in d.get("events") or []) if m]
+
+    def calendar(self, league):
+        """Les jours de match de la saison (Ligue 1, Premier League, NBA…) et la journée en cours selon ESPN."""
+        hit = self.cal_cache.get(league)
+        if hit and time.time() - hit[0] < 12 * 3600:
+            return hit[1]
+        d = http(f"{ESPN}/{self.path(league)}/scoreboard", timeout=10) or {}
+        lg = (d.get("leagues") or [{}])[0]
+        days = []
+        if lg.get("calendarType") == "day":
+            for x in lg.get("calendar") or []:
+                try:
+                    days.append(dt.date.fromisoformat(str(x)[:10]))
+                except ValueError:
+                    pass
+        current = [m for m in (self.match(e, league) for e in d.get("events") or []) if m]
+        self.cal_cache[league] = (time.time(), (days, current))
+        return days, current
+
+    def days_to_fetch(self, league, today):
+        """Hier, aujourd'hui, puis les 3 prochains jours de match (dans les 3 semaines) ; sans calendrier : les 3 jours suivants."""
+        days = {today - dt.timedelta(days=1), today}
+        try:
+            cal, _ = self.calendar(league)
+        except (OSError, ValueError):
+            cal = []
+        nxt = [x for x in sorted(set(cal)) if today < x <= today + dt.timedelta(days=21)][:3]
+        days.update(nxt or [today + dt.timedelta(days=i) for i in (1, 2, 3)])
+        return sorted(days)
+
+    def day(self, league, day, today):
+        """Matchs d'un jour, gardés plus ou moins longtemps selon qu'ils peuvent encore changer."""
+        key = (league, day.isoformat())
+        hit = self.days.get(key)
+        ttl = (55 if self.live else 300) if day == today else 1800 if day > today else 6 * 3600
+        if hit and time.time() - hit[0] < ttl:
+            return hit[1]
+        ms = self.scoreboard(league, day)
+        self.days[key] = (time.time(), ms)
+        if len(self.days) > 200:  # les vieux jours ne servent plus
+            for k in sorted(self.days, key=lambda k: self.days[k][0])[:80]:
+                self.days.pop(k, None)
+        return ms
+
+    @staticmethod
+    def event_kind(k):
+        t = ((k.get("type") or {}).get("type") or "").lower()
+        if k.get("scoringPlay") or t.startswith("goal") or "penalty---scored" in t or "own-goal" in t:
+            return "goal"
+        if "yellow" in t and "red" not in t:
+            return "yellow"
+        if "red" in t:
+            return "red"
+        if "substitution" in t:
+            return "sub"
+        if t in ("halftime", "end-regular-time"):
+            return "half"
+        return None
+
+    def summary(self, league, event_id):
+        """Fiche d'un match : score, temps forts (buts, cartons, remplacements), statistiques."""
+        if league not in LEAGUES or not re.fullmatch(r"[A-Za-z0-9]{1,20}", event_id or ""):
+            raise ValueError("match inconnu")
+        key = (league, event_id)
+        hit = self.summaries.get(key)
+        if hit and time.time() - hit[0] < (25 if hit[1].get("state") == "in" else 600):
+            return hit[1]
+        if self.m.dry:
+            out = self._demo_summary(event_id)
+        else:
+            d = http(f"{ESPN}/{self.path(league)}/summary?event={event_id}", timeout=10) or {}
+            comp = ((d.get("header") or {}).get("competitions") or [{}])[0]
+            ev = {"id": event_id, "date": comp.get("date"), "competitions": [comp], "status": comp.get("status")}
+            m = self.match(ev, league) or {}
+            sides = {}
+            for c in comp.get("competitors") or []:
+                sides[str((c.get("team") or {}).get("id"))] = c.get("homeAway")
+            events = []
+            for k in d.get("keyEvents") or []:
+                kind = self.event_kind(k)
+                if not kind:
+                    continue
+                names = [((p.get("athlete") or {}).get("displayName") or "") for p in k.get("participants") or []]
+                t = ((k.get("type") or {}).get("type") or "")
+                if kind == "goal":
+                    who = names[0] if names else ""
+                    who += " (pén.)" if "penalty" in t else " (csc)" if "own" in t else ""
+                elif kind == "sub":
+                    who = f"{names[0]} ← {names[1]}" if len(names) > 1 else (names[0] if names else "")
+                elif kind == "half":
+                    who = "Mi-temps" if t == "halftime" else "Fin du temps réglementaire"
+                else:
+                    who = names[0] if names else ""
+                events.append({"clock": (k.get("clock") or {}).get("displayValue") or "", "kind": kind, "text": who,
+                               "side": sides.get(str((k.get("team") or {}).get("id")))})
+            stats = []
+            teams = (d.get("boxscore") or {}).get("teams") or []
+            if len(teams) == 2:
+                by = {}
+                for tm in teams:
+                    side = sides.get(str((tm.get("team") or {}).get("id")))
+                    for st in tm.get("statistics") or []:
+                        by.setdefault(st.get("label") or st.get("name"), {})[side] = st.get("displayValue")
+                soccer = LEAGUES[league][1] == "soccer"
+                for label, v in by.items():
+                    if "home" in v and "away" in v and (not soccer or label in STAT_FR):
+                        stats.append({"label": STAT_FR.get(label, label), "home": v["home"], "away": v["away"]})
+                order = list(dict.fromkeys(STAT_FR.values()))
+                stats.sort(key=lambda x: order.index(x["label"]) if x["label"] in order else 99)
+            venue = ((d.get("gameInfo") or {}).get("venue") or {}).get("fullName")
+            out = {**m, "events": events, "stats": stats[:9], "venue": venue,
+                   "detail": ((comp.get("status") or {}).get("type") or {}).get("detail")}
+        self.summaries[key] = (time.time(), out)
+        return out
 
     def teams(self, league):
         if league not in LEAGUES:
@@ -988,15 +1110,24 @@ class Sports:
         leagues, favs = self.leagues(), self.favorites()
         if self.m.dry:
             ticker = self._demo(favs)
+            board = self._demo_board()
         else:
-            matches = []
-            for lg in leagues:
-                try:
-                    matches += self.scoreboard(lg)
-                except (OSError, ValueError) as e:
-                    log.info("scores %s indisponibles : %s", lg, e)
             now = dt.datetime.now(dt.timezone.utc).astimezone()
             today = now.date()
+            seen = {}
+            for lg in leagues:
+                try:
+                    for day in self.days_to_fetch(lg, today):
+                        for m in self.day(lg, day, today):
+                            seen[m["id"]] = m
+                    if not self.calendar(lg)[0]:  # pas de calendrier (Ligue des champions) : la journée en cours d'ESPN
+                        for m in self.calendar(lg)[1]:
+                            w = self._when(m["start"])
+                            if m["state"] != "in" and w and w.astimezone().date() != today:
+                                seen.setdefault(m["id"], m)
+                except (OSError, ValueError) as e:
+                    log.info("scores %s indisponibles : %s", lg, e)
+            matches = list(seen.values())
 
             def recent(m):  # en direct, ou aujourd'hui (heure de Scaros), ou fini il y a moins de 6 h
                 w = self._when(m["start"])
@@ -1023,13 +1154,50 @@ class Sports:
                     if n and n["id"] not in {x["id"] for x in nexts}:
                         nexts.append({**n, "fav": True})
             ticker = mine + others[:6] + nexts
+            # onglet « Matchs » : le direct, puis les 7 prochains jours, puis les résultats des 36 dernières heures
+            for m in matches:
+                m["fav"] = m["home"]["id"] in fav_set or m["away"]["id"] in fav_set
+            live = sorted((m for m in matches if m["state"] == "in"), key=lambda m: (not m["fav"], m["start"] or ""))
+            soon = sorted((m for m in matches if m["state"] == "pre"), key=lambda m: (not m["fav"], m["start"] or ""))
+            past = [m for m in matches if m["state"] == "post" and (w := self._when(m["start"])) and now - w.astimezone() < dt.timedelta(hours=36)]
+            past.sort(key=lambda m: m["start"] or "", reverse=True)
+            past.sort(key=lambda m: not m["fav"])
+            board = (live + soon + past)[:30]
+            ids = {m["id"] for m in board}
+            board += [n for n in nexts if n["id"] not in ids]
         with self.lock:
-            changed = ticker != self.ticker
-            self.ticker = ticker
-            self.live = any(m["state"] == "in" for m in ticker)
+            changed = ticker != self.ticker or board != self.board
+            self.ticker, self.board = ticker, board
+            self.live = any(m["state"] == "in" for m in ticker + board)
         if changed:
-            self.m.bus.emit("sport", ticker=ticker)
+            self.m.bus.emit("sport", ticker=ticker, board=board)
         return ticker
+
+    def _demo_board(self):
+        t = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+        team = lambda i, n, a: {"id": f"fra.1:{i}", "name": n, "abbr": a, "logo": None}
+        mk = lambda i, lg, st, clock, h, a, hs, as_, start, fav=False: {"id": f"b{i}", "league": lg, "leagueName": LEAGUES[lg][0], "state": st,
+              "clock": clock, "start": start.isoformat(), "home": {**h, "score": hs}, "away": {**a, "score": as_}, "fav": fav}
+        return self._demo([]) + [
+            mk(3, "fra.1", "pre", "", team(4, "Paris SG", "PSG"), team(5, "Lens", "RCL"), None, None, t + dt.timedelta(days=1, hours=3)),
+            mk(4, "uefa.champions", "pre", "", team(6, "Real Madrid", "RMA"), team(7, "PSV", "PSV"), None, None, t + dt.timedelta(days=5)),
+            mk(5, "fra.1", "post", "Terminé", team(8, "Monaco", "ASM"), team(9, "Nice", "OGCN"), "3", "2", t - dt.timedelta(hours=20)),
+        ]
+
+    def _demo_summary(self, event_id):
+        base = next((m for m in self._demo([]) + self._demo_board() if m["id"] == event_id), self._demo([])[0])
+        if base["state"] == "pre":
+            return {**base, "events": [], "stats": [], "venue": "Parc des Princes", "detail": ""}
+        return {**base, "venue": "Groupama Stadium", "detail": base["clock"],
+                "events": [{"clock": "12'", "kind": "goal", "text": "A. Lacazette", "side": "home"},
+                           {"clock": "28'", "kind": "yellow", "text": "L. Balerdi", "side": "away"},
+                           {"clock": "41'", "kind": "goal", "text": "M. Greenwood (pén.)", "side": "away"},
+                           {"clock": "45'+2'", "kind": "half", "text": "Mi-temps", "side": None},
+                           {"clock": "58'", "kind": "sub", "text": "E. Mikautadze ← A. Lacazette", "side": "home"},
+                           {"clock": "63'", "kind": "goal", "text": "R. Cherki", "side": "home"}],
+                "stats": [{"label": "Possession", "home": "54.2", "away": "45.8"}, {"label": "Tirs", "home": "14", "away": "9"},
+                          {"label": "Tirs cadrés", "home": "6", "away": "3"}, {"label": "Corners", "home": "5", "away": "4"},
+                          {"label": "Fautes", "home": "11", "away": "13"}, {"label": "Cartons jaunes", "home": "1", "away": "2"}]}
 
     def _demo(self, favs):
         lyon = {"id": "fra.1:0", "name": "Lyon", "abbr": "OL", "logo": None}
@@ -1084,7 +1252,7 @@ class Media:
         self.bus.emit("accounts", accounts=self.public())
 
     def state(self):
-        return {"rows": self.rows, "status": self.status, "accounts": self.public(), "sport": self.sports.ticker}
+        return {"rows": self.rows, "status": self.status, "accounts": self.public(), "sport": self.sports.ticker, "board": self.sports.board}
 
     def image_source(self, kind, ref, w, h):
         if kind == "plex":
