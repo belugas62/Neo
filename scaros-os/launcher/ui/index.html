@@ -2618,7 +2618,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     power: () => ({
       title: 'Alimentation', icon: 'power', pa: '#ff6a4d', pb: '#8a2416', caption: 'Le PC peut rester fermé quand il est branché à la télé.',
       body: `<div class="opts">
-          ${row('power:sleep', 'moon', 'Mettre en veille', 'L’écran affiche l’heure, une touche le rallume.')}
+          ${row('power:sleep', 'moon', 'Mettre en veille', 'L’écran de veille s’affiche (heure, météo, musique), une touche le ferme.')}
           ${row('power:restart', 'replay', 'Redémarrer', 'Scaros redémarre et revient sur ce menu.')}
           ${row('power:off', 'power', 'Éteindre', 'Le PC s’éteint complètement.')}
         </div>`
@@ -3692,7 +3692,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   applyPrefs();
   setInterval(() => {
     const min = Number(state.prefs.autoSleep) || 0;
-    if (!min || state.launched || state.power || state.booting) return;
+    if (!min || state.saver || state.launched || state.power || state.booting) return;
     if (Date.now() - lastInputAt > min * 60000) { closePanel(); sleep(); }
   }, 20000);
 
@@ -3916,7 +3916,9 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else { state.power = 'off'; showOff('off', 'Scaros est éteint. Appuie sur une touche pour rallumer.'); }
     }, reduce ? 30 : 700);
   }
-  function sleep() { stopSaver(); state.power = 'sleep'; showOff('sleep', 'Appuie sur une touche pour revenir.'); }
+  // « Veille » (bouton du menu, veille automatique) : c'est l'écran de veille (widgets ou paysages)
+  // qui s'affiche, une touche le ferme
+  function sleep() { startSaver(); }
   function wake() {
     const was = state.power;
     state.power = null; OFF.hidden = true;

@@ -234,7 +234,8 @@ minute pour ne pas marquer la télé. **Lecture** (Y à la manette, ou la touche
 ou relance la musique sans fermer l'écran de veille ; n'importe quelle autre touche le ferme sans rien lancer. Le style
 **Paysages** montre à la place le paysage de Scaros en plein écran, qui change d'ambiance chaque minute. Tout se règle
 dans **Réglages > Écran de veille** : activé ou non, le style, les widgets affichés, le délai (2, 5, 10 ou 15 minutes),
-et **Voir l'écran de veille** pour le montrer tout de suite. Il ne passe jamais par-dessus une appli, une recopie
+et **Voir l'écran de veille** pour le montrer tout de suite. **Veille** (centre de contrôle, ou **Réglages >
+Alimentation**) et la veille automatique l'affichent aussi. Il ne passe jamais par-dessus une appli, une recopie
 AirPlay, une mise à jour ou un diagnostic.
 
 **Musique dans le menu :** la touche **Lecture** met aussi en pause ou relance la musique Spotify quand le menu est
