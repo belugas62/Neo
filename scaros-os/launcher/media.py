@@ -27,6 +27,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import socket
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 log = logging.getLogger("scaros")
@@ -383,7 +385,8 @@ class Plex:
         return {"id": f"plex:{rk}", "title": title or "Sans titre", "sub": sub, "kind": kind,
                 "meta": " · ".join([kind] + genres + ([str(md["year"])] if md.get("year") and t != "movie" else [])),
                 "poster": self.m.images.url("plex", poster, 360, 540), "art": self.m.images.url("plex", art, 1280, 720),
-                "progress": progress, "src": "Plex", "open": {"plex": str(rk)}}
+                "progress": progress, "src": "Plex",
+                "open": {"plex": str(rk), "offset": int(md.get("viewOffset") or 0), "type": t or "movie"}}
 
     def rows(self):
         cont = None
@@ -407,6 +410,103 @@ class Plex:
             seen.add(show)
             rec.append(self.item(md))
         return [self.item(md) for md in (cont or [])][:MAX_ITEMS], rec[:MAX_ITEMS]
+
+    # ---------- lecture directe dans Plex HTPC ----------
+    # Plex HTPC ne sait pas s'ouvrir sur un film précis. Mais comme toutes les applis Plex « lecteur », il
+    # accepte des ordres de lecture (le « Lire sur… » de l'appli Plex du téléphone) : Scaros le trouve sur ce
+    # PC (annonce GDM, sinon ses ports habituels), crée une file de lecture sur le serveur et lui demande de
+    # lire le film ou l'épisode, à l'endroit où tu t'étais arrêté.
+    PLAYER_PORTS = (32433, 32500)
+
+    @staticmethod
+    def local_ips():
+        ips = {"127.0.0.1"}
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("192.0.2.1", 9))  # aucun paquet envoyé : donne juste l'adresse de la carte réseau
+            ips.add(s.getsockname()[0])
+        except OSError:
+            pass
+        finally:
+            s.close()
+        return ips
+
+    def _gdm(self, wait=1.2):
+        """Lecteurs Plex qui répondent à l'annonce GDM (port 32412), sur CE PC seulement."""
+        found, mine = [], self.local_ips()
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 1)
+            s.settimeout(0.3)
+            for dest in (("127.0.0.1", 32412), ("239.0.0.250", 32412)):
+                try:
+                    s.sendto(b"M-SEARCH * HTTP/1.1\r\n\r\n", dest)
+                except OSError:
+                    pass
+            end = time.monotonic() + wait
+            while time.monotonic() < end:
+                try:
+                    data, (host, _) = s.recvfrom(4096)
+                except socket.timeout:
+                    continue
+                except OSError:
+                    break
+                if host not in mine:
+                    continue  # un autre appareil de la maison (télé, téléphone) : pas lui
+                head = {}
+                for line in data.decode(errors="replace").splitlines():
+                    k, _, v = line.partition(":")
+                    if v:
+                        head[k.strip().lower()] = v.strip()
+                if head.get("port") and head.get("resource-identifier"):
+                    found.append({"host": "127.0.0.1", "port": int(head["port"]), "id": head["resource-identifier"],
+                                  "product": head.get("product", ""), "name": head.get("name", "")})
+        finally:
+            s.close()
+        return found
+
+    def _probe(self):
+        """Repli : les ports où les lecteurs Plex attendent les ordres (Plex HTPC : 32433)."""
+        for port in self.PLAYER_PORTS:
+            try:
+                raw, _ = http(f"http://127.0.0.1:{port}/resources", headers=self.headers(), timeout=2, raw=True)
+                root = ET.fromstring(raw)
+            except (OSError, ValueError, ET.ParseError):
+                continue
+            pl = root.find(".//Player")
+            if pl is not None and pl.get("machineIdentifier"):
+                return {"host": "127.0.0.1", "port": port, "id": pl.get("machineIdentifier"), "product": pl.get("product", ""),
+                        "name": pl.get("title", "")}
+        return None
+
+    def find_player(self):
+        players = self._gdm()
+        players.sort(key=lambda p: "htpc" not in p["product"].lower())
+        return players[0] if players else self._probe()
+
+    def play_on(self, player, rating_key, offset=0, mtype="movie", command_id=1):
+        """Demande au lecteur de lire (film, épisode) ou d'afficher la fiche (série, saison)."""
+        c = self.conf
+        mid, url = c.get("machineId") or "", urllib.parse.urlparse(c["server"])
+        port = url.port or (443 if url.scheme == "https" else 80)
+        key = f"/library/metadata/{rating_key}"
+        common = {"key": key, "machineIdentifier": mid, "address": url.hostname, "port": port, "protocol": url.scheme,
+                  "token": c["serverToken"], "commandID": command_id}
+        headers = {**self.headers(c["serverToken"]), "X-Plex-Target-Client-Identifier": player["id"]}
+        base = f"http://{player['host']}:{player['port']}/player"
+        if mtype in ("movie", "episode", "clip", "video"):
+            uri = f"server://{mid}/com.plexapp.plugins.library{key}"
+            q = http(c["server"] + "/playQueues?" + urllib.parse.urlencode({"type": "video", "uri": uri, "shuffle": 0, "repeat": 0,
+                                                                            "continuous": 1 if mtype == "episode" else 0, "own": 1}),
+                     method="POST", headers=self.headers(c["serverToken"]), form={}, timeout=8) or {}
+            pq = (q.get("MediaContainer") or {}).get("playQueueID")
+            params = {**common, "offset": int(offset or 0), "type": "video", "providerIdentifier": "com.plexapp.plugins.library"}
+            if pq:
+                params["containerKey"] = f"/playQueues/{pq}?own=1&window=200"
+            http(f"{base}/playback/playMedia?" + urllib.parse.urlencode(params), headers=headers, timeout=6, raw=True)
+        else:
+            http(f"{base}/mirror/details?" + urllib.parse.urlencode({**common, "type": "video"}), headers=headers, timeout=6, raw=True)
+        return True
 
     def web_url(self, rating_key):
         c = self.conf
@@ -476,7 +576,7 @@ class Overseerr:
         if status in (4, 5):
             badge = "Disponible" if status == 5 else "En partie"
             if mi.get("ratingKey") and self.m.plex.ready():
-                open_ = {"plex": str(mi["ratingKey"])}
+                open_ = {"plex": str(mi["ratingKey"]), "type": "movie" if mtype == "movie" else "show"}
             else:
                 open_ = {"info": f"« {title} » est déjà dans ta médiathèque."}
         elif status in (2, 3):
@@ -965,6 +1065,7 @@ class Media:
         self.spotify = Spotify(self)
         self.sports = Sports(self)
         self.connect_state = lambda: None   # remplacé par scaros.py (spotifyd)
+        self.open_plex = None               # remplacé par scaros.py (lecture directe dans Plex HTPC)
         self.airplay_np = lambda: None      # remplacé par scaros.py (pochette UxPlay)
         self.rows = self._load_rows()
         self.status = {}                    # onglet -> ok | off | error | loading
@@ -995,7 +1096,7 @@ class Media:
         if kind == "url":
             host = urllib.parse.urlparse(ref).hostname or ""
             if ref.startswith("https://") and (host.endswith(".scdn.co") or host.endswith(".spotifycdn.com")
-                                               or host.endswith(".espncdn.com") or host == "image.tmdb.org"):
+                                               or host.endswith(".espncdn.com") or host in ("image.tmdb.org", "dl.flathub.org")):
                 return ref, {}
         raise KeyError(kind)
 
@@ -1108,8 +1209,11 @@ class Media:
         if "plex" in op:
             if not self.plex.ready():
                 return {"error": "Connecte Plex dans Réglages › Comptes."}
-            self.launch_url("plexweb", "Plex", self.plex.web_url(op["plex"]), "scaros-plexweb")
-            return {"ok": True, "opened": "plexweb"}
+            if self.prefs().get("plexOpen") == "web" or not self.open_plex:
+                self.launch_url("plexweb", "Plex", self.plex.web_url(op["plex"]), "scaros-plexweb")
+                return {"ok": True, "opened": "plexweb"}
+            self.open_plex(op["plex"], op.get("offset") or 0, op.get("type") or "movie", it.get("title") or "")
+            return {"ok": True, "opened": "plex"}
         if "request" in op:
             return {"ok": True, "ask": op["request"]}
         return {"ok": True, "info": op.get("info") or it.get("title")}

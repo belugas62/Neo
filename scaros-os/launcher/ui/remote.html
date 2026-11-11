@@ -162,7 +162,19 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
 /* Comptes : Plex, Overseerr, Spotify (ce qui demande de taper du texte se fait ici) */
 .acc-btn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; margin-left: auto; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: none; color: var(--text-2); cursor: pointer; }
 .acc-btn .ic { width: 19px; height: 19px; }
-.acc-btn + .conn { margin-left: 8px; }
+.acc-btn + .conn, .acc-btn + .acc-btn { margin-left: 8px; }
+.st-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.st-row:first-of-type { border-top: 0; }
+.st-row .ico { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; overflow: hidden; border-radius: 12px; color: #fff; font-weight: 800; font-size: 19px;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--c) 85%, #fff), color-mix(in oklab, var(--c) 70%, #000)); }
+.st-row .ico img { position: absolute; inset: 5px; width: 34px; height: 34px; object-fit: contain; }
+.st-row .ico:has(img) { background: var(--key); }
+.st-row .ico:has(img) b { visibility: hidden; }
+.st-row .txt { flex: 1; min-width: 0; }
+.st-row .txt b { display: block; font-size: 15px; }
+.st-row .txt span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.st-row .btn { flex: none; min-height: 36px; padding: 0 12px; font-size: 13.5px; }
+.st-row .btn.ok { background: var(--key); color: var(--ok); border: 1px solid var(--line); }
 .sheet { position: fixed; inset: 0; z-index: 40; overflow-y: auto; box-sizing: border-box; background: var(--ink);
   padding: calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 28px) max(16px, env(safe-area-inset-left, 0px)); }
 .sheet-head { position: sticky; top: calc(-14px - env(safe-area-inset-top, 0px)); z-index: 1; display: flex; align-items: center; justify-content: space-between; margin: -14px -16px 0; padding: 14px 16px 10px; background: var(--ink); }
@@ -202,6 +214,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   <header>
     <svg class="mark" viewBox="0 0 224 224" aria-hidden="true"><path fill="#FF5A1F" d="M224 57.8 H76 A18.2 18.2 0 0 0 76 94.2 H224 Z"/><path fill="#FF5A1F" d="M0 166.2 H148 A18.2 18.2 0 0 0 148 129.8 H0 Z"/><path fill="#FFFFFF" d="M58 0 H166 C201.96 0 224 22.04 224 58 V59 H76 A17 17 0 0 0 76 93 H224 V166 C224 201.96 201.96 224 166 224 H58 C22.04 224 0 201.96 0 166 V165 H148 A17 17 0 0 0 148 131 H0 V58 C0 22.04 22.04 0 58 0 Z"/></svg>
     <div class="htext"><svg class="word" viewBox="22.58 69.45 638.26 117.2" role="img" aria-label="scaros"><path fill="currentColor" d="M71.78 186.65C99.46 186.65 119.30 172.86 119.30 151.01C119.30 134.57 109.01 124.81 86.84 120.15L66.69 116.01C57.36 114.0 51.84 109.86 51.84 103.18C51.84 95.54 59.06 89.60 70.83 89.60C83.03 89.60 91.19 96.92 91.40 106.89H116.54C115.90 83.87 97.34 69.56 70.19 69.56C42.83 69.56 25.12 83.45 25.12 104.03C25.12 121.0 36.36 131.92 57.78 136.37L76.87 140.30C86.31 142.31 92.15 146.24 92.15 153.03C92.15 160.98 84.30 166.60 71.36 166.60C58.0 166.60 50.15 160.34 48.98 149.42H22.57C24.27 173.5 44.53 186.65 71.78 186.65Z M186.07 186.54C214.39 186.54 234.96 168.30 236.87 143.80H210.46C207.92 156.21 200.39 164.27 186.39 164.27C168.78 164.27 158.39 150.16 158.39 128.10C158.39 105.93 168.89 91.72 186.39 91.72C200.28 91.72 208.66 100.10 210.68 112.09H236.87C234.54 87.16 214.18 69.45 186.07 69.45C153.30 69.45 131.34 93.53 131.34 128.10C131.34 162.68 153.30 186.54 186.07 186.54Z M287.95 185.80C306.19 185.80 315.63 178.16 320.93 168.19H321.36V184.0H347.66V107.63C347.66 84.30 330.37 69.77 301.21 69.77C271.93 69.77 253.69 84.51 252.42 106.78H278.19C278.93 97.34 287.63 90.56 300.68 90.56C313.51 90.56 321.15 97.34 321.15 106.89V107.74C321.15 115.37 314.04 115.69 293.25 118.03C270.13 120.46 249.24 126.72 249.24 152.18C249.24 174.56 265.68 185.80 287.95 185.80ZM294.53 165.96C282.86 165.96 275.33 160.77 275.33 151.96C275.33 141.78 285.09 137.65 296.54 135.95C307.57 134.25 317.96 132.56 321.25 130.43V142.53C321.25 155.57 312.03 165.96 294.53 165.96Z M370.31 184.0H397.04V120.57C397.04 103.07 406.90 94.27 419.63 94.27C424.93 94.27 430.24 94.80 432.25 95.12V71.36C430.13 71.15 427.16 70.93 423.56 70.93C409.13 70.93 400.54 77.72 396.40 90.56H396.09V72.0H370.31Z M496.69 186.54C529.68 186.54 551.95 162.89 551.95 128.10C551.95 93.31 529.68 69.45 496.69 69.45C463.71 69.45 441.43 93.31 441.43 128.10C441.43 162.89 463.71 186.54 496.69 186.54ZM496.69 164.16C479.40 164.16 468.48 150.48 468.48 128.10C468.48 105.62 479.51 91.83 496.69 91.83C513.77 91.83 524.80 105.72 524.80 128.10C524.80 150.37 513.87 164.16 496.69 164.16Z M613.31 186.65C641.0 186.65 660.83 172.86 660.83 151.01C660.83 134.57 650.54 124.81 628.37 120.15L608.22 116.01C598.89 114.0 593.37 109.86 593.37 103.18C593.37 95.54 600.59 89.60 612.36 89.60C624.56 89.60 632.72 96.92 632.93 106.89H658.07C657.43 83.87 638.87 69.56 611.72 69.56C584.36 69.56 566.65 83.45 566.65 104.03C566.65 121.0 577.89 131.92 599.31 136.37L618.40 140.30C627.84 142.31 633.68 146.24 633.68 153.03C633.68 160.98 625.83 166.60 612.89 166.60C599.53 166.60 591.68 160.34 590.51 149.42H564.10C565.80 173.5 586.06 186.65 613.31 186.65Z"/></svg><span class="now">À l’écran : <b id="now-app">le menu</b></span></div>
+    <button type="button" class="acc-btn" id="store-open" aria-label="App Store" data-icon="bag"></button>
     <button type="button" class="acc-btn" id="acc-open" aria-label="Comptes : Plex, Overseerr, Spotify" data-icon="user"></button>
     <span class="conn" id="conn"><span class="dot"></span><span id="conn-text">Connexion…</span></span>
   </header>
@@ -245,6 +258,11 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
 
   <div class="channels" id="channels"></div>
 </main>
+<div class="sheet" id="store" hidden role="dialog" aria-label="App Store">
+  <div class="sheet-head"><b>App Store</b><button type="button" id="store-close" aria-label="Fermer">✕</button></div>
+  <p class="sheet-lead">Installe des applis qui se pilotent bien à la télé, ou ajoute un site web comme une appli. Elles arrivent au bout de la bande des applis.</p>
+  <div id="store-body"><p class="sheet-lead">Chargement…</p></div>
+</div>
 <div class="sheet" id="acc" hidden role="dialog" aria-label="Comptes">
   <div class="sheet-head"><b>Comptes</b><button type="button" id="acc-close" aria-label="Fermer">✕</button></div>
   <p class="sheet-lead">Relie Plex, Overseerr et Spotify à Scaros. Les clés restent sur le PC de Scaros.</p>
@@ -263,7 +281,8 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
     send: '<path d="M4 12l16-7-6 16-3-7z"/>',
     arrows: '<path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
     mouse: '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3.5"/>',
-    user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>'
+    user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+    bag: '<path d="M5.5 8.5h13l-1 11.2a1.5 1.5 0 0 1-1.5 1.3H8a1.5 1.5 0 0 1-1.5-1.3z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>'
   };
   const icon = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
   document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon) + el.innerHTML; });
@@ -344,7 +363,12 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
       else if (m.type === 'airplay') { airplay = m.state === 'mirroring' ? (m.device || 'iPhone') : null; renderNow(); }
       else if (m.type === 'mouse') { if (!!m.on !== mouseMode) setMode(!!m.on); }
       else if ((m.type === 'accounts' || m.type === 'media') && m.accounts) { accounts = { ...(accounts || {}), ...m.accounts }; renderAccounts(); }
-      else if (m.type === 'toast' && !$('#acc').hidden) toast(m.text || '');
+      else if (m.type === 'toast' && (!$('#acc').hidden || !$('#store').hidden)) toast(m.text || '');
+      else if (m.type === 'store' && storeData) {
+        storeData.catalog.forEach(e => { e.job = (m.jobs || {})[e.id] || null; if (m.icons && m.icons[e.id]) e.icon = m.icons[e.id]; });
+        renderStore();
+      }
+      else if (m.type === 'apps') { apps = m.apps || apps; renderChannels(); if (!$('#store').hidden) openStore(); }
     };
   }
   function closeStream() {
@@ -381,6 +405,59 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   addEventListener('pageshow', wakeUp);
   addEventListener('online', wakeUp);
   setInterval(() => { if (visible()) post('/api/hello', {}, true).catch(() => {}); }, 15000);
+
+  // ---------- App Store ----------
+  let storeData = null;
+  function openStore() {
+    $('#store').hidden = false;
+    fetch('/api/store', { cache: 'no-store' }).then(r => r.json()).then(d => { storeData = d; renderStore(); }).catch(() => toast('Scaros ne répond pas.'));
+  }
+  function renderStore() {
+    const box = $('#store-body'), d = storeData;
+    if (!d || $('#store').hidden) return;
+    const keep = {};
+    box.querySelectorAll('input').forEach(i => { keep[i.id] = i.value; });
+    const ico = (name, color, icon) => `<span class="ico" style="--c:${color || '#5b7bff'}"><b>${esc((name || '?').charAt(0))}</b>${icon ? `<img src="${esc(icon)}" alt="" onerror="this.remove()">` : ''}</span>`;
+    const mine = Object.entries(apps).filter(([, a]) => a.store);
+    const btn = e => e.job ? `<button type="button" class="btn ghost" aria-disabled="true">${e.job.state === 'removing' ? 'Suppression…' : e.job.progress != null ? e.job.progress + ' %' : 'Installation…'}</button>`
+      : e.inMenu ? `<button type="button" class="btn ok" aria-disabled="true">Installée</button>`
+      : `<button type="button" class="btn" data-st="install:${e.id}">${e.installed ? 'Ajouter' : 'Installer'}</button>`;
+    box.innerHTML = `
+      ${mine.length ? `<section class="acc"><h2>Tes applis</h2>${mine.map(([id, a]) => `<div class="st-row">${ico(a.name, a.color, a.icon ? '/api/appicon/' + encodeURIComponent(id) : null)}
+        <div class="txt"><b>${esc(a.name)}</b><span>${a.web ? esc((d.web.find(w => w.id === id) || {}).url || 'Site web') : 'Installée depuis l’App Store'}</span></div>
+        <button type="button" class="btn ghost" data-st="remove:${id}">${a.web ? 'Retirer' : 'Désinstaller'}</button></div>`).join('')}</section>` : ''}
+      <section class="acc"><h2>Ajouter un site web</h2>
+        <input id="web-url" type="url" placeholder="Adresse, ex. www.arte.tv" autocapitalize="off" spellcheck="false">
+        <input id="web-name" placeholder="Nom (facultatif)" autocapitalize="words">
+        <div class="row"><button type="button" class="btn" data-st="web">Ajouter</button></div>
+        <p class="help">Il s’ouvre en plein écran sur la télé, comme Twitch. Netflix, Disney+ et Prime Video ne marchent pas (protection des vidéos).</p>
+      </section>
+      ${d.categories.map(([k, n]) => `<section class="acc"><h2>${esc(n)}</h2>${d.catalog.filter(e => e.cat === k).map(e => `<div class="st-row">${ico(e.name, e.color, e.icon)}
+        <div class="txt"><b>${esc(e.name)}</b><span>${esc(e.desc)}</span></div>${btn(e)}</div>`).join('')}</section>`).join('')}`;
+    for (const [id, v] of Object.entries(keep)) { const i = document.getElementById(id); if (i && v) i.value = v; }
+  }
+  $('#store-open').addEventListener('click', openStore);
+  $('#store-close').addEventListener('click', () => { $('#store').hidden = true; });
+  $('#store-body').addEventListener('click', e => {
+    const b = e.target.closest('[data-st]');
+    if (!b || b.getAttribute('aria-disabled') === 'true') return;
+    const [k, id] = b.dataset.st.split(':');
+    if (k === 'install') {
+      const it = storeData.catalog.find(x => x.id === id);
+      if (it) { it.job = { state: 'installing', progress: null }; renderStore(); }
+      postLong('/api/store/install', { id }).then(r => { if (r.error) toast(r.error); }).catch(() => {});
+    } else if (k === 'remove') {
+      postLong('/api/store/uninstall', { id }).then(r => { if (r.error) toast(r.error); }).catch(() => {});
+    } else if (k === 'web') {
+      const url = (document.getElementById('web-url').value || '').trim(), name = (document.getElementById('web-name').value || '').trim();
+      if (!url) return toast('Tape d’abord l’adresse du site.');
+      postLong('/api/store/web', { url, name }).then(r => {
+        if (!r.ok) return toast(r.error || 'Adresse refusée.');
+        document.getElementById('web-url').value = ''; document.getElementById('web-name').value = '';
+        toast('Ajouté au bout de la bande des applis.');
+      }).catch(() => {});
+    }
+  });
 
   // ---------- Comptes ----------
   let accounts = null, spAuth = null;
@@ -482,7 +559,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   });
 
   function renderChannels() {
-    $('#channels').innerHTML = Object.entries(apps).map(([id, a], i) =>
+    $('#channels').innerHTML = Object.entries(apps).slice(0, 6).map(([id, a], i) =>
       `<button type="button" class="chan" data-a="ch${i + 1}" aria-disabled="${a.installed === false}" aria-label="${a.name}">${LOGOS[id] || ''}<span>${SHORT[id] || a.name}</span></button>`).join('');
   }
   function renderNow() {

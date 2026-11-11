@@ -48,7 +48,7 @@ try:
 except ImportError:
     qrcode = None
 
-VERSION = "0.8"
+VERSION = "0.9"
 ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
 CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "scaros"
@@ -77,6 +77,7 @@ log = logging.getLogger("scaros")
 DRY = False
 
 from media import LEAGUES, TABS, Media, image_type  # noqa: E402  (à côté de ce fichier)
+import store  # noqa: E402
 
 
 def run(cmd, timeout=10, quiet=False):
@@ -141,6 +142,20 @@ def system_info():
     except OSError:
         pass
     return info
+
+
+def app_icon(flatpak_id):
+    """Icône d'une appli Flatpak installée (pour sa tuile dans la bande des applis)."""
+    if not flatpak_id or not re.fullmatch(r"[A-Za-z0-9._-]{3,120}", flatpak_id):
+        return None
+    for root in ("/var/lib/flatpak", str(Path.home() / ".local/share/flatpak")):
+        base = Path(root) / "exports/share/icons/hicolor"
+        for size in ("256x256", "512x512", "128x128", "scalable"):
+            for ext in ("png", "svg"):
+                f = base / size / "apps" / f"{flatpak_id}.{ext}"
+                if f.is_file():
+                    return f
+    return None
 
 
 def lan_ip():
@@ -362,6 +377,15 @@ class Scaros:
         self.bus = Bus()
         self.lock = threading.RLock()
         self.settings = self._load_settings()
+        # applis ajoutées depuis l'App Store (Flathub ou site web), après celles de apps.json
+        self.user_apps = self._load_user_apps()
+        for k, v in self.user_apps.items():
+            self.apps.setdefault(k, v)
+        self.store_jobs = {}         # appli -> installation en cours {state, progress}
+        self.store_icons = {}        # appli du catalogue -> image (icône de Flathub)
+        self.store_icons_loaded = False
+        self.dry_flatpaks = set()
+        self.plex_job = None
         self.mode = self.settings.get("display_mode", "auto")
         self.hdmi = False
         self.output = "pc"
@@ -426,6 +450,7 @@ class Scaros:
                            notify=self.say, launch_url=self.launch_url)
         self.media.connect_state = self.connect_state
         self.media.airplay_np = self.airplay_np
+        self.media.open_plex = self.open_plex
         self.dry_wifi = [            # réseaux simulés en --dry-run
             {"ssid": "Freebox-3A2C1F", "signal": 82, "secure": True, "known": True, "active": True},
             {"ssid": "Livebox-9F10", "signal": 61, "secure": True, "known": False, "active": False},
@@ -518,8 +543,7 @@ class Scaros:
                 "pad": self.pad, "padSupport": evdev is not None,
                 "volume": self.volume, "muted": self.muted,
                 "app": self.current[0] if self.current else None, "shown": self.shown,
-                "apps": {k: {"name": v["name"], "installed": self.installed.get(k, True)}
-                         for k, v in self.apps.items()},
+                "apps": self.apps_state(),
                 "prefs": self.settings.get("ui", {}),
                 "audio": {"mode": self.audio_mode, "target": self.audio_target, "device": self.audio_device},
                 "airplay": self.airplay_state(),
@@ -1464,6 +1488,227 @@ class Scaros:
         self._wifi_changed()
 
     # ---------- applis : mises à jour ----------
+    def apps_state(self):
+        """Les applis du menu, pour le menu et la télécommande (dans l'ordre des chaînes 1, 2, 3…)."""
+        return {k: {"name": v["name"], "installed": self.installed.get(k, True), "store": bool(v.get("store")),
+                    "web": bool(v.get("web")), "color": v.get("color"), "icon": bool(v.get("flatpak") and app_icon(v["flatpak"]))}
+                for k, v in self.apps.items()}
+
+    # ---------- App Store : applis de Flathub et sites web ajoutés depuis le menu ou le téléphone ----------
+    def _load_user_apps(self):
+        try:
+            data = json.loads((STATE_DIR / "userapps.json").read_text())
+        except (OSError, ValueError):
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        return {k: v for k, v in data.items() if isinstance(v, dict) and re.fullmatch(r"[a-z0-9-]{2,40}", k)
+                and isinstance(v.get("name"), str) and (v.get("flatpak") or v.get("web"))}
+
+    def _save_user_apps(self):
+        try:
+            STATE_DIR.mkdir(parents=True, exist_ok=True)
+            (STATE_DIR / "userapps.json").write_text(json.dumps(self.user_apps, indent=2, ensure_ascii=False))
+        except OSError as e:
+            log.warning("applis de l'App Store non enregistrées : %s", e)
+
+    def _apps_changed(self):
+        self.bus.emit("apps", apps=self.apps_state())
+
+    def _store_emit(self):
+        self.bus.emit("store", jobs=dict(self.store_jobs))
+
+    def _flatpaks(self):
+        if DRY:
+            return set(self.dry_flatpaks)
+        return self.cached("flatpaks", 15, lambda: set(
+            run(["flatpak", "list", "--app", "--columns=application"], timeout=30, quiet=True)[1].split()))
+
+    def _load_store_icons(self):
+        """Icônes du catalogue, lues une fois sur Flathub (puis gardées : elles ne changent presque jamais)."""
+        f = STATE_DIR / "store-icons.json"
+        try:
+            urls = json.loads(f.read_text())
+        except (OSError, ValueError):
+            urls = {}
+        if not DRY:
+            for e in store.CATALOG:
+                if e["id"] in urls:
+                    continue
+                try:
+                    d = self._http_json(f"https://flathub.org/api/v2/appstream/{e['flatpak']}", timeout=8)
+                    if isinstance(d, dict) and str(d.get("icon", "")).startswith("https://dl.flathub.org/"):
+                        urls[e["id"]] = d["icon"]
+                except (OSError, ValueError):
+                    break  # pas d'internet : on réessaiera
+            try:
+                f.write_text(json.dumps(urls))
+            except OSError:
+                pass
+        self.store_icons = {k: self.media.images.url("url", u) for k, u in urls.items() if k in store.BY_ID}
+        self.store_icons_loaded = True
+        if urls:
+            self.bus.emit("store", jobs=dict(self.store_jobs), icons=self.store_icons)
+
+    def store_state(self):
+        if not self.store_icons_loaded:
+            self.store_icons_loaded = True
+            threading.Thread(target=self._load_store_icons, daemon=True).start()
+        have = self._flatpaks()
+        catalog = [{"id": e["id"], "name": e["name"], "cat": e["cat"], "desc": e["desc"], "color": e["color"],
+                    "native": bool(e.get("native")), "mouse": bool(e.get("mouse")),
+                    "installed": e["flatpak"] in have, "inMenu": e["id"] in self.apps,
+                    "job": self.store_jobs.get(e["id"]), "icon": self.store_icons.get(e["id"])} for e in store.CATALOG]
+        web = [{"id": k, "name": v["name"], "url": v["web"]} for k, v in self.user_apps.items() if v.get("web")]
+        return {"categories": store.CATEGORIES, "catalog": catalog, "web": web}
+
+    def _flatpak_install(self, app_id, flatpak_id):
+        """flatpak install, avec la progression quand flatpak la donne. Repli : installation pour le compte seul."""
+        if DRY:
+            for pct in range(0, 101, 20):
+                self.store_jobs[app_id] = {"state": "installing", "progress": pct}
+                self._store_emit()
+                time.sleep(0.4)
+            self.dry_flatpaks.add(flatpak_id)
+            return True
+        attempts = [["flatpak", "install", "-y", "--noninteractive", "flathub", flatpak_id],
+                    ["flatpak", "install", "--user", "-y", "--noninteractive", "flathub", flatpak_id]]
+        for i, cmd in enumerate(attempts):
+            if i == 1:
+                run(["flatpak", "remote-add", "--user", "--if-not-exists", "flathub",
+                     "https://dl.flathub.org/repo/flathub.flatpakrepo"], timeout=60)
+            try:
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+            except OSError as e:
+                log.warning("flatpak introuvable : %s", e)
+                return False
+            buf, last = b"", 0.0
+            while True:
+                chunk = p.stdout.read1(512) if hasattr(p.stdout, "read1") else p.stdout.read(512)
+                if not chunk:
+                    break
+                buf = (buf + chunk)[-2000:]
+                m = re.findall(rb"(\d{1,3})%", buf)
+                if m and time.monotonic() - last > 1:
+                    last = time.monotonic()
+                    self.store_jobs[app_id] = {"state": "installing", "progress": min(100, int(m[-1]))}
+                    self._store_emit()
+            code = p.wait()
+            log.info("%s -> %s", " ".join(cmd), code)
+            if code == 0:
+                return True
+            log.warning("installation de %s ratée : %s", flatpak_id, buf.decode(errors="replace")[-300:])
+        return False
+
+    def store_install(self, app_id):
+        e = store.BY_ID.get(app_id)
+        if not e or app_id in self.store_jobs:
+            return False
+        self.store_jobs[app_id] = {"state": "installing", "progress": None}
+        self._store_emit()
+        self.say("download", f"Installation de {e['name']}… ça peut prendre quelques minutes.", 5000)
+        try:
+            ok = e["flatpak"] in self._flatpaks() or self._flatpak_install(app_id, e["flatpak"])
+            self.cache.pop("flatpaks", None)
+            if ok:
+                conf = store.app_conf(e)
+                self.user_apps[app_id] = conf
+                self.apps[app_id] = conf
+                self.installed[app_id] = True
+                self._save_user_apps()
+                self.say("download", f"{e['name']} est installé : il est au bout de la bande des applis.", 6000)
+            else:
+                self.say("alert", f"L'installation de {e['name']} a échoué. Vérifie la connexion internet, puis réessaie.", 7000)
+        finally:
+            self.store_jobs.pop(app_id, None)
+            self._store_emit()
+            self._apps_changed()
+        return True
+
+    def store_uninstall(self, app_id):
+        conf = self.user_apps.get(app_id)
+        if not conf:
+            return False
+        if self.current and self.current[0] == app_id:
+            self.close_app()
+        if conf.get("flatpak"):
+            self.store_jobs[app_id] = {"state": "removing", "progress": None}
+            self._store_emit()
+            if DRY:
+                time.sleep(1)
+                self.dry_flatpaks.discard(conf["flatpak"])
+            else:
+                run(["flatpak", "uninstall", "-y", "--noninteractive", conf["flatpak"]], timeout=900)
+            self.store_jobs.pop(app_id, None)
+            self.cache.pop("flatpaks", None)
+        self.user_apps.pop(app_id, None)
+        self.apps.pop(app_id, None)
+        self.installed.pop(app_id, None)
+        self._save_user_apps()
+        self._store_emit()
+        self._apps_changed()
+        self.say("close", f"{conf['name']} est retiré de Scaros.", 4000)
+        return True
+
+    def store_add_web(self, name, url):
+        name, url = name.strip()[:40], url.strip()[:500]
+        if not re.match(r"^https?://", url):
+            url = "https://" + url
+        host = urlparse(url).hostname
+        if not host or " " in url:
+            return None, "Adresse invalide (exemple : https://www.arte.tv)."
+        if not name:
+            name = re.sub(r"^www\.", "", host).split(".")[0].capitalize()
+        base = "web-" + store.slug(name)
+        app_id, n = base, 2
+        while app_id in self.apps:
+            app_id, n = f"{base}-{n}", n + 1
+        hue = int(hashlib.md5(name.encode()).hexdigest()[:2], 16) * 360 // 256
+        conf = {"name": name, "web": url, "profile": f"scaros-{app_id}", "store": True, "color": f"hsl({hue} 55% 42%)"}
+        self.user_apps[app_id] = conf
+        self.apps[app_id] = conf
+        self.installed[app_id] = True
+        self._save_user_apps()
+        self._apps_changed()
+        self._store_emit()
+        self.say("plus", f"{name} est ajouté au bout de la bande des applis.", 5000)
+        return app_id, None
+
+    # ---------- Plex HTPC : lecture directe depuis une affiche de l'accueil ----------
+    def open_plex(self, rating_key, offset, mtype, title):
+        if not (self.current and self.current[0] == "plex"):
+            self.submit("launch", "plex")
+        job = self.plex_job = object()
+        threading.Thread(target=self._plex_cast, args=(job, rating_key, offset, mtype, title), daemon=True).start()
+
+    def _plex_cast(self, job, rating_key, offset, mtype, title):
+        """Attend que Plex HTPC soit prêt (jusqu'à 90 s sur ce petit PC), puis lui demande de lire."""
+        if DRY:
+            time.sleep(2)
+            log.info("[dry-run] Plex HTPC : lecture de %s (%s, à %s ms)", rating_key, mtype, offset)
+            return
+        deadline, tries, started = time.monotonic() + 90, 0, time.monotonic()
+        while time.monotonic() < deadline and self.plex_job is job:
+            time.sleep(2.5)
+            if not (self.current and self.current[0] == "plex") and time.monotonic() - started > 8:
+                return  # Plex a été fermé (ou ne s'est pas ouvert) entre-temps
+            player = self.media.plex.find_player()
+            if not player:
+                continue
+            if tries == 0:
+                time.sleep(4)  # le lecteur répond avant que son interface soit prête
+            tries += 1
+            try:
+                self.media.plex.play_on(player, rating_key, offset, mtype, command_id=tries)
+                log.info("Plex HTPC (%s) : lecture de %s demandée", player.get("product") or player["id"], rating_key)
+                return
+            except (OSError, ValueError, KeyError) as e:
+                log.info("Plex HTPC : ordre de lecture refusé (%s)", e)
+                if tries >= 4:
+                    break
+        if self.plex_job is job:
+            self.say("alert", f"Plex est ouvert, mais la lecture directe n'a pas marché : choisis « {title or 'le film'} » dans Plex.", 8000)
+
     def update_apps(self):
         if self.apps_updating:
             return
@@ -1486,7 +1731,8 @@ class Scaros:
              "theme": ("dark", "light", "auto"),
              "bg": ("weather", "stars", "aurora", "rain", "snow", "none"),
              "homeBg": ("poster", "decor", "plain"), "accent": ("amber", "blue", "violet", "green", "pink", "white"),
-             "clock24": ("24", "12"), "saverStyle": ("widgets", "landscape"), "spotifyConnect": ("on", "off")}
+             "clock24": ("24", "12"), "saverStyle": ("widgets", "landscape"), "spotifyConnect": ("on", "off"),
+             "plexOpen": ("htpc", "web")}
     SAVER_WIDGETS = ("analog", "digital", "weather", "air", "music", "sport")
 
     def list_pref_ok(self, key, value):
@@ -1495,7 +1741,7 @@ class Scaros:
             return False
         if len(set(value)) != len(value):
             return False
-        allowed = {"tabs": set(TABS), "appOrder": set(self.apps) | {"settings"}, "appHidden": set(self.apps),
+        allowed = {"tabs": set(TABS), "appOrder": set(self.apps) | {"settings", "store"}, "appHidden": set(self.apps),
                    "ssWidgets": set(self.SAVER_WIDGETS), "sportLeagues": set(LEAGUES)}.get(key)
         if allowed is not None:
             return set(value) <= allowed
@@ -2840,6 +3086,13 @@ class Handler(BaseHTTPRequestHandler):
                     "<body style='font:24px system-ui;background:#000;color:#fff;display:grid;place-items:center;height:90vh;"
                     f"text-align:center;padding:1em'>{msg}</body>")
             return self.send(200, html.encode(), "text/html; charset=utf-8")
+        if path.startswith("/api/appicon/"):
+            f = app_icon(self.app.conf(path.rsplit("/", 1)[-1]).get("flatpak"))
+            if not f:
+                return self.send(404, b"", "text/plain")
+            return self.send(200, f.read_bytes(), "image/svg+xml" if f.suffix == ".svg" else "image/png", cache="max-age=86400")
+        if path == "/api/store":
+            return self.json(self.app.store_state())
         if path == "/api/qr.svg":
             return self.qr()
         if path == "/api/diag":
@@ -3132,6 +3385,21 @@ class Handler(BaseHTTPRequestHandler):
             return self.json({"ok": True})
         # ---------- accueil, comptes, musique ----------
         m = a.media
+        if path == "/api/store/install":
+            app_id = str(body.get("id", ""))
+            if app_id not in store.BY_ID:
+                return self.json({"error": "appli inconnue"}, 404)
+            threading.Thread(target=a.store_install, args=(app_id,), daemon=True).start()
+            return self.json({"ok": True})
+        if path == "/api/store/uninstall":
+            app_id = str(body.get("id", ""))
+            if app_id not in a.user_apps:
+                return self.json({"error": "appli inconnue"}, 404)
+            threading.Thread(target=a.store_uninstall, args=(app_id,), daemon=True).start()
+            return self.json({"ok": True})
+        if path == "/api/store/web":
+            app_id, err = a.store_add_web(str(body.get("name", "")), str(body.get("url", "")))
+            return self.json({"ok": not err, "error": err, "id": app_id})
         if path == "/api/media/refresh":
             threading.Thread(target=m.refresh, kwargs={"force": bool(body.get("force"))}, daemon=True).start()
             return self.json({"ok": True})

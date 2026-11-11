@@ -44,6 +44,10 @@ ICONS = {
     "alert": '<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     "mouse": '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3.5"/>',
     "check": '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    "download": '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
+    "plus": '<path d="M12 5v14M5 12h14"/>',
+    "close": '<path d="M6 6l12 12M18 6L6 18"/>',
+    "play": '<path d="M7 5v14l11-7z"/>',
     "music": '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
 }
 

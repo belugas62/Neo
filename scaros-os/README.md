@@ -114,8 +114,10 @@ reboot
 - **Comptes de l'accueil** (**Réglages > Comptes**) : ce qui remplit l'accueil et l'écran de veille.
   - **Plex** : **Connecter Plex** affiche un code ; tape-le sur <https://plex.tv/link> (téléphone ou PC).
     Scaros trouve ton serveur tout seul. Les onglets **Reprendre** et **Ajoutés récemment** se remplissent.
-    Une affiche ouvre sa fiche dans **Plex Web** en plein écran : la première fois, connecte-toi à ton compte Plex
-    dans cette page (clavier et souris de la télécommande du téléphone), c'est gardé ensuite.
+    Une affiche ouvre l'appli **Plex** (Plex HTPC) et lance directement le film ou l'épisode, là où tu t'étais arrêté
+    (comme « Lire sur… » depuis l'appli Plex du téléphone). Si la lecture directe ne marche pas chez toi, Plex reste
+    ouvert sur son accueil ; tu peux alors choisir **Plex Web** dans **Réglages > Comptes > Plex** (la fiche du film
+    dans le navigateur, où il faudra te connecter une fois).
   - **Overseerr** (ou Jellyseerr) : sur la télécommande du téléphone, touche le bonhomme en haut, puis colle
     l'adresse d'Overseerr (`http://192.168.x.x:5055`) et sa clé API (**Overseerr > Paramètres > Général**).
     Les onglets **Tendances** et **Mes demandes** se remplissent ; OK sur une tendance que tu n'as pas la demande.
@@ -197,6 +199,16 @@ ce que tu as commencé et l'état des demandes (« Disponible », « Télécharg
 **Haut** et **bas** passent d'une rangée à l'autre ; **gauche** et **droite** avancent dans la rangée ; un onglet
 s'affiche dès que tu le choisis. Le fond reprend l'affiche choisie, floutée. Tant qu'un compte n'est pas relié,
 l'onglet le dit ; OK ouvre **Réglages > Comptes**.
+
+**App Store :** la tuile **App Store**, au bout de la bande des applis (ou **Réglages > App Store**), installe en un appui
+des applis qui se pilotent bien à la télé, venues de Flathub : Kodi, Stremio, FreeTube, Grayjay, VLC, Plexamp, Spotify,
+Shortwave (radios), Moonlight, Greenlight (Xbox Cloud Gaming), chiaki-ng (PlayStation à distance), RetroArch, PPSSPP,
+Pegasus. L'appli arrive au bout de la bande des applis ; **Gérer** permet de la désinstaller. Les applis marquées
+**Manette** lisent la manette elles-mêmes (maintiens le bouton Xbox pour revenir au menu) ; celles marquées **Souris**
+se pilotent mieux avec le mode souris. **Ajouter un site web** en fait une appli (un nom, une adresse), ouverte en plein
+écran comme Twitch ; Netflix, Disney+ et Prime Video ne marchent pas (leurs protections bloquent la lecture sous Linux).
+Tout se fait aussi depuis la télécommande du téléphone (le sac en haut), plus pratique pour taper une adresse.
+Les touches **1 à 9** ouvrent les applis dans l'ordre de la bande ; la télécommande du téléphone garde les 6 premières.
 
 **Personnaliser :** **Réglages > Accueil** : les onglets affichés et leur ordre, les applis de la bande et leur ordre
 (OK affiche ou masque, gauche et droite déplacent), le fond (**Affiche** du programme choisi, **Paysage** animé qui suit
@@ -283,6 +295,11 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
 - **L'écran de veille n'affiche pas la musique du téléphone :** l'appli Spotify (developer.spotify.com) doit avoir
   exactement la Redirect URI `http://127.0.0.1:8421/api/spotify/callback`. Pour la musique jouée par Scaros
   lui-même (Spotify Connect), rien à faire.
+- **Une affiche ouvre Plex mais pas le film :** la lecture directe a besoin que Plex HTPC accepte les ordres de
+  lecture (comme quand tu lances un film depuis l'appli Plex du téléphone) ; regarde dans les réglages de Plex HTPC
+  qu'il est bien visible comme lecteur sur le réseau. Sinon, choisis **Plex Web** dans **Réglages > Comptes > Plex**.
+- **Une appli de l'App Store ne s'installe pas :** il faut internet, et de la place sur le disque (certaines applis
+  téléchargent plusieurs centaines de Mo la première fois). Le détail est dans `scaros.log`.
 - **Mettre à jour les applis :** **Réglages > Applis > Mettre à jour les applis**.
 - **Mettre à jour Scaros :** **Réglages > Mise à jour de Scaros > Mettre à jour Scaros**, à la manette. Scaros
   télécharge la dernière version, l'installe et redémarre l'écran (environ une minute). Les applis et réglages sont gardés.
@@ -335,6 +352,8 @@ mais pas encore sur ta machine. À surveiller au premier essai :
 - le volume affiché par-dessus YouTube, Jellyfin ou Steam Link ;
 - la fluidité de l'accueil (fond flouté, défilement des affiches) et de l'écran de veille sur la télé ;
 - Plex, Overseerr et Spotify avec tes vrais comptes (testés ici contre des serveurs simulés) ;
+- la lecture directe dans Plex HTPC depuis une affiche (testée contre un lecteur Plex simulé) ;
+- les installations de l'App Store (téléchargements Flathub réels) et les icônes des applis installées ;
 - Spotify Connect (spotifyd) : « Scaros » dans la liste des appareils, le son, et les touches lecture et suivant ;
 - la mise à jour lancée depuis le menu ;
 - le son sur la télé ;
@@ -351,6 +370,7 @@ scaros-os/
 ├── launcher/
 │   ├── scaros.py           serveur local : applis, écrans, son, Bluetooth, manette, télécommande, AirPlay, météo
 │   ├── media.py            accueil et veille : Plex, Overseerr, Spotify, pochette AirPlay, scores (ESPN)
+│   ├── store.py            le catalogue de l'App Store (applis Flathub qui se pilotent bien à la télé)
 │   ├── osd.py              volume et notifications affichés par-dessus les applis
 │   ├── apps.json           les applis du menu et la commande qui les lance
 │   └── ui/

@@ -192,12 +192,12 @@ button { font: inherit; color: inherit; }
 @keyframes live { 50% { opacity: .35; } }
 
 /* rangée d'affiches */
-.rail { position: absolute; z-index: 2; left: 0; right: 0; top: 11.3rem; height: 25.2rem; overflow: hidden; padding: 1rem 0 0 var(--side); box-sizing: border-box; }
+.rail { position: absolute; z-index: 2; left: 0; right: 0; top: 11.1rem; height: 23.8rem; overflow: hidden; padding: 1rem 0 0 var(--side); box-sizing: border-box; }
 .rail-track { display: flex; align-items: flex-start; gap: 1.6rem; transition: transform .5s var(--ease); will-change: transform; }
-.pc { flex: none; display: flex; flex-direction: column; width: 12.6rem; padding: 0; margin: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.pc { flex: none; display: flex; flex-direction: column; width: 11.8rem; padding: 0; margin: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }
 .pc:focus { outline: none; }
-.pc.wide { width: 33.6rem; }
-.pc-img { position: relative; display: block; height: 18.9rem; overflow: hidden; border-radius: 1.1rem; background: #ffffff10;
+.pc.wide { width: 31.4rem; }
+.pc-img { position: relative; display: block; height: 17.7rem; overflow: hidden; border-radius: 1.1rem; background: #ffffff10;
   box-shadow: 0 1.2rem 2.2rem -1.4rem #000000d0; transition: transform .32s var(--spring), box-shadow .32s ease; }
 .pc-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s ease; }
 .pc-img img.ok { opacity: 1; }
@@ -217,7 +217,7 @@ button { font: inherit; color: inherit; }
 .pc.is-focus .pc-sub { color: var(--text-2); }
 /* carte « message » : compte à relier, serveur muet, rangée vide */
 .pc.msg { width: 52rem; }
-.pc-msg { display: flex; flex-direction: column; justify-content: center; gap: .7rem; height: 18.9rem; padding: 2.4rem 3rem; box-sizing: border-box; border-radius: 1.1rem;
+.pc-msg { display: flex; flex-direction: column; justify-content: center; gap: .7rem; height: 17.7rem; padding: 2.4rem 3rem; box-sizing: border-box; border-radius: 1.1rem;
   background: #ffffff0d; border: 1px solid #ffffff1f; transition: transform .32s var(--spring), background .2s ease; }
 .pc-msg .ic { width: 3rem; height: 3rem; color: var(--accent); }
 .pc-msg b { font-size: calc(2.1rem * min(var(--fs), 1.1)); font-weight: 700; letter-spacing: -.02em; }
@@ -228,18 +228,21 @@ button { font: inherit; color: inherit; }
 @keyframes skel { from { background-position: 100% 0; } to { background-position: 0 0; } }
 
 /* bande des applis */
-.apps { position: absolute; z-index: 2; left: 0; right: 0; top: 38.6rem; padding: 0 var(--side); }
-.icons { display: flex; gap: 1.6rem; }
-.icon { position: relative; flex: none; width: min(12.6rem, calc((100rem - 9.2rem - (var(--n, 7) - 1) * 1.6rem) / var(--n, 7))); padding: 0; margin: 0; border: 0; background: none; cursor: pointer; color: inherit; font: inherit; }
+.apps { position: absolute; z-index: 2; left: 0; right: 0; top: 34.9rem; padding: 1.3rem 0 1rem var(--side); overflow: hidden; }
+.icons { display: flex; gap: 1.8rem; transition: transform .5s var(--ease); will-change: transform; }
+.icon { position: relative; flex: none; width: 15.8rem; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; color: inherit; font: inherit; }
 .icon:focus { outline: none; }
 .icon-art { position: relative; display: grid; place-items: center; overflow: hidden; aspect-ratio: 16 / 9; border-radius: 1.1rem; background: var(--bg);
   box-shadow: 0 .9rem 1.8rem -1.2rem #000000c0, inset 0 0 0 1px #ffffff14; transition: transform .32s var(--spring), box-shadow .32s ease; }
-.icon-art svg { width: 42%; height: 50%; }
-.icon[data-id="youtube"] .icon-art svg { width: 36%; }
-.icon[data-id="twitch"] .icon-art svg { width: 36%; height: 46%; }
-.icon[data-id="scarostv"] .icon-art svg { width: 30%; height: 62%; filter: drop-shadow(0 .25rem .45rem #02143373); }
-.icon.is-focus .icon-art { transform: scale(1.1); box-shadow: 0 0 0 .2rem var(--text), 0 1.8rem 2.8rem -1.2rem #000000e6; }
-.icon-name { display: block; margin-top: .8rem; text-align: center; font-size: calc(1.2rem * min(var(--fs), 1.12)); font-weight: 550; color: var(--muted); transition: color .2s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-art svg { width: 50%; height: 58%; }
+.icon-art .mono { font-size: 4.4rem; font-weight: 800; letter-spacing: -.04em; color: #fff; text-shadow: 0 .3rem 1.2rem #0004; }
+.icon-art .app-ico { position: absolute; inset: 0; margin: auto; width: 44%; height: 66%; object-fit: contain; filter: drop-shadow(0 .4rem .8rem #0005); }
+.icon-art:has(.app-ico) .mono { visibility: hidden; }
+.icon[data-id="youtube"] .icon-art svg { width: 44%; }
+.icon[data-id="twitch"] .icon-art svg { width: 44%; height: 54%; }
+.icon[data-id="scarostv"] .icon-art svg { width: 36%; height: 72%; filter: drop-shadow(0 .25rem .45rem #02143373); }
+.icon.is-focus .icon-art { transform: scale(1.08); box-shadow: 0 0 0 .2rem var(--text), 0 1.8rem 2.8rem -1.2rem #000000e6; }
+.icon-name { display: block; margin-top: 1rem; text-align: center; font-size: calc(1.45rem * min(var(--fs), 1.1)); font-weight: 600; color: var(--muted); transition: color .2s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .icon.is-focus .icon-name { color: var(--text); }
 .icon.bump .icon-art, .pc.bump .pc-img, .tab.bump, .round.bump { animation: bump .32s ease; }
 @keyframes bump { 40% { translate: var(--bx, 0) 0; } }
@@ -477,6 +480,20 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
 .code-box .k { margin-bottom: .6rem; font-size: calc(1.3rem * var(--fs)); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
 .code-box .t { font-size: calc(1.6rem * var(--fs)); color: var(--text-2); }
 .code-box .code { margin: .6rem 0 .8rem; font-size: calc(5.6rem * var(--fs)); font-weight: 700; letter-spacing: .32em; font-variant-numeric: tabular-nums; }
+.store-row .st-ico { position: relative; flex: none; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; overflow: hidden; border-radius: 1.1rem;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--c) 85%, #fff), color-mix(in oklab, var(--c) 70%, #000)); color: #fff; font-size: 2rem; }
+.store-row .st-ico img { position: absolute; inset: .5rem; width: calc(100% - 1rem); height: calc(100% - 1rem); object-fit: contain; }
+.store-row .st-ico:has(img) { background: #ffffff14; }
+.store-row .st-ico:has(img) b { visibility: hidden; }
+.store-row .opt-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.store-row.done .opt-val { color: var(--pad-a); }
+.opt.is-focus.store-row.done .opt-val { color: #1f8a3e; }
+.tag { display: inline-block; margin-left: .5rem; padding: .05rem .5rem; border-radius: .4rem; font-size: calc(1.05rem * var(--fs)); font-weight: 700; vertical-align: .15rem;
+  color: var(--text-2); border: 1px solid var(--line); }
+.opt.is-focus .tag { color: var(--focus-muted); border-color: color-mix(in oklab, var(--focus-fg) 25%, transparent); }
+.art-tile .mono { font-size: 7rem; font-weight: 800; color: #fff; }
+.art-tile .app-ico { width: 60%; height: 60%; object-fit: contain; }
+.art-tile:has(.app-ico) .mono { display: none; }
 .art-tile.poster { position: relative; width: 17rem; height: 25.5rem; overflow: hidden; border-radius: 1.6rem; }
 .art-tile.poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .art-tile.poster .pc-ph { font-size: 2.2rem; }
@@ -707,7 +724,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   .rail-track { transform: none !important; padding-right: 16px; }
   .pc { width: 11rem; } .pc.wide { width: 26rem; } .pc-img, .pc-msg { height: 16.5rem; } .pc.msg { width: min(30rem, 86vw); }
   .apps { margin-top: 1.6rem; padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); }
-  .icons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem 1.2rem; }
+  .icons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem 1.2rem; transform: none !important; }
+  .apps { overflow: visible; padding-top: 0; }
   .icon { width: auto; }
   .icon.is-focus .icon-art { transform: scale(1.05); }
   .foot { margin-top: 2.6rem; }
@@ -1071,6 +1089,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     'wx-snow': '<path d="M7.5 15h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.6 1.2A3.5 3.5 0 0 0 7.5 15z"/><path d="M8.5 18.5v.1M12 20.5v.1M15.5 18.5v.1"/>',
     'wx-storm': '<path d="M7.5 15h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.6 1.2A3.5 3.5 0 0 0 7.5 15z"/><path d="M12.5 15.5l-2 3.2h3l-2 3.3"/>',
     mouse: '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3.5"/>',
+    bag: '<path d="M5.5 8.5h13l-1 11.2a1.5 1.5 0 0 1-1.5 1.3H8a1.5 1.5 0 0 1-1.5-1.3z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>',
+    globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5S9.4 5.9 12 3.5z"/>',
     sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
     film: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M7.5 4.5v15M16.5 4.5v15M3.5 9.5h4M3.5 14.5h4M16.5 9.5h4M16.5 14.5h4"/>',
     music: '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
@@ -1131,9 +1151,11 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     spotifylogin: () => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#fff"/><path d="M6.6 9.4c3.6-1.1 7.6-.8 10.9 1M7.2 12.6c2.9-.9 6.1-.6 8.8.9M7.8 15.6c2.3-.7 4.6-.5 6.7.6" fill="none" stroke="#1ed760" stroke-width="1.6" stroke-linecap="round"/></svg>'
   };
   ART.plexweb = ART.plex;
+  ART.store = () => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 8.5h13l-1 11.2a1.5 1.5 0 0 1-1.5 1.3H8a1.5 1.5 0 0 1-1.5-1.3z" fill="#fff"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="M12 11.6v5.2M9.4 14.2h5.2" stroke="#4b3bd6" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
   // ---------- content ----------
-  const APPS = [
+  // applis de base (apps.json) ; celles de l'App Store s'ajoutent derrière (syncApps)
+  const BUILTIN = [
     { id: 'scarostv', ch: 1, name: 'Scaros TV',
       bg: 'radial-gradient(75% 95% at 8% 8%, #00c2d1f2, #00c2d100 70%), radial-gradient(60% 85% at 92% 18%, #2f6bff, #2f6bff00 70%), radial-gradient(70% 95% at 82% 100%, #4b1fb8e6, #4b1fb800 72%), #06204a',
       a: '#2f6bff', b: '#06204a', kicker: 'Ta télé', desc: 'Scaros TV en plein écran, pilotée à la manette et à la télécommande.' },
@@ -1150,7 +1172,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   ];
   const SETTINGS_APP = { id: 'settings', name: 'Réglages', bg: 'linear-gradient(160deg, #a7adb8, #5d636e)', a: '#8fa0c4', b: '#232a3a',
     kicker: 'Système', desc: 'Écran, son, Bluetooth, manette, télécommande et alimentation.' };
-  const DOCK = [...APPS, SETTINGS_APP];
+  const STORE_APP = { id: 'store', name: 'App Store', bg: 'linear-gradient(160deg, #3d7bff, #6a3df0 60%, #4b1fb8)', a: '#5b7bff', b: '#1d2470',
+    kicker: 'Applis', desc: 'Installe d’autres applis et ajoute tes sites web.' };
+  const APPS = BUILTIN.slice();
+  const DOCK = [...APPS, STORE_APP, SETTINGS_APP];
   const EXTRA = [
     { id: 'plexweb', name: 'Plex', bg: 'linear-gradient(160deg, #303236, #151618)', a: '#f2a516', b: '#4a2c00' },
     { id: 'spotifylogin', name: 'Spotify', bg: 'linear-gradient(160deg, #1ed760, #128a3e)', a: '#1ed760', b: '#0b3d1c' }
@@ -1162,7 +1187,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   const BT_KIND = { audio: 'Casque ou enceinte', input: 'Manette', other: 'Appareil Bluetooth' };
 
   const state = {
-    live: false, dry: false, version: '0.7', lost: false, mouse: false,
+    live: false, dry: false, version: '0.9', lost: false, mouse: false,
     focus: APPS[0].id, panel: null, pItems: [], pIdx: 0, panelStack: [], launched: null,
     mode: 'auto', hdmi: false, output: 'pc', volume: 35, muted: false, booting: false, power: null,
     res: '1366×768', tvRes: '1080', shown: false,
@@ -1184,7 +1209,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     media: { rows: {}, status: {}, accounts: { plex: {}, overseerr: {}, spotify: {} }, sport: [] }, np: null,
     leagues: { 'fra.1': 'Ligue 1', 'uefa.champions': 'Ligue des champions', 'eng.1': 'Premier League', 'esp.1': 'Liga', 'ita.1': 'Serie A',
       'ger.1': 'Bundesliga', 'uefa.europa': 'Ligue Europa', 'fra.2': 'Ligue 2', 'fifa.world': 'Coupe du monde', 'uefa.euro': 'Euro', nba: 'NBA' },
-    sportLeague: null, sportTeams: {}, moving: null,
+    sportLeague: null, sportTeams: {}, moving: null, store: null, storeSel: null, webUrl: '', webName: '',
     // maquette : valeurs d'exemple (sur le PC, elles viennent du serveur)
     weather: { city: 'Lille', temp: 14, kind: 'rain', label: 'Pluie', day: true, max: 16, min: 9 },
     place: { city: 'Lille', auto: true },
@@ -1230,8 +1255,31 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   let audioReady = false, displayToastAt = 0, lastOut = 'pc';
   const computeOutput = () => state.mode === 'pc' ? 'pc' : (state.hdmi ? 'tv' : 'pc');
 
-  $('#shelf').innerHTML = DOCK.map(t => `<div class="scene" data-id="${t.id}" style="--a:${t.a};--b:${t.b}"></div>`).join('');
-  const scenes = [...document.querySelectorAll('.scene')];
+  let scenes = [];
+  function buildScenes() {
+    $('#shelf').innerHTML = DOCK.map(t => `<div class="scene" data-id="${t.id}" style="--a:${t.a};--b:${t.b}"></div>`).join('');
+    scenes = [...document.querySelectorAll('.scene')];
+  }
+  buildScenes();
+  // la liste des applis vient du serveur : celles de apps.json (dans l'ordre des chaînes), puis celles de l'App Store
+  function syncApps(sApps) {
+    if (!sApps || !Object.keys(sApps).length) return;
+    const list = Object.entries(sApps).map(([id, v], i) => {
+      const b = BUILTIN.find(x => x.id === id);
+      if (b) return { ...b, ch: i + 1 };
+      const col = v.color || `hsl(${hashHue(v.name)} 55% 42%)`;
+      ART[id] = () => `<span class="mono">${esc((v.name || '?').trim().charAt(0).toUpperCase())}</span>`
+        + (v.icon ? `<img class="app-ico" src="/api/appicon/${encodeURIComponent(id)}" alt="" onerror="this.remove()">` : '');
+      return { id, ch: i + 1, name: v.name, user: true, web: !!v.web,
+        bg: `linear-gradient(160deg, color-mix(in oklab, ${col} 88%, #fff), color-mix(in oklab, ${col} 72%, #000))`,
+        a: col, b: `color-mix(in oklab, ${col} 45%, #000)`, kicker: v.web ? 'Site web' : 'Appli', desc: '' };
+    });
+    APPS.splice(0, APPS.length, ...list);
+    DOCK.splice(0, DOCK.length, ...APPS, STORE_APP, SETTINGS_APP);
+    for (const k of Object.keys(byId)) delete byId[k];
+    [...DOCK, ...EXTRA].forEach(t => { byId[t.id] = t; });
+    buildScenes();
+  }
 
   const stage = $('#stage'), pane = $('#pane'), scrim = $('#scrim'), L = $('#launch'),
         B = $('#boot'), OFF = $('#off'), T = $('#toast'), V = $('#vol'), P = $('#phone');
@@ -1256,6 +1304,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       leagues: s.leagues || state.leagues,
       installed: Object.fromEntries(Object.entries(s.apps || {}).map(([k, v]) => [k, v.installed]))
     });
+    syncApps(s.apps);
     lastOut = state.output;
     applyPrefs();
   }
@@ -1385,6 +1434,17 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       if (m.step !== was && m.step === 'failed') toast('alert', 'Le diagnostic réseau n’a pas pu se lancer. Mets à jour Scaros, puis réessaie.', 6000);
       diagTick();
       if (state.panel === 'netdiag') rerenderPane();
+    } else if (m.type === 'apps') {
+      syncApps(m.apps);
+      state.installed = Object.fromEntries(Object.entries(m.apps || {}).map(([k, v]) => [k, v.installed]));
+      renderApps(); paintFocus(false); updateHints();
+      if (state.store) loadStore();
+      if (['store', 'storeapp', 'apps', 'settings'].includes(state.panel)) rerenderPane();
+    } else if (m.type === 'store') {
+      if (state.store) {
+        state.store.catalog.forEach(e => { e.job = (m.jobs || {})[e.id] || null; if (m.icons && m.icons[e.id]) e.icon = m.icons[e.id]; });
+        if (state.panel === 'store') rerenderPane();
+      }
     } else if (m.type === 'media') {
       state.media = { ...state.media, rows: m.rows || {}, status: m.status || {}, accounts: m.accounts || state.media.accounts };
       renderRail();
@@ -1520,6 +1580,20 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     track.style.transform = railTx ? `translateX(${-railTx}px)` : '';
     if (instant) { void track.offsetWidth; track.style.transition = ''; }
   }
+  let appsTx = 0;
+  function scrollApps(instant) {
+    const box = $('#icons'), els = appEls(), el = els.find(e => e.dataset.id === state.focus);
+    if (!el) return;
+    const wrap = $('.apps'), pad = parseFloat(getComputedStyle(wrap).paddingLeft) || 0;
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 10;
+    const view = wrap.clientWidth - pad - 4 * rem;
+    const left = el.offsetLeft - els[0].offsetLeft, right = left + el.offsetWidth;
+    if (right - appsTx > view) appsTx = right - view;
+    if (left - appsTx < 0) appsTx = left;
+    if (instant) box.style.transition = 'none';
+    box.style.transform = appsTx ? `translateX(${-appsTx}px)` : '';
+    if (instant) { void box.offsetWidth; box.style.transition = ''; }
+  }
   function renderTabs() {
     const tabs = visibleTabs();
     if (!tabs.includes(state.tab)) state.tab = tabs[0];
@@ -1528,11 +1602,12 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   }
   function renderApps() {
     const list = dockList();
-    $('#icons').style.setProperty('--n', list.length);
     $('#icons').innerHTML = list.map(t => `<button type="button" class="icon" role="listitem" id="t-${t.id}" data-id="${t.id}" tabindex="-1" aria-label="${t.name}">`
       + `<span class="icon-art" style="--bg:${t.bg}">${ART[t.id]()}<span class="badge" hidden>À installer</span></span><span class="icon-name">${t.name}</span></button>`).join('');
     if (!list.some(t => t.id === state.focus)) state.focus = list[0].id;
     renderTiles();
+    appsTx = Math.min(appsTx, 0) || 0;
+    scrollApps(true);
   }
   function renderTiles() {
     appEls().forEach(el => { el.querySelector('.badge').hidden = !(state.live && state.installed[el.dataset.id] === false); });
@@ -1552,6 +1627,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       el.classList.add('is-focus');
       if (takeDom && !state.panel && !state.launched && !state.saver && document.activeElement !== el) el.focus({ preventScroll: true });
       if (state.zone === 'rail') scrollRail();
+      if (state.zone === 'apps') scrollApps();
     }
     updateBackdrop();
   }
@@ -1631,10 +1707,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   }
   function openItem(it, el) {
     if (!it) return;
-    state.lastCard = el;
+    state.lastCard = el; state.lastCardAt = Date.now();
     const op = it.open || {};
     if (!state.live) {
-      if (op.plex) launch('plexweb');
+      if (op.plex) launch(state.prefs.plexOpen === 'web' ? 'plexweb' : 'plex');
       else if (op.request) { state.item = it; openPanel('item'); }
       else toast('info', op.info || it.title, 4000);
       return;
@@ -1721,13 +1797,13 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   }
   const G = {
     a: '<span class="bg g-a">A</span>', b: '<span class="bg g-b">B</span>',
-    menu: '<span class="bg g-menu">≡</span>', num: `<span class="bg g-num">1–${APPS.length}</span>`
+    menu: '<span class="bg g-menu">≡</span>', num: () => `<span class="bg g-num">1–${Math.min(9, APPS.length)}</span>`
   };
   function updateHints() {
     const h = (g, t) => `<span class="hint">${g}${t}</span>`;
     $('#hints').innerHTML = state.panel
       ? h(G.a, 'Choisir') + h(G.b, state.panelStack.length ? 'Retour' : 'Fermer')
-      : h(G.a, 'Ouvrir') + h(G.menu, 'Centre de contrôle') + h(G.num, 'Accès direct');
+      : h(G.a, 'Ouvrir') + h(G.menu, 'Centre de contrôle') + h(G.num(), 'Accès direct');
   }
   function renderAll() {
     renderStatus(); renderHome(); updateHints();
@@ -1765,6 +1841,47 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   function sportSummary() {
     const f = sportFavs();
     return f.length ? f.map(teamName).slice(0, 2).join(', ') + (f.length > 2 ? '…' : '') : `${sportLeagues().length} compétition${sportLeagues().length > 1 ? 's' : ''}`;
+  }
+  // ---------- App Store ----------
+  const DEMO_STORE = {
+    categories: [['video', 'Vidéo'], ['music', 'Musique'], ['games', 'Jeux']],
+    catalog: [
+      { id: 'kodi', name: 'Kodi', cat: 'video', color: '#17b2e7', desc: 'Le centre multimédia de référence : films, séries, IPTV, extensions. Parfait à la manette.' },
+      { id: 'stremio', name: 'Stremio', cat: 'video', color: '#7b5bf5', mouse: true, desc: 'Films et séries en streaming grâce à des extensions.' },
+      { id: 'freetube', name: 'FreeTube', cat: 'video', color: '#e3434b', mouse: true, desc: 'YouTube sans publicité ni compte, tes abonnements gardés sur le PC.' },
+      { id: 'plexamp', name: 'Plexamp', cat: 'music', color: '#e5a00d', mouse: true, desc: 'La musique de ton serveur Plex, avec une belle interface.' },
+      { id: 'shortwave', name: 'Shortwave', cat: 'music', color: '#3a86ff', mouse: true, desc: 'Des milliers de radios du monde entier.' },
+      { id: 'moonlight', name: 'Moonlight', cat: 'games', color: '#5b5bd6', native: true, desc: 'Les jeux de ton PC (Sunshine ou GeForce Experience) sur la télé, à la manette.' },
+      { id: 'retroarch', name: 'RetroArch', cat: 'games', color: '#585858', native: true, desc: 'Les consoles rétro (NES, Super Nintendo, Mega Drive, PlayStation…), tout à la manette.' }
+    ].map(e => ({ ...e, installed: false, inMenu: false, job: null, icon: null })),
+    web: []
+  };
+  function loadStore() {
+    if (!state.live) { state.store = state.store || DEMO_STORE; if (state.panel === 'store') rerenderPane(); return; }
+    fetch('/api/store', { cache: 'no-store' }).then(r => r.json()).then(st => {
+      state.store = st;
+      if (['store', 'storeapp'].includes(state.panel)) rerenderPane();
+    }).catch(() => toast('alert', 'Scaros ne répond pas.'));
+  }
+  const webUrl = id => ((state.store && state.store.web || []).find(w => w.id === id) || {}).url || '';
+  function guessName(url) {
+    const host = String(url).replace(/^https?:\/\//i, '').split(/[/:?#]/)[0].replace(/^www\./i, '');
+    const n = host.split('.')[0] || 'Site';
+    return n.charAt(0).toUpperCase() + n.slice(1);
+  }
+  function addWeb() {
+    const name = state.webName.trim() || guessName(state.webUrl), url = state.webUrl.trim();
+    const done = () => { backPanel(); backPanel(); };
+    if (!state.live) {
+      const id = 'web-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const apps = Object.fromEntries(APPS.map(a => [a.id, { name: a.name, store: !!a.user, web: !!a.web, color: a.user ? a.a : null }]));
+      apps[id] = { name, store: true, web: true, color: `hsl(${hashHue(name)} 55% 42%)` };
+      syncApps(apps); renderApps(); paintFocus(false);
+      (state.store || DEMO_STORE).web.push({ id, name, url });
+      toast('plus', `${name} est ajouté au bout de la bande des applis.`);
+      done(); return;
+    }
+    api('/api/store/web', { name, url }).then(r => r.ok ? done() : toast('alert', r.error || 'Adresse refusée.')).catch(() => toast('alert', 'Scaros ne répond pas.'));
   }
   function setPref(key, value) {
     if (state.live) api('/api/prefs', { key, value }).catch(() => toast('alert', 'Scaros ne répond pas.'));
@@ -1861,7 +1978,12 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   // le même clavier sert au mot de passe Wi-Fi et à la recherche de ville
   const KBT = {
     wifipass: { get: () => state.pw, set: v => { state.pw = v.slice(0, 63); }, ok: 'Se connecter', submit: () => submitPassword() },
-    citysearch: { get: () => state.cityQuery, set: v => { state.cityQuery = v.slice(0, 40); }, ok: 'Rechercher', submit: () => submitCity() }
+    citysearch: { get: () => state.cityQuery, set: v => { state.cityQuery = v.slice(0, 40); }, ok: 'Rechercher', submit: () => submitCity() },
+    weburl: { get: () => state.webUrl, set: v => { state.webUrl = v.slice(0, 300); }, ok: 'Suivant', submit: () => {
+      if (!/\.[a-z]{2,}|localhost|\d+\.\d+\.\d+\.\d+/i.test(state.webUrl)) return toast('globe', 'Tape une adresse, par exemple www.arte.tv.');
+      state.webName = guessName(state.webUrl); openPanel('webname');
+    } },
+    webname: { get: () => state.webName, set: v => { state.webName = v.slice(0, 40); }, ok: 'Ajouter', submit: () => addWeb() }
   };
   function keyboardHTML() {
     return `<div class="kb">${KB[state.kbMode].map((r, ri) => `<div class="kb-row">${r.map((k, ci) => {
@@ -1968,6 +2090,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         </div>
         ${group('Accueil et comptes')}<div class="opts">
           ${row('panel:accounts', 'user', 'Comptes', 'Plex, Overseerr et Spotify', accountsSummary())}
+          ${row('panel:store', 'bag', 'App Store', 'Installer d’autres applis, ajouter un site web', APPS.filter(a => a.user).length ? `${APPS.filter(a => a.user).length} ajoutée${APPS.filter(a => a.user).length > 1 ? 's' : ''}` : '')}
           ${row('panel:home', 'home', 'Accueil', 'Onglets, applis, fond et couleur', HOMEBG_LABEL[homeBg()])}
           ${row('panel:saver', 'moon', 'Écran de veille', '', saverEnabled() ? (saverStyle() === 'widgets' ? 'Widgets' : 'Paysages') : 'Désactivé')}
           ${row('panel:sport', 'trophy', 'Sport', '', esc(sportSummary()))}
@@ -2332,6 +2455,10 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
         lead: 'Relie tes services pour remplir l’accueil et l’écran de veille. Ce qui demande de taper du texte se fait depuis la télécommande du téléphone.',
         body: `${group('Plex')}${plex}<div class="opts">${px.connected ? row('plexlink', 'replay', 'Reconnecter Plex', 'Nouveau code, si le serveur a changé.') + row('plexlogout', 'close', 'Déconnecter Plex', '')
             : row('plexlink', 'plus', px.link ? 'Nouveau code' : 'Connecter Plex', '')}</div>
+          ${px.connected ? `<p class="opt-group" style="margin-top:1.4rem">Une affiche de l’accueil s’ouvre dans</p><div class="opts" role="radiogroup" aria-label="Ouvrir les affiches dans">
+            ${radio('pref:plexOpen:htpc', 'Plex (appli télé) · recommandé', 'Lecture directe : le film reprend là où tu t’étais arrêté.', state.prefs.plexOpen !== 'web')}
+            ${radio('pref:plexOpen:web', 'Plex Web', 'La fiche du film dans le navigateur (si la lecture directe ne marche pas chez toi).', state.prefs.plexOpen === 'web')}
+          </div>` : ''}
           ${group('Overseerr')}${card(ov.connected, ov.connected ? `Connecté${ov.user ? ` : ${esc(ov.user)}` : ''}` : 'Pas connecté',
             ov.error ? esc(ov.error) : ov.connected ? esc(ov.url || '') : 'Sur le téléphone : télécommande › Comptes › Overseerr. Colle l’adresse d’Overseerr et sa clé API (Overseerr › Paramètres › Général).')}
           ${ov.connected ? `<div class="opts">${row('ovlogout', 'close', 'Déconnecter Overseerr', '')}</div>` : ''}
@@ -2443,6 +2570,55 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
           ${row('back', 'back', 'Retour', '')}</div>`
       };
     },
+    store: () => {
+      const st = state.store;
+      const head = { title: 'App Store', icon: 'bag', pa: '#5b7bff', pb: '#2a1f8a', caption: 'Des applis qui se pilotent bien à la télé.' };
+      if (!st) { loadStore(); return { ...head, body: '<p class="note"><span class="spin"></span> Chargement…</p>' }; }
+      const mine = APPS.filter(a => a.user);
+      const item = e => {
+        const job = e.job;
+        const val = job ? (job.state === 'removing' ? 'Suppression…' : job.progress != null ? `${job.progress} %` : 'Installation…')
+          : e.inMenu ? 'Installée' : e.installed ? 'Ajouter' : 'Installer';
+        const tag = e.native ? '<span class="tag">Manette</span>' : e.mouse ? '<span class="tag">Souris</span>' : '';
+        return `<button type="button" class="opt store-row${e.inMenu ? ' done' : ''}" data-act="store:${e.id}">`
+          + `<span class="st-ico" style="--c:${e.color}"><b>${esc(e.name.charAt(0))}</b>${e.icon ? `<img src="${esc(e.icon)}" alt="" onerror="this.remove()">` : ''}</span>`
+          + `<span class="opt-main"><span class="opt-title">${esc(e.name)} ${tag}</span><span class="opt-desc">${esc(e.desc)}</span></span>`
+          + `<span class="opt-val">${job ? '<span class="spin"></span> ' : ''}${val}</span></button>`;
+      };
+      return {
+        ...head,
+        lead: 'Un appui installe l’appli : elle arrive au bout de la bande des applis. Tu peux aussi ajouter un site web comme une appli, ou tout faire depuis la télécommande du téléphone.',
+        body: `${mine.length ? `${group('Tes applis')}<div class="opts">${mine.map(a => row(`storeapp:${a.id}`, a.web ? 'globe' : 'apps', esc(a.name),
+            a.web ? esc(webUrl(a.id)) : 'Installée depuis l’App Store', 'Gérer')).join('')}</div>` : ''}
+          ${group('Sites web')}<div class="opts">${row('webadd', 'plus', 'Ajouter un site web', 'Il s’ouvre en plein écran, comme Twitch (Arte, un serveur perso…).')}</div>
+          ${st.categories.map(([k, n]) => `${group(n)}<div class="opts">${st.catalog.filter(e => e.cat === k).map(item).join('')}</div>`).join('')}
+          <p class="note" style="margin-top:1.2rem"><b>Manette</b> : l’appli lit la manette elle-même ; maintiens le bouton Xbox pour revenir au menu.
+            <b>Souris</b> : elle se pilote mieux avec le mode souris de la télécommande. Les applis viennent de Flathub ; l’installation prend
+            de une à plusieurs minutes selon la connexion.</p>`
+      };
+    },
+    storeapp: () => {
+      const a = byId[state.storeSel] || { name: 'Appli', id: state.storeSel }, e = (state.store && state.store.catalog || []).find(x => x.id === a.id);
+      return {
+        title: esc(a.name), art: a.id, pa: a.a || '#5b7bff', pb: a.b || '#2a1f8a', caption: a.web ? esc(webUrl(a.id)) : 'Installée depuis l’App Store',
+        body: `<div class="opts">
+            ${row(`launch:${a.id}`, 'play', `Ouvrir ${esc(a.name)}`, '')}
+            ${row(`storeremove:${a.id}`, 'close', a.web ? 'Retirer de Scaros' : 'Désinstaller', a.web ? 'Le site disparaît de la bande des applis.' : 'L’appli est supprimée du PC et disparaît de la bande des applis.')}
+          </div>
+          ${e && e.native ? '<p class="note" style="margin-top:1.2rem">Cette appli lit la manette elle-même : maintiens le bouton Xbox une seconde pour revenir au menu.</p>' : ''}
+          ${e && e.mouse ? '<p class="note" style="margin-top:1.2rem">Elle se pilote mieux avec le mode souris : tuile Souris du centre de contrôle, ou bouton Souris de la télécommande.</p>' : ''}`
+      };
+    },
+    weburl: () => ({
+      title: 'Adresse du site', icon: 'globe', pa: '#5b7bff', pb: '#2a1f8a', wide: true, caption: 'Étape 1 sur 2',
+      lead: 'Tape l’adresse, par exemple www.arte.tv. Tu peux aussi la taper depuis la télécommande du téléphone (champ « Taper du texte »).',
+      body: `<div class="pw-field">${state.webUrl ? esc(state.webUrl) : '<span class="ph">https://…</span>'}<span class="caret"></span></div>${keyboardHTML()}`
+    }),
+    webname: () => ({
+      title: 'Nom de l’appli', icon: 'globe', pa: '#5b7bff', pb: '#2a1f8a', wide: true, caption: 'Étape 2 sur 2',
+      lead: `Le nom affiché sous la tuile, pour ${esc(state.webUrl)}.`,
+      body: `<div class="pw-field">${state.webName ? esc(state.webName) : '<span class="ph">Nom</span>'}<span class="caret"></span></div>${keyboardHTML()}`
+    }),
     control: () => {
       const d = new Date(), app = mirroring() ? null : state.launched && byId[state.launched];
       // ouvert pendant une appli : elle reste ouverte derrière, on peut y revenir ou la fermer
@@ -2476,6 +2652,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     airplay: 'AirPlay', update: 'Mise à jour', netdiag: 'Diagnostic réseau', wifinetwork: 'Réseau', wifipass: 'Mot de passe', general: 'Affichage', apps: 'Applis',
     accounts: 'Comptes', home: 'Accueil', hometabs: 'Onglets', homeapps: 'Applis de la bande', saver: 'Écran de veille', sport: 'Sport',
     sportpick: 'Ajouter une équipe', sportteams: 'Équipes', item: 'Fiche',
+    store: 'App Store', storeapp: 'Appli', weburl: 'Site web', webname: 'Nom',
     power: 'Alimentation', about: 'À propos', control: 'Centre de contrôle' };
 
   const currentAct = () => state.pItems[state.pIdx] && state.pItems[state.pIdx].dataset.act;
@@ -2716,6 +2893,45 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
       else toast('download', 'Sur le PC, Scaros télécharge ici les dernières versions des applis.');
     }
     else if (k === 'reload') location.reload();
+    else if (k === 'store') {
+      const e = state.store && state.store.catalog.find(x => x.id === v);
+      if (!e) return;
+      if (e.job) return toast('download', e.job.state === 'removing' ? `Suppression de ${e.name}…` : `Installation de ${e.name} en cours…`);
+      if (e.inMenu) { state.storeSel = v; openPanel('storeapp'); return; }
+      if (!state.live) {
+        e.job = { state: 'installing', progress: 0 }; rerenderPane();
+        toast('download', `Installation de ${e.name}… (maquette)`);
+        const tick = setInterval(() => {
+          e.job.progress += 25;
+          if (e.job.progress >= 100) {
+            clearInterval(tick); e.job = null; e.installed = e.inMenu = true;
+            const apps = Object.fromEntries(APPS.map(a => [a.id, { name: a.name, store: !!a.user, web: !!a.web, color: a.user ? a.a : null }]));
+            apps[e.id] = { name: e.name, store: true, color: e.color };
+            syncApps(apps); renderApps(); paintFocus(false);
+            toast('download', `${e.name} est installé : il est au bout de la bande des applis.`);
+          }
+          if (state.panel === 'store') rerenderPane();
+        }, 600);
+        return;
+      }
+      api('/api/store/install', { id: v }).catch(fail);
+    }
+    else if (k === 'storeapp') { state.storeSel = v; openPanel('storeapp'); }
+    else if (k === 'launch') { closePanel({ resume: false }); launch(v); }
+    else if (k === 'storeremove') {
+      const a = byId[v];
+      if (!state.live) {
+        syncApps(Object.fromEntries(APPS.filter(x => x.id !== v).map(x => [x.id, { name: x.name, store: !!x.user, web: !!x.web, color: x.user ? x.a : null }])));
+        const e = state.store && state.store.catalog.find(x => x.id === v);
+        if (e) e.installed = e.inMenu = false;
+        if (state.store) state.store.web = state.store.web.filter(w => w.id !== v);
+        renderApps(); paintFocus(false); backPanel();
+        toast('close', `${a ? a.name : 'L’appli'} est retirée de Scaros.`);
+        return;
+      }
+      api('/api/store/uninstall', { id: v }).then(() => backPanel()).catch(fail);
+    }
+    else if (k === 'webadd') { state.webUrl = ''; state.webName = ''; state.kbMode = 'abc'; state.kbShift = false; openPanel('weburl'); }
     else if (k === 'tabtoggle') {
       const vis = visibleTabs(), next = vis.includes(v) ? vis.filter(t => t !== v) : [...vis, v];
       if (!next.length) { toast('info', 'Garde au moins un onglet.'); return; }
@@ -3327,6 +3543,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
   function launch(id) {
     stopSaver();
     if (id === 'settings') { openPanel('settings'); return; }
+    if (id === 'store') { openPanel('store'); return; }
     openOverlay(id);
     if (state.live) api('/api/launch', { id }).catch(() => { closeLaunch(false); toast('alert', 'Scaros ne répond pas.'); });
   }
@@ -3346,7 +3563,8 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     const t = byId[id];
     if (state.panel) closePanel({ resume: false });
     // l'écran d'ouverture part de la tuile (ou de l'affiche choisie, pour une fiche Plex)
-    const from = (id === 'plexweb' && state.lastCard && state.lastCard.isConnected && state.lastCard.querySelector('.pc-img')) || $('#t-' + id + ' .icon-art');
+    const fromCard = (id === 'plexweb' || id === 'plex') && state.lastCard && state.lastCard.isConnected && Date.now() - (state.lastCardAt || 0) < 8000;
+    const from = (fromCard && state.lastCard.querySelector('.pc-img')) || $('#t-' + id + ' .icon-art');
     const r = from ? from.getBoundingClientRect() : { top: innerHeight / 2 - 60, left: innerWidth / 2 - 100, right: innerWidth / 2 + 100, bottom: innerHeight / 2 + 60 };
     L.style.setProperty('--t', `${r.top}px`);
     L.style.setProperty('--l', `${r.left}px`);
@@ -3585,7 +3803,7 @@ kbd { font-family: var(--font); font-weight: 700; padding: .05rem .45rem; border
     Escape: 'back', Backspace: 'back', Home: 'home', '+': 'volup', '=': 'volup', '-': 'voldown', ' ': 'playpause', MediaPlayPause: 'playpause',
     MediaTrackNext: 'next', MediaTrackPrevious: 'prev',
     m: 'menu', M: 'menu', ContextMenu: 'menu', F1: 'menu', q: 'qr', Q: 'qr',
-    '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4', '5': 'ch5', '6': 'ch6', '0': 'mute' };
+    '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4', '5': 'ch5', '6': 'ch6', '7': 'ch7', '8': 'ch8', '9': 'ch9', '0': 'mute' };
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
