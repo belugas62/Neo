@@ -48,9 +48,10 @@ try:
 except ImportError:
     qrcode = None
 
-VERSION = "0.7"
+VERSION = "0.8"
 ROOT = Path(__file__).resolve().parent
 UI = ROOT / "ui"
+CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "scaros"
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "scaros"
 LAUNCHER_CLASS = "ScarosLauncher"
 WEB_CLASS = "ScarosWeb"        # fenêtres des applis web (Twitch), à part du menu
@@ -74,6 +75,8 @@ MAC = re.compile(r"(?:[0-9A-F]{2}:){5}[0-9A-F]{2}", re.I)
 
 log = logging.getLogger("scaros")
 DRY = False
+
+from media import LEAGUES, TABS, Media, image_type  # noqa: E402  (à côté de ce fichier)
 
 
 def run(cmd, timeout=10, quiet=False):
@@ -206,7 +209,8 @@ DRY_DIAG = """Diagnostic réseau de Scaros (démo)
 """
 DRY_WEATHER = [  # --dry-run : réponses d'Open-Meteo simulées
     {"current": {"temperature_2m": 14.2, "weather_code": 63, "is_day": 1},
-     "daily": {"temperature_2m_max": [16.1], "temperature_2m_min": [9.4]}},
+     "daily": {"temperature_2m_max": [16.1], "temperature_2m_min": [9.4], "sunrise": ["2026-11-11T08:02"],
+               "sunset": ["2026-11-11T17:09"], "uv_index_max": [2.1]}},
     {"current": {"temperature_2m": 21.0, "weather_code": 0, "is_day": 1},
      "daily": {"temperature_2m_max": [24.0], "temperature_2m_min": [12.0]}},
     {"current": {"temperature_2m": -1.5, "weather_code": 73, "is_day": 1},
@@ -222,16 +226,38 @@ DRY_WEATHER = [  # --dry-run : réponses d'Open-Meteo simulées
 ]
 
 
-def parse_weather(data, city):
-    """Réponse d'Open-Meteo -> ce qu'affiche le menu."""
+AQI_LABELS = ((20, "Bon"), (40, "Correct"), (60, "Moyen"), (80, "Médiocre"), (100, "Mauvais"), (10**6, "Très mauvais"))
+
+
+def parse_weather(data, city, air=None):
+    """Réponses d'Open-Meteo (météo, et qualité de l'air si dispo) -> ce qu'affiche le menu."""
     cur = data["current"]
     code = int(cur["weather_code"])
     kind, label = WEATHER_CODES.get(code, ("cloudy", "Nuageux"))
     daily = data.get("daily") or {}
-    tmax, tmin = (daily.get("temperature_2m_max") or [None])[0], (daily.get("temperature_2m_min") or [None])[0]
+    first = lambda k: (daily.get(k) or [None])[0]
+    tmax, tmin = first("temperature_2m_max"), first("temperature_2m_min")
+    hm = lambda s: s[11:16] if isinstance(s, str) and len(s) >= 16 else None
+    uv = None
+    hourly = data.get("hourly") or {}
+    times, values = hourly.get("time") or [], hourly.get("uv_index") or []
+    now = (cur.get("time") or "")[:13]
+    for t, v in zip(times, values):
+        if t[:13] == now and v is not None:
+            uv = round(float(v))
+    if uv is None and first("uv_index_max") is not None:
+        uv = round(float(first("uv_index_max")))
+    aqi = None
+    try:
+        aqi = round(float(((air or {}).get("current") or {})["european_aqi"]))
+    except (KeyError, TypeError, ValueError):
+        pass
     return {"city": city, "temp": round(float(cur["temperature_2m"])), "code": code, "kind": kind, "label": label,
             "day": bool(cur.get("is_day", 1)), "max": None if tmax is None else round(tmax),
-            "min": None if tmin is None else round(tmin), "at": int(time.time())}
+            "min": None if tmin is None else round(tmin), "sunrise": hm(first("sunrise")), "sunset": hm(first("sunset")),
+            "uv": uv, "uvMax": None if first("uv_index_max") is None else round(float(first("uv_index_max"))),
+            "aqi": aqi, "aqiLabel": next(lab for lim, lab in AQI_LABELS if aqi < lim) if aqi is not None else None,
+            "at": int(time.time())}
 
 
 class Bus:
@@ -389,6 +415,17 @@ class Scaros:
         self.dry_bt = []             # appareils Bluetooth simulés en --dry-run
         self.wifi_scanning = False
         self.apps_updating = False
+        self.extra = {}              # pages ouvertes en plein écran sans être des applis du menu (fiche Plex, Spotify)
+        self.spotifyd_proc = None
+        self.spotifyd_error = None
+        self.spotifyd_started = 0.0
+        self.airplay_cover = STATE_DIR / "airplay-cover.jpg"
+        self.airplay_meta = STATE_DIR / "airplay-meta.txt"
+        self.airplay_opts = None     # options de fichiers que l'UxPlay installé connaît (-ca, -md)
+        self.media = Media(self.bus, STATE_DIR, CACHE_DIR, VERSION, port, DRY, prefs=lambda: self.settings.get("ui", {}),
+                           notify=self.say, launch_url=self.launch_url)
+        self.media.connect_state = self.connect_state
+        self.media.airplay_np = self.airplay_np
         self.dry_wifi = [            # réseaux simulés en --dry-run
             {"ssid": "Freebox-3A2C1F", "signal": 82, "secure": True, "known": True, "active": True},
             {"ssid": "Livebox-9F10", "signal": 61, "secure": True, "known": False, "active": False},
@@ -487,6 +524,7 @@ class Scaros:
                 "audio": {"mode": self.audio_mode, "target": self.audio_target, "device": self.audio_device},
                 "airplay": self.airplay_state(),
                 "mouse": self.mouse_mode,
+                "accounts": self.media.public(),
             }
         if lite:  # la télécommande n'a besoin que de ça : réponse immédiate
             s["remoteBuild"] = remote_page()[1]
@@ -500,6 +538,7 @@ class Scaros:
             "bt": {"devices": self.bt_devices(), "scanning": self.bt_scanning, "audio": bt_audio_available()},
             "weather": self.weather, "place": self.settings.get("weather_place"),
             "update": self.update, "justUpdated": self.just_updated(), "diag": self.diag,
+            "media": self.media.state(), "leagues": {k: v[0] for k, v in LEAGUES.items()},
         })
         return s
 
@@ -551,8 +590,17 @@ class Scaros:
         except (urllib.error.URLError, OSError, ValueError):
             return False
 
+    def conf(self, app_id):
+        return self.apps.get(app_id) or self.extra.get(app_id) or {}
+
+    def launch_url(self, app_id, name, url, profile):
+        """Ouvre une adresse en plein écran comme une appli (fiche Plex Web, connexion à Spotify)."""
+        self.extra[app_id] = {"name": name, "web": url, "profile": profile}
+        self.installed[app_id] = True
+        self.submit("launch", app_id)
+
     def launch(self, app_id, retry=True):
-        conf = self.apps.get(app_id)
+        conf = self.conf(app_id)
         if not conf:
             return False
         if not self.installed.get(app_id, True):
@@ -628,7 +676,7 @@ class Scaros:
         self.osd.send(t="hide")
         app_id, p = cur
         self.windows = []
-        flatpak_id = self.apps[app_id].get("flatpak")
+        flatpak_id = self.conf(app_id).get("flatpak")
         try:
             os.killpg(p.pid, signal.SIGTERM)
         except (ProcessLookupError, PermissionError):
@@ -681,7 +729,7 @@ class Scaros:
                 if not self.shown:
                     self.shown = True
                     self.bus.emit("app", id=app_id, state="shown")
-                    if self.apps[app_id].get("controller") == "native":
+                    if self.conf(app_id).get("controller") == "native":
                         self.notify("gamepad", "La manette sert au jeu. Maintiens le bouton Xbox pour revenir au menu.", 6000)
             time.sleep(0.7)
 
@@ -830,7 +878,7 @@ class Scaros:
             cur = self.current
             if cur and not self.overlay:
                 # une appli peut demander une autre touche, ex. "keys": {"back": "BackSpace"} dans apps.json
-                key = self.apps[cur[0]].get("keys", {}).get(action, key)
+                key = self.conf(cur[0]).get("keys", {}).get(action, key)
                 self.ensure_app_focus()
             run(["xdotool", "key", "--clearmodifiers", key], timeout=3)
 
@@ -845,7 +893,7 @@ class Scaros:
         Pas pendant que le centre de contrôle est ouvert par-dessus : la manette sert alors au menu.
         """
         cur = self.current
-        return bool(cur and not self.overlay and not self.mirroring and self.apps[cur[0]].get("controller") == "native")
+        return bool(cur and not self.overlay and not self.mirroring and self.conf(cur[0]).get("controller") == "native")
 
     # ---------- mode souris ----------
     def set_mouse_mode(self, on):
@@ -1436,14 +1484,37 @@ class Scaros:
     PREFS = {"textScale": ("normal", "large", "xlarge"), "autoSleep": (0, 15, 30, 60), "saver": (0, 2, 5, 10, 15),
              "saverOn": ("on", "off"),
              "theme": ("dark", "light", "auto"),
-             "bg": ("weather", "stars", "aurora", "rain", "snow", "none")}
+             "bg": ("weather", "stars", "aurora", "rain", "snow", "none"),
+             "homeBg": ("poster", "decor", "plain"), "accent": ("amber", "blue", "violet", "green", "pink", "white"),
+             "clock24": ("24", "12"), "saverStyle": ("widgets", "landscape"), "spotifyConnect": ("on", "off")}
+    SAVER_WIDGETS = ("analog", "digital", "weather", "air", "music", "sport")
+
+    def list_pref_ok(self, key, value):
+        """Préférences en liste (ordre des onglets et des applis, widgets, sport)."""
+        if not isinstance(value, list) or len(value) > 40 or not all(isinstance(v, str) for v in value):
+            return False
+        if len(set(value)) != len(value):
+            return False
+        allowed = {"tabs": set(TABS), "appOrder": set(self.apps) | {"settings"}, "appHidden": set(self.apps),
+                   "ssWidgets": set(self.SAVER_WIDGETS), "sportLeagues": set(LEAGUES)}.get(key)
+        if allowed is not None:
+            return set(value) <= allowed
+        if key == "sportTeams":
+            return all(re.fullmatch(r"[a-z0-9.]{2,20}:\d{1,9}", v) and v.split(":")[0] in LEAGUES for v in value)
+        return False
 
     def set_pref(self, key, value):
-        if key not in self.PREFS or value not in self.PREFS[key]:
+        if key in self.PREFS:
+            if value not in self.PREFS[key]:
+                return False
+        elif not self.list_pref_ok(key, value):
             return False
         self.settings.setdefault("ui", {})[key] = value
         self._save_settings()
         self.bus.emit("prefs", prefs=self.settings["ui"])
+        if key in ("sportLeagues", "sportTeams"):
+            self.media.sports.next_cache.clear()
+            self.media.wake.set()
         return True
 
     # ---------- écrans ----------
@@ -1671,6 +1742,13 @@ class Scaros:
         if self.covered():
             self.osd.send(t="note", icon=icon, text=text, ms=ms)
 
+    def say(self, icon, text, ms=3500):
+        """Message pour l'écran, où qu'on soit : par-dessus l'appli ouverte, ou dans le menu."""
+        if self.covered():
+            self.notify(icon, text, ms)
+        else:
+            self.bus.emit("toast", icon=icon, text=text, ms=ms)
+
     # ---------- AirPlay (UxPlay) : recopie d'écran et vidéos depuis un iPhone ----------
     def airplay_state(self):
         return {"enabled": self.settings.get("airplay", True), "available": DRY or shutil.which("uxplay") is not None,
@@ -1706,6 +1784,7 @@ class Scaros:
             # -p : ports fixes (TCP 7000 7001 7100, UDP 6000 6001 7011) au lieu de ports au hasard,
             # que le diagnostic réseau sait surveiller et qu'un pare-feu peut laisser passer
             cmd = ["uxplay", "-n", AIRPLAY_NAME, "-nh", "-fs", "-nohold", "-reset", "15", "-p"]
+            cmd += self._airplay_file_opts()
             if shutil.which("stdbuf"):
                 cmd = ["stdbuf", "-oL", "-eL"] + cmd
             try:
@@ -1756,6 +1835,105 @@ class Scaros:
                 self._airplay_fail(f"UxPlay s'arrête au démarrage : {why}")
             fails = fails + 1 if quick else 0
             time.sleep(min(60, 2 * 2 ** min(fails, 5)))  # UxPlay qui plante en boucle : on espace
+
+    def _airplay_file_opts(self):
+        """-ca : pochette de la musique envoyée par l'iPhone (écran de veille) ; -md (UxPlay 1.72+) : titre, artiste."""
+        if self.airplay_opts is None:
+            try:
+                p = subprocess.run(["uxplay", "-h"], capture_output=True, text=True, timeout=5)
+                text = p.stdout + p.stderr
+            except (OSError, subprocess.TimeoutExpired):
+                text = ""
+            self.airplay_opts = []
+            if re.search(r"^\s*-ca\b", text, re.M):
+                self.airplay_opts += ["-ca", str(self.airplay_cover)]
+            if re.search(r"^\s*-md\b", text, re.M):
+                self.airplay_opts += ["-md", str(self.airplay_meta)]
+            for f in (self.airplay_cover, self.airplay_meta):
+                f.unlink(missing_ok=True)
+        return self.airplay_opts
+
+    def airplay_np(self):
+        """Musique envoyée en AirPlay : pochette (et titre si UxPlay le donne), pendant 8 minutes après le dernier morceau."""
+        if self.mirroring or not self.airplay_proc:
+            return None
+        try:
+            st = self.airplay_cover.stat()
+        except OSError:
+            st = None
+        meta = {}
+        try:
+            if time.time() - self.airplay_meta.stat().st_mtime < 480:
+                for line in self.airplay_meta.read_text(errors="replace").splitlines():
+                    k, _, v = line.partition(":")
+                    if v.strip():
+                        meta[k.strip().lower()] = v.strip()
+        except OSError:
+            pass
+        if not meta and (not st or time.time() - st.st_mtime > 480):
+            return None
+        return {"source": "airplay", "via": "airplay", "title": meta.get("title") or meta.get("titre") or "Musique en AirPlay",
+                "artist": meta.get("artist") or meta.get("artiste") or (self.airplay_device or "iPhone"),
+                "album": meta.get("album") or "", "cover": f"/api/np/cover?t={int(st.st_mtime)}" if st else None,
+                "playing": True, "position": 0, "duration": 0, "device": self.airplay_device, "controls": False}
+
+    def spotify_done(self, err, close=True):
+        """Fin de la connexion à Spotify (page fermée sur la télé, message pour tout le monde)."""
+        if close and self.current and self.current[0] == "spotifylogin":
+            self.close_app()
+        self.say("alert" if err else "check", err or "Spotify est connecté : la musique s'affiche sur l'écran de veille.", 6000)
+        self.media.changed()
+
+    # ---------- Spotify Connect (spotifyd) ----------
+    def connect_state(self):
+        """Scaros dans la liste des appareils de l'appli Spotify : on | off | missing | error."""
+        if self.settings.get("ui", {}).get("spotifyConnect") == "off":
+            return "off"
+        if DRY:
+            return "on"
+        if not shutil.which("spotifyd"):
+            return "missing"
+        p = self.spotifyd_proc
+        return "on" if p and p.poll() is None else "error" if self.spotifyd_error else "starting"
+
+    def _spotifyd_loop(self):
+        """Garde spotifyd lancé : « Scaros » apparaît dans l'appli Spotify (Premium) et le son sort ici."""
+        if DRY:
+            return
+        run(["pkill", "-x", "-u", str(os.getuid()), "spotifyd"], timeout=5, quiet=True)
+        fails = 0
+        while True:
+            want = self.settings.get("ui", {}).get("spotifyConnect", "on") != "off" and shutil.which("spotifyd")
+            p = self.spotifyd_proc
+            if not want:
+                if p and p.poll() is None:
+                    try:
+                        os.killpg(p.pid, signal.SIGTERM)
+                    except (ProcessLookupError, PermissionError):
+                        pass
+                    self.spotifyd_proc = None
+                time.sleep(3)
+                continue
+            if p and p.poll() is None:
+                time.sleep(3)
+                continue
+            if p:
+                quick = time.monotonic() - self.spotifyd_started < 15
+                fails = fails + 1 if quick else 0
+                self.spotifyd_error = f"spotifyd s'est arrêté (code {p.returncode})" if quick else None
+                log.warning("spotifyd s'est arrêté (code %s)", p.returncode)
+                time.sleep(min(120, 3 * 2 ** min(fails, 5)))
+            try:
+                STATE_DIR.mkdir(parents=True, exist_ok=True)
+                out = open(STATE_DIR / "spotifyd.log", "ab")
+                self.spotifyd_proc = subprocess.Popen(["spotifyd", "--no-daemon"], stdout=out, stderr=subprocess.STDOUT,
+                                                      stdin=subprocess.DEVNULL, start_new_session=True)
+                out.close()
+                self.spotifyd_started = time.monotonic()
+                log.info("Spotify Connect : spotifyd lancé (« Scaros » dans l'appli Spotify)")
+            except OSError as e:
+                self.spotifyd_error = str(e)
+                time.sleep(60)
 
     def _avahi_ok(self):
         code, out = run(["systemctl", "is-active", "avahi-daemon"], timeout=5, quiet=True)
@@ -2102,15 +2280,23 @@ class Scaros:
                 self.settings["weather_place"] = place
                 self._save_settings()
             try:
+                air = None
                 if DRY:
                     data = DRY_WEATHER[self.dry_weather % len(DRY_WEATHER)]
+                    air = {"current": {"european_aqi": 28}}
                 else:
                     data = self._http_json(
                         "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode({
                             "latitude": place["lat"], "longitude": place["lon"], "timezone": "auto", "forecast_days": 1,
                             "current": "temperature_2m,weather_code,is_day",
-                            "daily": "temperature_2m_max,temperature_2m_min"}))
-                self.weather = parse_weather(data, place["city"])
+                            "hourly": "uv_index",
+                            "daily": "temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max"}))
+                    try:  # qualité de l'air : un plus, pas indispensable
+                        air = self._http_json("https://air-quality-api.open-meteo.com/v1/air-quality?" + urllib.parse.urlencode({
+                            "latitude": place["lat"], "longitude": place["lon"], "timezone": "auto", "current": "european_aqi"}))
+                    except (OSError, ValueError) as e:
+                        log.info("qualité de l'air indisponible : %s", e)
+                self.weather = parse_weather(data, place["city"], air)
             except (OSError, ValueError, KeyError, TypeError, IndexError) as e:
                 log.info("météo indisponible : %s", e)
                 return
@@ -2154,6 +2340,8 @@ class Scaros:
         threading.Thread(target=self._watch_airplay_window, daemon=True).start()
         threading.Thread(target=self._watch_weather, daemon=True).start()
         threading.Thread(target=self._watch_updates, daemon=True).start()
+        threading.Thread(target=self.media.watch, daemon=True).start()
+        threading.Thread(target=self._spotifyd_loop, daemon=True).start()
         threading.Thread(target=self.osd.start, daemon=True).start()
         if evdev is not None:
             threading.Thread(target=Pad(self).run, daemon=True).start()
@@ -2620,6 +2808,38 @@ class Handler(BaseHTTPRequestHandler):
             except (OSError, ValueError, KeyError) as e:
                 log.info("recherche de ville impossible : %s", e)
                 return self.json({"error": "offline", "results": []}, 502)
+        if path.startswith("/api/img/"):
+            hit = self.app.media.images.get(path[len("/api/img/"):])
+            if not hit:
+                return self.send(404, b"", "text/plain")
+            return self.send(200, hit[0], hit[1], cache="max-age=2592000")
+        if path == "/api/np":
+            return self.json({"np": self.app.media.now_playing()})
+        if path == "/api/np/cover":
+            try:
+                data = self.app.airplay_cover.read_bytes()
+            except OSError:
+                return self.send(404, b"", "text/plain")
+            return self.send(200, data, image_type(data) or "image/jpeg", cache="max-age=3600")
+        if path == "/api/accounts":
+            return self.json({**self.app.media.public(), "leagues": {k: v[0] for k, v in LEAGUES.items()}})
+        if path == "/api/sport/teams":
+            league = urllib.parse.parse_qs(url.query).get("league", [""])[0]
+            try:
+                return self.json({"teams": self.app.media.sports.teams(league)})
+            except (OSError, ValueError) as e:
+                log.info("équipes %s indisponibles : %s", league, e)
+                return self.json({"error": "offline", "teams": []}, 502)
+        if path == "/api/spotify/callback":
+            q = urllib.parse.parse_qs(url.query)
+            err = "Connexion annulée sur Spotify." if q.get("error") else \
+                self.app.media.spotify.finish(q.get("code", [""])[0], q.get("state", [""])[0])
+            self.app.spotify_done(err)
+            msg = err or "Spotify est connecté à Scaros. Tu peux fermer cette page."
+            html = ("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
+                    "<body style='font:24px system-ui;background:#000;color:#fff;display:grid;place-items:center;height:90vh;"
+                    f"text-align:center;padding:1em'>{msg}</body>")
+            return self.send(200, html.encode(), "text/html; charset=utf-8")
         if path == "/api/qr.svg":
             return self.qr()
         if path == "/api/diag":
@@ -2910,6 +3130,81 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json({"error": "action inconnue"}, 400)
             threading.Thread(target=a.power, args=(action,), daemon=True).start()
             return self.json({"ok": True})
+        # ---------- accueil, comptes, musique ----------
+        m = a.media
+        if path == "/api/media/refresh":
+            threading.Thread(target=m.refresh, kwargs={"force": bool(body.get("force"))}, daemon=True).start()
+            return self.json({"ok": True})
+        if path == "/api/media/open":
+            res = m.open_item(str(body.get("id", "")))
+            return self.json(res, 404 if res.get("error") == "introuvable" else 200)
+        if path == "/api/media/request":
+            try:
+                mtype, tmdb = str(body.get("type")), int(body.get("id"))
+            except (TypeError, ValueError):
+                return self.json({"error": "demande invalide"}, 400)
+            err = m.request(mtype, tmdb, str(body.get("title", ""))[:200])
+            return self.json({"ok": not err, "error": err})
+        if path == "/api/np/control":
+            action = body.get("action")
+            if action not in ("toggle", "play", "pause", "next", "prev"):
+                return self.json({"error": "action inconnue"}, 400)
+            return self.json({"ok": m.control(action), "np": m.now_playing()})
+        if path == "/api/accounts/plex":
+            action = body.get("action")
+            if action == "link":
+                ok = m.plex.start_link()
+            elif action == "logout":
+                m.plex.logout()
+                ok = True
+            elif action == "manual":
+                server, token = str(body.get("server", "")).strip()[:300], str(body.get("token", "")).strip()[:200]
+                if not re.match(r"^https?://[^\s/]+", server) or not token:
+                    return self.json({"ok": False, "error": "Adresse (http://…:32400) et jeton nécessaires."})
+                err = m.plex.set_manual(server, token)
+                if err:
+                    return self.json({"ok": False, "error": err})
+                ok = True
+            else:
+                return self.json({"error": "action inconnue"}, 400)
+            m.changed()
+            threading.Thread(target=m.refresh, kwargs={"force": True}, daemon=True).start()
+            return self.json({"ok": ok, "accounts": m.public()})
+        if path == "/api/accounts/overseerr":
+            if body.get("action") == "logout":
+                m.overseerr.logout()
+                err = None
+            else:
+                url_, key = str(body.get("url", ""))[:300], str(body.get("key", ""))[:200]
+                if not url_.strip() or not key.strip():
+                    return self.json({"ok": False, "error": "Adresse et clé API nécessaires."})
+                err = m.overseerr.connect(url_, key)
+            m.changed()
+            if not err:
+                threading.Thread(target=m.refresh, kwargs={"force": True}, daemon=True).start()
+            return self.json({"ok": not err, "error": err, "accounts": m.public()})
+        if path == "/api/accounts/spotify":
+            sp, action, err, extra = m.spotify, body.get("action"), None, {}
+            if "clientId" in body:
+                err = sp.set_client(str(body.get("clientId"))[:64])
+            elif action == "auth":  # lien à ouvrir sur le téléphone
+                extra["url"] = sp.auth_url()
+                err = None if extra["url"] else "Enregistre d'abord le Client ID."
+            elif action == "tv":    # connexion sur la télé (clavier et souris de la télécommande)
+                u = sp.auth_url()
+                if u:
+                    a.launch_url("spotifylogin", "Spotify", u, "scaros-spotify")
+                else:
+                    err = "Enregistre d'abord le Client ID."
+            elif action == "code":  # adresse copiée depuis Safari après la connexion sur le téléphone
+                err = sp.finish_url(str(body.get("url", ""))[:4000])
+                a.spotify_done(err, close=False)
+            elif action == "logout":
+                sp.logout()
+            else:
+                return self.json({"error": "action inconnue"}, 400)
+            m.changed()
+            return self.json({"ok": not err, "error": err, "accounts": m.public(), **extra})
         if DRY and path == "/api/dev/airplay":
             threading.Thread(target=a.dry_airplay, daemon=True).start()
             return self.json({"ok": True})

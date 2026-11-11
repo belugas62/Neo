@@ -51,6 +51,44 @@ polkit.addRule(function (action, subject) {
 EOF
 }
 
+# Spotify Connect : spotifyd (programme officiel du projet, publié sur GitHub). « Scaros » apparaît alors
+# dans la liste des appareils de l'appli Spotify (compte Premium) et le son sort par Scaros.
+SPOTIFYD_URL="https://github.com/Spotifyd/spotifyd/releases/download/v0.4.2/spotifyd-linux-x86_64-full.tar.gz"
+install_spotifyd() {
+  [ -x /usr/local/bin/spotifyd ] && return 0
+  local t; t="$(mktemp -d)"
+  if wget -q -O "$t/spotifyd.tar.gz" "$SPOTIFYD_URL" && tar -xzf "$t/spotifyd.tar.gz" -C "$t" \
+      && [ -n "$(find "$t" -type f -name spotifyd | head -n1)" ]; then
+    install -m 755 "$(find "$t" -type f -name spotifyd | head -n1)" /usr/local/bin/spotifyd
+    echo "Spotify Connect (spotifyd) installé."
+  else
+    warn "Téléchargement de spotifyd raté : Spotify Connect ne sera pas disponible (la musique du téléphone s'affichera quand même)."
+  fi
+  rm -rf "$t"
+  if [ -x /usr/local/bin/spotifyd ] && ldd /usr/local/bin/spotifyd 2>/dev/null | grep -q "not found"; then
+    warn "spotifyd : bibliothèques manquantes ($(ldd /usr/local/bin/spotifyd | grep 'not found' | awk '{print $1}' | xargs))."
+  fi
+}
+# réglages de spotifyd pour le compte de la box (gardés s'ils existent déjà)
+write_spotifyd_conf() {
+  local home="$1" user="$2" conf="$1/.config/spotifyd/spotifyd.conf"
+  [ -f "$conf" ] && return 0
+  install -d -o "$user" -g "$user" "$home/.config" "$home/.config/spotifyd"
+  cat > "$conf" <<'EOF'
+# Scaros OS : Spotify Connect. « Scaros » dans la liste des appareils de l'appli Spotify.
+[global]
+device_name = "Scaros"
+device_type = "t_v"
+backend = "pulseaudio"
+bitrate = 320
+initial_volume = 90
+volume_normalisation = true
+use_mpris = true
+dbus_type = "session"
+EOF
+  chown -R "$user:$user" "$home/.config/spotifyd"
+}
+
 # ---------------------------------------------------------------------------
 step "1/9 Paquets du système (affichage, son, manette, vidéo)"
 apt-get update
@@ -59,13 +97,17 @@ apt_install \
   chromium fonts-noto-core \
   pipewire pipewire-pulse wireplumber pulseaudio-utils alsa-ucm-conf libspa-0.2-bluetooth \
   intel-media-va-driver i965-va-driver vainfo \
-  bluez dbus-user-session polkitd \
+  bluez dbus-user-session polkitd playerctl \
   python3 python3-evdev python3-qrcode \
   python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-rsvg-2.0 fontconfig \
   uxplay avahi-utils gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav \
   gstreamer1.0-x gstreamer1.0-gl gstreamer1.0-pulseaudio \
   curl ca-certificates wget flatpak plymouth avahi-daemon zram-tools wireless-tools iw openssh-server \
   tcpdump iputils-arping
+
+# bibliothèques de spotifyd (Spotify Connect)
+apt_install libasound2t64 >/dev/null 2>&1 || apt_install libasound2 >/dev/null 2>&1 || true
+apt_install libpulse0 libdbus-1-3 >/dev/null 2>&1 || true
 
 # micrologiciels (son Intel SOF, Wi-Fi) : présents si la section non-free-firmware est activée
 for fw in firmware-sof-signed firmware-misc-nonfree firmware-iwlwifi firmware-realtek; do
@@ -112,7 +154,8 @@ options iwlmvm power_scheme=1"
 printf '%s\n' "$wifi_modprobe" > /etc/modprobe.d/scaros-wifi.conf
 
 # ---------------------------------------------------------------------------
-step "3/9 Applis YouTube, Jellyfin, Plex et Steam Link (Flathub ; Twitch n'a besoin de rien)"
+step "3/9 Applis YouTube, Jellyfin, Plex et Steam Link (Flathub ; Twitch n'a besoin de rien), Spotify Connect"
+install_spotifyd
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 for app in "${FLATPAKS[@]}"; do
   if flatpak info "$app" >/dev/null 2>&1; then
@@ -162,6 +205,7 @@ TimeoutStartSec=180
 EOF
 systemctl daemon-reload
 # polices du menu, aussi pour l'affichage par-dessus les applis
+rm -rf /usr/local/share/fonts/scaros
 mkdir -p /usr/local/share/fonts/scaros
 cp "$HERE"/launcher/ui/fonts/*.woff2 /usr/local/share/fonts/scaros/ 2>/dev/null && fc-cache -f >/dev/null 2>&1 || true
 mkdir -p /etc/chromium/policies/managed
@@ -208,6 +252,7 @@ EOF
 fi
 mkdir -p "$USER_HOME/.local/state/scaros"
 chown -R "$USER_NAME:$USER_NAME" "$profile" "$USER_HOME/.local"
+write_spotifyd_conf "$USER_HOME" "$USER_NAME"
 
 # ---------------------------------------------------------------------------
 step "6/9 Manette Bluetooth et nom réseau « scaros »"
@@ -292,6 +337,7 @@ step "9/9 Vérifications"
 vainfo --display drm --device /dev/dri/renderD128 2>/dev/null | grep -qi "VAProfileVP9" && echo "Décodage vidéo par la puce Intel : OK (VP9 disponible)." \
   || warn "Le décodage vidéo matériel n'a pas pu être vérifié (normal tant que la session graphique n'a pas démarré)."
 for app in "${FLATPAKS[@]}"; do flatpak info "$app" >/dev/null 2>&1 || warn "$app manquant."; done
+[ -x /usr/local/bin/spotifyd ] || warn "spotifyd manquant : Scaros n'apparaîtra pas dans l'appli Spotify (relance install.sh)."
 
 echo
 if [ "${#WARNINGS[@]}" -gt 0 ]; then

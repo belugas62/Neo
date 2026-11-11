@@ -80,6 +80,8 @@ NEW_PACKAGES=(
   python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-rsvg-2.0 fontconfig
   # diagnostic réseau (Réglages › Wi-Fi › Diagnostic réseau)
   tcpdump iputils-arping iw
+  # musique en cours sur l'écran de veille (Spotify Connect, via MPRIS)
+  playerctl libpulse0 libdbus-1-3
 )
 missing=()
 for pkg in "${NEW_PACKAGES[@]}"; do
@@ -230,8 +232,45 @@ TimeoutStartSec=180
 EOF
 systemctl daemon-reload
 
-# Spotify n'est plus dans Scaros
-rm -f /usr/local/bin/spotifyd
+# Spotify Connect : spotifyd (programme officiel du projet, publié sur GitHub). « Scaros » apparaît alors
+# dans la liste des appareils de l'appli Spotify (compte Premium) et le son sort par Scaros.
+SPOTIFYD_URL="https://github.com/Spotifyd/spotifyd/releases/download/v0.4.2/spotifyd-linux-x86_64-full.tar.gz"
+install_spotifyd() {
+  [ -x /usr/local/bin/spotifyd ] && return 0
+  local t; t="$(mktemp -d)"
+  if wget -q -O "$t/spotifyd.tar.gz" "$SPOTIFYD_URL" && tar -xzf "$t/spotifyd.tar.gz" -C "$t" \
+      && [ -n "$(find "$t" -type f -name spotifyd | head -n1)" ]; then
+    install -m 755 "$(find "$t" -type f -name spotifyd | head -n1)" /usr/local/bin/spotifyd
+    echo "Spotify Connect (spotifyd) installé."
+  else
+    echo "Attention : Téléchargement de spotifyd raté : Spotify Connect ne sera pas disponible (la musique du téléphone s'affichera quand même)."
+  fi
+  rm -rf "$t"
+  if [ -x /usr/local/bin/spotifyd ] && ldd /usr/local/bin/spotifyd 2>/dev/null | grep -q "not found"; then
+    echo "Attention : spotifyd : bibliothèques manquantes ($(ldd /usr/local/bin/spotifyd | grep 'not found' | awk '{print $1}' | xargs))."
+  fi
+}
+# réglages de spotifyd pour le compte de la box (gardés s'ils existent déjà)
+write_spotifyd_conf() {
+  local home="$1" user="$2" conf="$1/.config/spotifyd/spotifyd.conf"
+  [ -f "$conf" ] && return 0
+  install -d -o "$user" -g "$user" "$home/.config" "$home/.config/spotifyd"
+  cat > "$conf" <<'EOF'
+# Scaros OS : Spotify Connect. « Scaros » dans la liste des appareils de l'appli Spotify.
+[global]
+device_name = "Scaros"
+device_type = "t_v"
+backend = "pulseaudio"
+bitrate = 320
+initial_volume = 90
+volume_normalisation = true
+use_mpris = true
+dbus_type = "session"
+EOF
+  chown -R "$user:$user" "$home/.config/spotifyd"
+}
+install_spotifyd
+[ -n "$USER_NAME" ] && write_spotifyd_conf "$(getent passwd "$USER_NAME" | cut -d: -f6)" "$USER_NAME"
 
 # 3) fichiers de Scaros
 mkdir -p /opt/scaros
@@ -244,6 +283,7 @@ install -m 755 "$src/system/scaros-diag.sh" /usr/local/bin/scaros-diag
 python3 -I -c 'import sys, tarfile; print(tarfile.open(sys.argv[1]).pax_headers.get("comment", ""))' \
   "$SCAROS_TMP/scaros.tar.gz" > /opt/scaros/commit 2>/dev/null || rm -f /opt/scaros/commit
 # polices du menu, aussi pour l'affichage par-dessus les applis
+rm -rf /usr/local/share/fonts/scaros
 mkdir -p /usr/local/share/fonts/scaros
 cp "$src"/launcher/ui/fonts/*.woff2 /usr/local/share/fonts/scaros/ 2>/dev/null && fc-cache -f >/dev/null 2>&1 || true
 

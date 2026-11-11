@@ -24,7 +24,7 @@ gi.require_version("Rsvg", "2.0")
 import cairo  # noqa: E402
 from gi.repository import Gdk, GLib, Gtk, Pango, PangoCairo, Rsvg  # noqa: E402
 
-FONT = "Figtree, Noto Sans, Sans"
+FONT = "Inter, Noto Sans, Sans"
 SHEET = (0.086, 0.106, 0.141)     # #161b24 : toujours sombre, par-dessus une vidéo
 LINE = (1, 1, 1, 0.13)
 TEXT = (0.953, 0.961, 0.976)
@@ -43,6 +43,8 @@ ICONS = {
     "wifi": '<path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.6 16a5 5 0 0 1 6.8 0"/><circle cx="12" cy="19.3" r="1.1" fill="#fff"/>',
     "alert": '<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     "mouse": '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3.5"/>',
+    "check": '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    "music": '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
 }
 
 

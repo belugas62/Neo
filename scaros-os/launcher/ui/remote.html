@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" href="/icons/icon-192.png">
 <title>Télécommande Scaros</title>
 <style>
-@font-face { font-family: "Figtree"; src: url("/fonts/figtree.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("/fonts/inter.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 /* Layout: one screen, no scrolling — header, search, the Flèches/Souris switch, a big touch
    pad (arrows: swipe to move, tap to select; mouse: a trackpad), then the keys laid out like an
    Apple TV remote (Retour, Accueil, Lecture, Menu, and the volume rocker on the right), channels.
@@ -30,7 +30,7 @@
   --muted: #8a91a1;
   --ok: #6cc04a;
   --led: #ff3b30;
-  --font: "Figtree", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
   --gap: clamp(8px, 1.5dvh, 14px);
   color-scheme: dark;
 }
@@ -159,6 +159,40 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
 }
 .toast.on { transform: translate(-50%, 0); opacity: 1; }
 
+/* Comptes : Plex, Overseerr, Spotify (ce qui demande de taper du texte se fait ici) */
+.acc-btn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; margin-left: auto; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: none; color: var(--text-2); cursor: pointer; }
+.acc-btn .ic { width: 19px; height: 19px; }
+.acc-btn + .conn { margin-left: 8px; }
+.sheet { position: fixed; inset: 0; z-index: 40; overflow-y: auto; box-sizing: border-box; background: var(--ink);
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 28px) max(16px, env(safe-area-inset-left, 0px)); }
+.sheet-head { position: sticky; top: calc(-14px - env(safe-area-inset-top, 0px)); z-index: 1; display: flex; align-items: center; justify-content: space-between; margin: -14px -16px 0; padding: 14px 16px 10px; background: var(--ink); }
+.sheet-head b { font-size: 22px; letter-spacing: -.02em; }
+.sheet-head button { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: var(--key); color: var(--text); font-size: 16px; cursor: pointer; }
+.sheet-lead { margin: 2px 0 6px; font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+.acc { margin-top: 12px; padding: 14px; border-radius: 18px; background: var(--raised); border: 1px solid var(--line); }
+.acc h2 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 17px; }
+.acc h2 .logo { height: 24px; width: 24px; }
+.acc .st { display: flex; align-items: center; gap: 7px; margin: 8px 0 0; font-size: 14px; color: var(--text-2); }
+.acc .st::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.acc .st.ok::before { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.acc .err { margin: 6px 0 0; font-size: 13px; color: #ff9f8a; }
+.acc .help { margin: 8px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.acc ol { margin: 10px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.acc ol b { color: var(--text); word-break: break-all; }
+.acc input { display: block; width: 100%; box-sizing: border-box; height: 42px; margin-top: 8px; padding: 0 12px; font: inherit; font-size: 15px; color: var(--text);
+  background: var(--key); border: 1px solid var(--line); border-radius: 12px; }
+.acc input:focus { outline: 2px solid #ffffff60; outline-offset: 1px; }
+.acc .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.btn { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 14px; border: 0; border-radius: 12px;
+  background: var(--text); color: var(--ink); font: inherit; font-size: 14.5px; font-weight: 650; text-decoration: none; cursor: pointer; }
+.btn.ghost { background: var(--key); color: var(--text); border: 1px solid var(--line); }
+.btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+.code { margin-top: 10px; padding: 12px; border-radius: 14px; background: var(--key); text-align: center; }
+.code p { margin: 0; font-size: 13.5px; color: var(--text-2); }
+.code b { display: block; margin: 6px 0 10px; font-size: 38px; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
+.acc details { margin-top: 10px; font-size: 13px; color: var(--muted); }
+.acc summary { cursor: pointer; }
+
 /* very short screens (landscape, small phones): the page scrolls instead of squeezing */
 @media (max-height: 560px) { main { height: auto; min-height: 100dvh; } main > .pad-wrap { flex: none; height: 250px; } }
 @media (max-width: 350px) { .key { font-size: 12.5px; gap: 6px; } .ctrl { grid-template-columns: 1fr 1fr 64px; } }
@@ -168,6 +202,7 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   <header>
     <svg class="mark" viewBox="0 0 224 224" aria-hidden="true"><path fill="#FF5A1F" d="M224 57.8 H76 A18.2 18.2 0 0 0 76 94.2 H224 Z"/><path fill="#FF5A1F" d="M0 166.2 H148 A18.2 18.2 0 0 0 148 129.8 H0 Z"/><path fill="#FFFFFF" d="M58 0 H166 C201.96 0 224 22.04 224 58 V59 H76 A17 17 0 0 0 76 93 H224 V166 C224 201.96 201.96 224 166 224 H58 C22.04 224 0 201.96 0 166 V165 H148 A17 17 0 0 0 148 131 H0 V58 C0 22.04 22.04 0 58 0 Z"/></svg>
     <div class="htext"><svg class="word" viewBox="22.58 69.45 638.26 117.2" role="img" aria-label="scaros"><path fill="currentColor" d="M71.78 186.65C99.46 186.65 119.30 172.86 119.30 151.01C119.30 134.57 109.01 124.81 86.84 120.15L66.69 116.01C57.36 114.0 51.84 109.86 51.84 103.18C51.84 95.54 59.06 89.60 70.83 89.60C83.03 89.60 91.19 96.92 91.40 106.89H116.54C115.90 83.87 97.34 69.56 70.19 69.56C42.83 69.56 25.12 83.45 25.12 104.03C25.12 121.0 36.36 131.92 57.78 136.37L76.87 140.30C86.31 142.31 92.15 146.24 92.15 153.03C92.15 160.98 84.30 166.60 71.36 166.60C58.0 166.60 50.15 160.34 48.98 149.42H22.57C24.27 173.5 44.53 186.65 71.78 186.65Z M186.07 186.54C214.39 186.54 234.96 168.30 236.87 143.80H210.46C207.92 156.21 200.39 164.27 186.39 164.27C168.78 164.27 158.39 150.16 158.39 128.10C158.39 105.93 168.89 91.72 186.39 91.72C200.28 91.72 208.66 100.10 210.68 112.09H236.87C234.54 87.16 214.18 69.45 186.07 69.45C153.30 69.45 131.34 93.53 131.34 128.10C131.34 162.68 153.30 186.54 186.07 186.54Z M287.95 185.80C306.19 185.80 315.63 178.16 320.93 168.19H321.36V184.0H347.66V107.63C347.66 84.30 330.37 69.77 301.21 69.77C271.93 69.77 253.69 84.51 252.42 106.78H278.19C278.93 97.34 287.63 90.56 300.68 90.56C313.51 90.56 321.15 97.34 321.15 106.89V107.74C321.15 115.37 314.04 115.69 293.25 118.03C270.13 120.46 249.24 126.72 249.24 152.18C249.24 174.56 265.68 185.80 287.95 185.80ZM294.53 165.96C282.86 165.96 275.33 160.77 275.33 151.96C275.33 141.78 285.09 137.65 296.54 135.95C307.57 134.25 317.96 132.56 321.25 130.43V142.53C321.25 155.57 312.03 165.96 294.53 165.96Z M370.31 184.0H397.04V120.57C397.04 103.07 406.90 94.27 419.63 94.27C424.93 94.27 430.24 94.80 432.25 95.12V71.36C430.13 71.15 427.16 70.93 423.56 70.93C409.13 70.93 400.54 77.72 396.40 90.56H396.09V72.0H370.31Z M496.69 186.54C529.68 186.54 551.95 162.89 551.95 128.10C551.95 93.31 529.68 69.45 496.69 69.45C463.71 69.45 441.43 93.31 441.43 128.10C441.43 162.89 463.71 186.54 496.69 186.54ZM496.69 164.16C479.40 164.16 468.48 150.48 468.48 128.10C468.48 105.62 479.51 91.83 496.69 91.83C513.77 91.83 524.80 105.72 524.80 128.10C524.80 150.37 513.87 164.16 496.69 164.16Z M613.31 186.65C641.0 186.65 660.83 172.86 660.83 151.01C660.83 134.57 650.54 124.81 628.37 120.15L608.22 116.01C598.89 114.0 593.37 109.86 593.37 103.18C593.37 95.54 600.59 89.60 612.36 89.60C624.56 89.60 632.72 96.92 632.93 106.89H658.07C657.43 83.87 638.87 69.56 611.72 69.56C584.36 69.56 566.65 83.45 566.65 104.03C566.65 121.0 577.89 131.92 599.31 136.37L618.40 140.30C627.84 142.31 633.68 146.24 633.68 153.03C633.68 160.98 625.83 166.60 612.89 166.60C599.53 166.60 591.68 160.34 590.51 149.42H564.10C565.80 173.5 586.06 186.65 613.31 186.65Z"/></svg><span class="now">À l’écran : <b id="now-app">le menu</b></span></div>
+    <button type="button" class="acc-btn" id="acc-open" aria-label="Comptes : Plex, Overseerr, Spotify" data-icon="user"></button>
     <span class="conn" id="conn"><span class="dot"></span><span id="conn-text">Connexion…</span></span>
   </header>
 
@@ -210,6 +245,11 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
 
   <div class="channels" id="channels"></div>
 </main>
+<div class="sheet" id="acc" hidden role="dialog" aria-label="Comptes">
+  <div class="sheet-head"><b>Comptes</b><button type="button" id="acc-close" aria-label="Fermer">✕</button></div>
+  <p class="sheet-lead">Relie Plex, Overseerr et Spotify à Scaros. Les clés restent sur le PC de Scaros.</p>
+  <div id="acc-body"><p class="sheet-lead">Chargement…</p></div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -222,7 +262,8 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
     playpause: '<path d="M5 5.5v13l8-6.5z"/><path d="M16 6v12M20 6v12"/>',
     send: '<path d="M4 12l16-7-6 16-3-7z"/>',
     arrows: '<path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
-    mouse: '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3.5"/>'
+    mouse: '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3.5"/>',
+    user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>'
   };
   const icon = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
   document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon) + el.innerHTML; });
@@ -302,6 +343,8 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
       else if (m.type === 'volume') { muted = !!m.muted; renderVol(m.level); }
       else if (m.type === 'airplay') { airplay = m.state === 'mirroring' ? (m.device || 'iPhone') : null; renderNow(); }
       else if (m.type === 'mouse') { if (!!m.on !== mouseMode) setMode(!!m.on); }
+      else if ((m.type === 'accounts' || m.type === 'media') && m.accounts) { accounts = { ...(accounts || {}), ...m.accounts }; renderAccounts(); }
+      else if (m.type === 'toast' && !$('#acc').hidden) toast(m.text || '');
     };
   }
   function closeStream() {
@@ -339,12 +382,111 @@ main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direct
   addEventListener('online', wakeUp);
   setInterval(() => { if (visible()) post('/api/hello', {}, true).catch(() => {}); }, 15000);
 
+  // ---------- Comptes ----------
+  let accounts = null, spAuth = null;
+  const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // les vérifications (Overseerr, serveur Plex) peuvent prendre quelques secondes
+  function postLong(path, body) {
+    return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' })
+      .then(r => r.json()).catch(e => { toast('Scaros ne répond pas.'); throw e; });
+  }
+  function openAccounts() {
+    $('#acc').hidden = false;
+    fetch('/api/accounts', { cache: 'no-store' }).then(r => r.json()).then(a => {
+      accounts = a; renderAccounts();
+      if (a.spotify && a.spotify.configured && !a.spotify.connected) fetchAuth();
+    }).catch(() => toast('Scaros ne répond pas.'));
+  }
+  function fetchAuth() {
+    postLong('/api/accounts/spotify', { action: 'auth' }).then(r => { spAuth = r.url || null; renderAccounts(); }).catch(() => {});
+  }
+  function renderAccounts() {
+    const box = $('#acc-body'), a = accounts;
+    if (!a || $('#acc').hidden) return;
+    // ce qui est en cours de frappe survit à la mise à jour de l'état
+    const keep = {}, focused = document.activeElement && document.activeElement.id;
+    box.querySelectorAll('input:not([readonly])').forEach(i => { keep[i.id] = i.value; });
+    const px = a.plex || {}, ov = a.overseerr || {}, sp = a.spotify || {};
+    const cs = { on: 'Spotify Connect activé : « Scaros » est dans la liste des appareils de l’appli Spotify.', off: 'Spotify Connect désactivé (Réglages › Comptes sur la télé).',
+      missing: 'Spotify Connect : spotifyd manque sur le PC (lance scaros-update).', error: 'Spotify Connect ne démarre pas sur le PC.', starting: 'Spotify Connect démarre…' }[sp.connect] || '';
+    box.innerHTML = `
+      <section class="acc"><h2>${LOGOS.plex}Plex</h2>
+        <p class="st${px.connected ? ' ok' : ''}">${px.connected ? `Connecté : ${esc(px.server || 'Plex')}` : 'Pas connecté'}</p>
+        ${px.error ? `<p class="err">${esc(px.error)}</p>` : ''}
+        ${px.link ? `<div class="code"><p>Sur plex.tv/link, tape ce code :</p><b>${esc(px.link.code)}</b><a class="btn" href="https://plex.tv/link" target="_blank" rel="noopener">Ouvrir plex.tv/link</a></div>` : ''}
+        <div class="row">${px.connected ? '<button type="button" class="btn ghost" data-acc="plex-link">Reconnecter</button><button type="button" class="btn ghost" data-acc="plex-logout">Déconnecter</button>'
+          : `<button type="button" class="btn" data-acc="plex-link">${px.link ? 'Nouveau code' : 'Connecter Plex'}</button>`}</div>
+        <details><summary>Adresse et jeton à la main (si le code ne trouve pas ton serveur)</summary>
+          <input id="px-server" type="url" placeholder="http://192.168.1.20:32400" autocapitalize="off" spellcheck="false">
+          <input id="px-token" type="password" placeholder="Jeton X-Plex-Token" autocapitalize="off" spellcheck="false">
+          <div class="row"><button type="button" class="btn ghost" data-acc="plex-manual">Enregistrer</button></div></details>
+      </section>
+      <section class="acc"><h2>Overseerr</h2>
+        <p class="st${ov.connected ? ' ok' : ''}">${ov.connected ? `Connecté${ov.user ? ` : ${esc(ov.user)}` : ''}` : 'Pas connecté'}</p>
+        ${ov.error ? `<p class="err">${esc(ov.error)}</p>` : ''}
+        <input id="ov-url" type="url" placeholder="http://192.168.1.20:5055" autocapitalize="off" spellcheck="false" value="${esc(ov.url || '')}">
+        <input id="ov-key" type="password" placeholder="Clé API" autocapitalize="off" spellcheck="false">
+        <div class="row"><button type="button" class="btn" data-acc="ov-save">${ov.connected ? 'Changer' : 'Connecter Overseerr'}</button>${ov.connected ? '<button type="button" class="btn ghost" data-acc="ov-logout">Déconnecter</button>' : ''}</div>
+        <p class="help">La clé : Overseerr (ou Jellyseerr) › Paramètres › Général › Clé API.</p>
+      </section>
+      <section class="acc"><h2>Spotify</h2>
+        <p class="st${sp.connected ? ' ok' : ''}">${sp.connected ? `Connecté${sp.user ? ` : ${esc(sp.user)}` : ''}` : sp.configured ? 'Client ID enregistré : il reste à te connecter' : 'Pas connecté'}</p>
+        ${sp.error ? `<p class="err">${esc(sp.error)}</p>` : ''}
+        ${sp.connected ? '<div class="row"><button type="button" class="btn ghost" data-acc="sp-logout">Déconnecter</button></div>'
+          : sp.configured ? `<div class="row"><a class="btn" ${spAuth ? `href="${esc(spAuth)}"` : 'aria-disabled="true"'} target="_blank" rel="noopener">Se connecter sur ce téléphone</a></div>
+              <p class="help">Après « Accepter », Safari affiche une page introuvable : c’est normal. Copie son adresse (elle commence par http://127.0.0.1), puis colle-la ici.</p>
+              <input id="sp-url" type="url" placeholder="http://127.0.0.1:8421/api/spotify/callback?code=…" autocapitalize="off" spellcheck="false">
+              <div class="row"><button type="button" class="btn ghost" data-acc="sp-code">Valider</button><button type="button" class="btn ghost" data-acc="sp-tv">Plutôt sur la télé</button></div>
+              <details><summary>Changer de Client ID</summary><input id="sp-client" placeholder="Client ID (32 caractères)" autocapitalize="off" spellcheck="false"><div class="row"><button type="button" class="btn ghost" data-acc="sp-client">Enregistrer</button></div></details>`
+          : `<ol><li>Ouvre <a class="link" href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com › Dashboard</a> et crée une appli (Create app).</li>
+              <li>Redirect URI : <b>${esc(sp.redirect || 'http://127.0.0.1:8421/api/spotify/callback')}</b></li><li>Coche « Web API », enregistre, puis copie le Client ID.</li></ol>
+              <input id="sp-redirect" readonly value="${esc(sp.redirect || '')}" aria-label="Redirect URI à copier">
+              <input id="sp-client" placeholder="Client ID (32 caractères)" autocapitalize="off" spellcheck="false">
+              <div class="row"><button type="button" class="btn" data-acc="sp-client">Enregistrer</button></div>
+              <p class="help">Il faut Spotify Premium. Rien n’est publié : l’appli reste en mode développement, pour toi seul.</p>`}
+        ${cs ? `<p class="help">${cs}</p>` : ''}
+      </section>`;
+    for (const [id, v] of Object.entries(keep)) { const i = document.getElementById(id); if (i && v) i.value = v; }
+    if (focused && document.getElementById(focused)) document.getElementById(focused).focus();
+  }
+  const val = id => ((document.getElementById(id) || {}).value || '').trim();
+  function accDone(r, okText) {
+    if (r.accounts) accounts = r.accounts;
+    if (r.ok === false || r.error) toast(r.error || 'Ça n’a pas marché.');
+    else if (okText) toast(okText);
+    renderAccounts();
+  }
+  $('#acc-open').addEventListener('click', openAccounts);
+  $('#acc-close').addEventListener('click', () => { $('#acc').hidden = true; });
+  $('#acc-body').addEventListener('focusin', e => { if (e.target.id === 'sp-redirect') e.target.select(); });
+  $('#acc-body').addEventListener('click', e => {
+    const b = e.target.closest('[data-acc]');
+    if (!b) return;
+    const k = b.dataset.acc;
+    if (k === 'plex-link') postLong('/api/accounts/plex', { action: 'link' }).then(r => accDone(r)).catch(() => {});
+    else if (k === 'plex-logout') postLong('/api/accounts/plex', { action: 'logout' }).then(r => accDone(r, 'Plex déconnecté.')).catch(() => {});
+    else if (k === 'plex-manual') postLong('/api/accounts/plex', { action: 'manual', server: val('px-server'), token: val('px-token') }).then(r => accDone(r, 'Plex connecté.')).catch(() => {});
+    else if (k === 'ov-save') {
+      if (!val('ov-url') || !val('ov-key')) return toast('Adresse et clé API, s’il te plaît.');
+      toast('Vérification…');
+      postLong('/api/accounts/overseerr', { url: val('ov-url'), key: val('ov-key') }).then(r => accDone(r, 'Overseerr est connecté.')).catch(() => {});
+    }
+    else if (k === 'ov-logout') postLong('/api/accounts/overseerr', { action: 'logout' }).then(r => accDone(r, 'Overseerr déconnecté.')).catch(() => {});
+    else if (k === 'sp-client') postLong('/api/accounts/spotify', { clientId: val('sp-client') }).then(r => { accDone(r, 'Client ID enregistré.'); if (r.ok) fetchAuth(); }).catch(() => {});
+    else if (k === 'sp-code') {
+      if (!val('sp-url')) return toast('Colle d’abord l’adresse de la page.');
+      postLong('/api/accounts/spotify', { action: 'code', url: val('sp-url') }).then(r => accDone(r, 'Spotify est connecté.')).catch(() => {});
+    }
+    else if (k === 'sp-tv') postLong('/api/accounts/spotify', { action: 'tv' }).then(r => accDone(r, 'La page de Spotify s’ouvre sur la télé : tape avec le clavier d’ici.')).catch(() => {});
+    else if (k === 'sp-logout') postLong('/api/accounts/spotify', { action: 'logout' }).then(r => accDone(r, 'Spotify déconnecté.')).catch(() => {});
+  });
+
   function renderChannels() {
     $('#channels').innerHTML = Object.entries(apps).map(([id, a], i) =>
       `<button type="button" class="chan" data-a="ch${i + 1}" aria-disabled="${a.installed === false}" aria-label="${a.name}">${LOGOS[id] || ''}<span>${SHORT[id] || a.name}</span></button>`).join('');
   }
   function renderNow() {
-    const name = current ? (apps[current] || {}).name || current : null;
+    const name = current ? (apps[current] || {}).name || { plexweb: 'Plex', spotifylogin: 'Spotify' }[current] || current : null;
     $('#now-app').textContent = airplay ? `recopie de ${airplay}` : !name ? 'le menu' : shown ? name : `ouverture de ${name}…`;
   }
   function renderVol(level) {

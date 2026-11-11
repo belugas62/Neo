@@ -1,8 +1,11 @@
 # Scaros OS
 
 Transforme un vieux PC portable en box TV. Au démarrage, l'animation Scaros se lance, puis
-un menu plein écran façon console : Scaros TV, YouTube (interface TV), Jellyfin, Plex, Steam Link
-pour jouer aux jeux de ton PC sur la télé, et Twitch en interface télé.
+un accueil façon Google TV : l'heure, la météo et les scores en haut, tes films et séries Plex à reprendre,
+les derniers ajouts et les tendances d'Overseerr en grandes affiches, et la bande des applis en bas : Scaros TV,
+YouTube (interface TV), Jellyfin, Plex, Steam Link pour jouer aux jeux de ton PC sur la télé, et Twitch.
+Quand personne n'y touche, un écran de veille en widgets affiche une grande horloge, la météo et la musique
+Spotify en cours.
 Tout se pilote à la manette Xbox ou depuis ton téléphone. Quand tu branches la télé en HDMI,
 l'image et le son passent dessus tout seuls.
 
@@ -108,6 +111,25 @@ reboot
 - **Jellyfin** : entre l'adresse de ton serveur, puis dans
   **Paramètres > Affichage > Mode d'affichage**, choisis **TV**.
 - **Plex** : connecte-toi avec le code affiché, sur <https://plex.tv/link>.
+- **Comptes de l'accueil** (**Réglages > Comptes**) : ce qui remplit l'accueil et l'écran de veille.
+  - **Plex** : **Connecter Plex** affiche un code ; tape-le sur <https://plex.tv/link> (téléphone ou PC).
+    Scaros trouve ton serveur tout seul. Les onglets **Reprendre** et **Ajoutés récemment** se remplissent.
+    Une affiche ouvre sa fiche dans **Plex Web** en plein écran : la première fois, connecte-toi à ton compte Plex
+    dans cette page (clavier et souris de la télécommande du téléphone), c'est gardé ensuite.
+  - **Overseerr** (ou Jellyseerr) : sur la télécommande du téléphone, touche le bonhomme en haut, puis colle
+    l'adresse d'Overseerr (`http://192.168.x.x:5055`) et sa clé API (**Overseerr > Paramètres > Général**).
+    Les onglets **Tendances** et **Mes demandes** se remplissent ; OK sur une tendance que tu n'as pas la demande.
+  - **Spotify** (compte Premium) : deux choses, qui se complètent.
+    **Spotify Connect** marche tout seul : dans l'appli Spotify du téléphone, touche l'icône des appareils et
+    choisis **Scaros** ; le son sort par la télé (ou le casque Bluetooth branché à Scaros).
+    Pour que l'écran de veille affiche aussi ce que joue ton **téléphone**, crée une fois une appli gratuite :
+    sur <https://developer.spotify.com/dashboard>, **Create app**, Redirect URI
+    `http://127.0.0.1:8421/api/spotify/callback`, coche **Web API**, puis copie le **Client ID** dans la télécommande
+    (bonhomme en haut > Spotify). Termine par **Se connecter sur la télé** (Réglages > Comptes), ou connecte-toi
+    sur le téléphone : Safari affiche ensuite une page introuvable, c'est normal ; copie son adresse et colle-la
+    dans la télécommande.
+  - **Sport** (**Réglages > Sport**) : choisis tes équipes (**Ajouter une équipe**) et les compétitions suivies
+    (Ligue 1, Ligue des champions et Premier League par défaut).
 - **Steam Link** : sur ton PC principal, ouvre Steam, puis **Paramètres > Remote Play** et active
   Remote Play. Au premier lancement de Steam Link sur le portable, choisis ton PC : un code
   s'affiche, entre-le dans Steam sur ton PC. Ton PC doit être allumé avec Steam ouvert.
@@ -168,24 +190,38 @@ pour le désactiver.
 **Volume par-dessus les applis :** pendant une vidéo, le volume, le son coupé, la manette ou les AirPods qui se
 connectent s'affichent en haut de l'écran, sans interrompre l'appli.
 
-**Fond et météo :** l'accueil est un paysage (montagnes, lac, sapins) dont le ciel suit le temps qu'il fait
-et l'heure : soleil, nuages, pluie, neige, orage, brouillard, aube, soir, nuit étoilée. La température s'affiche
-avec l'heure dans la pastille en haut à droite. Dans **Réglages > Fond et météo**, choisis un autre fond
-(nuit étoilée, aurore, pluie, neige, ou les couleurs de l'appli choisie) ou change de ville. La ville est devinée au premier
-démarrage grâce à l'adresse internet de la box ; la météo vient d'Open-Meteo (gratuit, sans compte).
+**Accueil :** en haut à gauche l'heure et la date, puis les onglets **Reprendre**, **Ajoutés récemment**,
+**Tendances** et **Mes demandes** ; à droite le score du moment, la météo et quatre boutons ronds (centre de contrôle,
+AirPlay, Wi-Fi, Réglages). Au milieu, les affiches de l'onglet choisi : la première en grand, avec la progression de
+ce que tu as commencé et l'état des demandes (« Disponible », « Téléchargement · 62 % »…). En bas, la bande des applis.
+**Haut** et **bas** passent d'une rangée à l'autre ; **gauche** et **droite** avancent dans la rangée ; un onglet
+s'affiche dès que tu le choisis. Le fond reprend l'affiche choisie, floutée. Tant qu'un compte n'est pas relié,
+l'onglet le dit ; OK ouvre **Réglages > Comptes**.
 
-**Apparence :** dans **Réglages > Affichage et veille**, choisis **Sombre**, **Clair**, ou **Automatique**
-(clair de 7 h à 19 h, sombre le soir). La taille du texte et la veille automatique se règlent au même endroit.
+**Personnaliser :** **Réglages > Accueil** : les onglets affichés et leur ordre, les applis de la bande et leur ordre
+(OK affiche ou masque, gauche et droite déplacent), le fond (**Affiche** du programme choisi, **Paysage** animé qui suit
+la météo, ou **Uni**, le plus léger) et la couleur d'accent. **Réglages > Affichage** : sombre, clair ou automatique pour
+les réglages, la taille du texte, l'horloge sur **24 h** ou **12 h**, et la veille automatique. **Réglages > Fond et
+météo** : le paysage (temps réel, nuit étoilée, aurore, pluie, neige) et la ville de la météo, devinée au premier
+démarrage grâce à l'adresse internet de la box ; la météo et la qualité de l'air viennent d'Open-Meteo (gratuit,
+sans compte).
 
-**Économiseur d'écran :** après 5 minutes sans toucher au menu, le paysage de Scaros passe en plein écran et avance
-lentement, avec l'heure, la date et la météo en grand. L'ambiance change chaque minute avec un fondu : le temps qu'il
-fait vraiment, puis l'aube, un coucher de soleil, une nuit étoilée, une aurore boréale, la neige, la brume, une averse.
-L'heure change de coin à chaque fois pour ne pas marquer la télé. N'importe quelle touche le ferme sans rien lancer ;
-le volume marche sans le fermer, et une chaîne choisie au téléphone s'ouvre directement. Il ne passe jamais
-par-dessus une appli, une recopie AirPlay, une mise à jour ou un diagnostic. Pour l'activer ou le désactiver :
-**Réglages > Affichage et veille > Économiseur d'écran**, **Activé** ou **Désactivé**. Quand il est activé, tu choisis
-au même endroit au bout de combien de temps il se lance (2, 5, 10 ou 15 minutes) ; le bouton **Voir l'économiseur**
-le montre tout de suite.
+**Scores :** en haut à droite, le match de tes équipes passe en premier (en direct, du jour, sinon le prochain), puis
+les autres matchs en cours des compétitions suivies, un à la fois. Ils viennent d'ESPN, sans compte.
+
+**Écran de veille :** après 5 minutes sans toucher au menu. Par défaut, le style **Widgets**, sur fond noir : une grande
+horloge à aiguilles, l'heure en chiffres fins, la météo (lever et coucher du soleil), la qualité de l'air, l'indice UV,
+la **musique en cours** (pochette, titre, progression, ◀◀ ⏯ ▶▶ : Spotify sur Scaros ou sur ton téléphone, ou la
+pochette de la musique envoyée en AirPlay) et le match de ton équipe. L'ensemble glisse de quelques pixels chaque
+minute pour ne pas marquer la télé. **Lecture** (Y à la manette, ou la touche Lecture de la télécommande) met en pause
+ou relance la musique sans fermer l'écran de veille ; n'importe quelle autre touche le ferme sans rien lancer. Le style
+**Paysages** montre à la place le paysage de Scaros en plein écran, qui change d'ambiance chaque minute. Tout se règle
+dans **Réglages > Écran de veille** : activé ou non, le style, les widgets affichés, le délai (2, 5, 10 ou 15 minutes),
+et **Voir l'écran de veille** pour le montrer tout de suite. Il ne passe jamais par-dessus une appli, une recopie
+AirPlay, une mise à jour ou un diagnostic.
+
+**Musique dans le menu :** la touche **Lecture** met aussi en pause ou relance la musique Spotify quand le menu est
+à l'écran.
 
 **Télé :** branche le câble HDMI, l'image et le son passent sur la télé. Tu peux fermer
 l'écran du portable, il ne se met pas en veille. Le choix Auto / Écran du PC / Télé est
@@ -195,7 +231,7 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
 ## Si quelque chose coince
 
 - **Console de secours :** Ctrl+Alt+F2, puis connecte-toi. Ctrl+Alt+F1 pour revenir à Scaros.
-- **Journaux :** dans `~/.local/state/scaros/` (`scaros.log`, `chromium.log`, `airplay.log`, `osd.log`,
+- **Journaux :** dans `~/.local/state/scaros/` (`scaros.log`, `chromium.log`, `airplay.log`, `spotifyd.log`, `osd.log`,
   et un fichier par appli, par exemple `youtube.log`). Mise à jour lancée du menu : `journalctl -u scaros-update`. Envoie-les si tu demandes de l'aide.
 - **Démarrer sans Scaros** (pour réparer) : `touch ~/.scaros-off` puis `reboot`.
   Pour le remettre : `rm ~/.scaros-off`.
@@ -239,6 +275,14 @@ resterait poussif en 4K. Si les vidéos saccadent, passe en **720p** au même en
   Sinon, « Redémarrer AirPlay », et le journal est dans `~/.local/state/scaros/airplay.log`.
 - **Une appli met du temps à s'ouvrir :** la première ouverture peut prendre jusqu'à une minute sur ce PC.
   Si elle se ferme aussitôt, Scaros la relance une fois tout seul.
+- **Les affiches ne s'affichent pas :** **Réglages > Comptes** dit ce qui coince (serveur Plex éteint, clé
+  Overseerr refusée…). Si ton serveur Plex a changé d'adresse, **Reconnecter Plex**. En dernier recours, la
+  télécommande permet de taper l'adresse et le jeton à la main (Comptes > Plex > « Adresse et jeton à la main »).
+- **Scaros n'apparaît pas dans l'appli Spotify :** il faut un compte Premium et le même Wi-Fi.
+  **Réglages > Comptes > Spotify Connect** doit être activé ; sinon regarde `spotifyd.log`.
+- **L'écran de veille n'affiche pas la musique du téléphone :** l'appli Spotify (developer.spotify.com) doit avoir
+  exactement la Redirect URI `http://127.0.0.1:8421/api/spotify/callback`. Pour la musique jouée par Scaros
+  lui-même (Spotify Connect), rien à faire.
 - **Mettre à jour les applis :** **Réglages > Applis > Mettre à jour les applis**.
 - **Mettre à jour Scaros :** **Réglages > Mise à jour de Scaros > Mettre à jour Scaros**, à la manette. Scaros
   télécharge la dernière version, l'installe et redémarre l'écran (environ une minute). Les applis et réglages sont gardés.
@@ -289,7 +333,9 @@ mais pas encore sur ta machine. À surveiller au premier essai :
   pas avec la vraie souris virtuelle du portable) ;
 - AirPlay : la fluidité de la recopie et le son ;
 - le volume affiché par-dessus YouTube, Jellyfin ou Steam Link ;
-- la fluidité de l'économiseur d'écran sur la télé (zoom lent du paysage) ;
+- la fluidité de l'accueil (fond flouté, défilement des affiches) et de l'écran de veille sur la télé ;
+- Plex, Overseerr et Spotify avec tes vrais comptes (testés ici contre des serveurs simulés) ;
+- Spotify Connect (spotifyd) : « Scaros » dans la liste des appareils, le son, et les touches lecture et suivant ;
 - la mise à jour lancée depuis le menu ;
 - le son sur la télé ;
 - l'appairage Bluetooth de la manette, et sa reconnexion toute seule après un redémarrage ;
@@ -304,13 +350,14 @@ scaros-os/
 ├── source.conf             le dépôt GitHub d'où viennent les mises à jour
 ├── launcher/
 │   ├── scaros.py           serveur local : applis, écrans, son, Bluetooth, manette, télécommande, AirPlay, météo
+│   ├── media.py            accueil et veille : Plex, Overseerr, Spotify, pochette AirPlay, scores (ESPN)
 │   ├── osd.py              volume et notifications affichés par-dessus les applis
 │   ├── apps.json           les applis du menu et la commande qui les lance
 │   └── ui/
 │       ├── index.html      le menu (marche aussi seul, en maquette)
 │       ├── remote.html     la télécommande téléphone (http://<adresse du PC>:8421/remote)
 │       ├── icons/          icônes de la télécommande (kit du logo Scaros)
-│       └── fonts/          police Figtree (licence OFL)
+│       └── fonts/          police Inter (licence OFL)
 └── system/
     ├── session.sh          session graphique : Openbox, serveur, menu plein écran
     ├── scaros-diag.sh      diagnostic réseau (commande scaros-diag, lancé aussi depuis le menu)
@@ -328,6 +375,13 @@ leur propre profil ; Scaros vérifie que leur adresse répond avant de les ouvri
 
 `scaros.py` réserve la manette et la transforme en touches clavier, pour qu'elle marche pareil dans
 toutes les applis. En mode souris, il crée une souris virtuelle (uinput, avec repli sur `xdotool`) ; la télécommande
-lui envoie ses gestes par une connexion WebSocket gardée ouverte (`/api/mouse`). Pour tester sans le portable : `python3 launcher/scaros.py --dry-run`, puis
+lui envoie ses gestes par une connexion WebSocket gardée ouverte (`/api/mouse`).
+
+`media.py` remplit l'accueil : Plex (connexion par code `plex.tv/link`, puis Reprendre et Ajoutés récemment),
+Overseerr (tendances, demandes), Spotify (API Web en PKCE, sans secret, et spotifyd par MPRIS avec `playerctl`), la
+pochette AirPlay d'UxPlay (`-ca`) et les scores d'ESPN. Les jetons et les clés restent dans
+`~/.local/state/scaros/accounts.json` (lisible par le compte de la box seulement) : le menu et la télécommande ne
+reçoivent que des titres et des adresses d'images servies par Scaros (`/api/img/…`, gardées en cache dans
+`~/.cache/scaros/img`). Pour tester sans le portable : `python3 launcher/scaros.py --dry-run`, puis
 ouvre <http://localhost:8421>. Dans ce mode, rien n'est lancé pour de vrai, et la touche H simule
 le branchement de la télé.
