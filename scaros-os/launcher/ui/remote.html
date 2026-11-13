@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D12">
+<meta name="scaros-build" content="__BUILD__">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scaros">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
+<title>Télécommande Scaros</title>
+<style>
+@font-face { font-family: "Inter"; src: url("/fonts/inter.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+/* Layout: one screen, no scrolling — header, search, the Flèches/Souris switch, a big touch
+   pad (arrows: swipe to move, tap to select; mouse: a trackpad), then the keys laid out like an
+   Apple TV remote (Retour, Accueil, Lecture, Menu, and the volume rocker on the right), channels.
+   Sized on the screen height. */
+:root {
+  --ink: #06080c;
+  --raised: #10141c;
+  --key: #161b25;
+  --key-2: #1d2330;
+  --line: #ffffff1a;
+  --text: #f1f3f8;
+  --text-2: #c7cdd8;
+  --muted: #8a91a1;
+  --ok: #6cc04a;
+  --led: #ff3b30;
+  --font: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --gap: clamp(8px, 1.5dvh, 14px);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { height: 100%; background: var(--ink); }
+body {
+  margin: 0; min-height: 100%; color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.3;
+  background: radial-gradient(120% 50% at 50% 0%, #151c2c 0%, var(--ink) 65%);
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation; overscroll-behavior: none;
+}
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+.ic { display: block; width: 22px; height: 22px; }
+
+main {
+  display: flex; flex-direction: column; gap: var(--gap);
+  height: 100vh; height: 100dvh; max-width: 440px; margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 12px) max(16px, env(safe-area-inset-left, 0px));
+}
+main > * { flex: none; }
+header { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.mark { flex: none; width: 34px; height: 34px; }
+.htext { display: flex; flex-direction: column; min-width: 0; }
+.word { display: block; width: 72px; height: 13.2px; margin: 2px 0 3px; color: var(--text); }
+.now { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12.5px; color: var(--muted); }
+.now b { color: var(--text-2); font-weight: 600; }
+.conn { margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 11px; font-size: 12.5px; font-weight: 600; color: var(--text-2); border: 1px solid var(--line); border-radius: 99px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.online .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+.banner, .offline { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; font-size: 13.5px; line-height: 1.35; border-radius: 14px; }
+.banner { background: #1b2740; border: 1px solid #4c8dff40; }
+.banner a { color: #9cc0ff; font-weight: 700; }
+.banner p { margin: 0; flex: 1; }
+.banner button { flex: none; width: 28px; height: 28px; margin: -3px -4px 0 0; padding: 0; border: 0; border-radius: 50%; background: #ffffff14; cursor: pointer; }
+.offline { background: #3a1c1f; border: 1px solid #ff6b6b40; }
+
+.type { display: flex; gap: 8px; }
+.type input {
+  flex: 1; min-width: 0; height: 44px; padding: 0 14px; font: inherit; font-size: 16px; color: var(--text);
+  background: var(--key); border: 1px solid var(--line); border-radius: 13px; user-select: text; -webkit-user-select: text;
+}
+.type input::placeholder { color: var(--muted); }
+.type input:focus { outline: 2px solid #ffffff60; outline-offset: 1px; }
+.type button { flex: none; display: grid; place-items: center; width: 48px; height: 44px; padding: 0; border: 0; border-radius: 13px; background: var(--text); color: var(--ink); cursor: pointer; }
+
+/* Flèches / Souris */
+.seg { display: flex; align-self: center; padding: 3px; border-radius: 99px; background: var(--raised); border: 1px solid var(--line); }
+.seg button { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 16px; border: 0; border-radius: 99px; background: none; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.seg button .ic { width: 17px; height: 17px; }
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--ink); }
+
+/* the touch pad: swipe anywhere to move, tap the centre (or an arrow) */
+main > .pad-wrap { flex: 1 1 auto; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.dpad {
+  position: relative; flex: 1 1 auto; min-height: 0; max-height: min(86vw, 330px); aspect-ratio: 1; border-radius: 50%; touch-action: none;
+  background: radial-gradient(circle at 50% 35%, #232a38, #12161f 70%); border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 #ffffff12, 0 20px 40px -20px #000;
+}
+.dpad button { position: absolute; display: grid; place-items: center; padding: 0; border: 0; background: none; color: var(--text-2); border-radius: 50%; pointer-events: none; }
+.dpad .ic { width: 30px; height: 30px; }
+.dpad [data-a="up"] { left: 35%; top: 4%; width: 30%; height: 24%; }
+.dpad [data-a="down"] { left: 35%; bottom: 4%; width: 30%; height: 24%; }
+.dpad [data-a="left"] { top: 35%; left: 4%; width: 24%; height: 30%; }
+.dpad [data-a="right"] { top: 35%; right: 4%; width: 24%; height: 30%; }
+.dpad [data-a="ok"] { left: 32%; top: 32%; width: 36%; height: 36%; background: #2a3242; border: 1px solid var(--line); font-weight: 700; font-size: 19px; color: var(--text); }
+.dpad .hl { color: #fff; background: #ffffff1f; }
+.dpad [data-a="ok"].hl { background: #3a4458; }
+.swipe-hint { flex: none; margin: 0; font-size: 11.5px; color: var(--muted); text-align: center; }
+
+/* mode souris : un trackpad à la place du pavé rond */
+.tpad {
+  position: relative; flex: 1 1 auto; align-self: stretch; min-height: 0; border-radius: 26px; touch-action: none; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 0%, #232a38, #12161f 75%); border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 #ffffff12, 0 20px 40px -20px #000;
+}
+.tpad .ic { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; color: #ffffff1f; }
+.tpad .touch { position: absolute; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: #ffffff24; pointer-events: none; opacity: 0; transition: opacity .2s ease; }
+.tpad .touch.on { opacity: 1; transition: none; }
+.tpad.clicked { background: radial-gradient(120% 90% at 50% 0%, #2c3546, #161b26 75%); }
+
+/* touches façon télécommande Apple TV : 2 × 2 à gauche, le volume en bascule verticale à droite */
+.ctrl { display: grid; grid-template-columns: 1fr 1fr 74px; grid-template-rows: repeat(2, clamp(48px, 6.8dvh, 58px)); gap: 8px; }
+.key {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0;
+  padding: 0 6px; border: 1px solid var(--line); border-radius: 15px;
+  background: var(--key); font-size: 14px; font-weight: 600; color: var(--text-2); cursor: pointer;
+  transition: transform .08s ease, background .08s ease;
+}
+.key .ic { flex: none; color: var(--text); }
+.key b { font-size: 21px; line-height: 22px; color: var(--text); }
+.rocker {
+  grid-column: 3; grid-row: 1 / 3; display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 37px; background: var(--key);
+}
+.rocker .key { flex: 1 1 0; border: 0; border-radius: 0; background: none; font-size: 28px; font-weight: 400; color: var(--text); }
+.rocker .key.down { background: var(--key-2) !important; transform: none; }
+.level {
+  flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: 38px; padding: 0;
+  font: inherit; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+  border: 0; border-block: 1px solid var(--line); background: #ffffff08; cursor: pointer;
+}
+.level b { font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--text); font-variant-numeric: tabular-nums; }
+.level.muted b { color: #ff8a80; }
+.level.down { background: var(--key-2); }
+.channels { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.chan {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  height: clamp(56px, 8dvh, 68px); padding: 0 4px; border: 1px solid var(--line); border-radius: 15px; background: var(--key); cursor: pointer;
+}
+.chan .logo { height: 22px; width: auto; max-width: 34px; }
+.chan span { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+.chan[aria-disabled="true"] { opacity: .4; }
+/* 6 chaînes ou plus : un peu plus serrées, pour que les noms tiennent */
+.channels:has(> .chan:nth-child(6)) { gap: 6px; }
+.channels:has(> .chan:nth-child(6)) .chan { padding: 0 2px; }
+.channels:has(> .chan:nth-child(6)) .chan span { font-size: 10.5px; letter-spacing: -.01em; }
+@media (max-width: 380px) { .channels:has(> .chan:nth-child(6)) .chan span { font-size: 9.6px; } }
+.down { background: var(--key-2) !important; transform: scale(.95); }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); width: max-content; max-width: calc(100% - 32px);
+  padding: 10px 16px; border-radius: 99px; background: var(--raised); border: 1px solid var(--line);
+  font-size: 13.5px; font-weight: 600; transform: translate(-50%, 16px); opacity: 0; transition: .25s ease; pointer-events: none;
+}
+.toast.on { transform: translate(-50%, 0); opacity: 1; }
+
+/* Comptes : Plex, Overseerr, Spotify (ce qui demande de taper du texte se fait ici) */
+.acc-btn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; margin-left: auto; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: none; color: var(--text-2); cursor: pointer; }
+.acc-btn .ic { width: 19px; height: 19px; }
+.acc-btn + .conn, .acc-btn + .acc-btn { margin-left: 8px; }
+.st-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.st-row:first-of-type { border-top: 0; }
+.st-row .ico { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; overflow: hidden; border-radius: 12px; color: #fff; font-weight: 800; font-size: 19px;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--c) 85%, #fff), color-mix(in oklab, var(--c) 70%, #000)); }
+.st-row .ico img { position: absolute; inset: 5px; width: 34px; height: 34px; object-fit: contain; }
+.st-row .ico:has(img) { background: var(--key); }
+.st-row .ico:has(img) b { visibility: hidden; }
+.st-row .txt { flex: 1; min-width: 0; }
+.st-row .txt b { display: block; font-size: 15px; }
+.st-row .txt span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.st-row .btn { flex: none; min-height: 36px; padding: 0 12px; font-size: 13.5px; }
+.st-row .btn.ok { background: var(--key); color: var(--ok); border: 1px solid var(--line); }
+.sheet { position: fixed; inset: 0; z-index: 40; overflow-y: auto; box-sizing: border-box; background: var(--ink);
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 28px) max(16px, env(safe-area-inset-left, 0px)); }
+.sheet-head { position: sticky; top: calc(-14px - env(safe-area-inset-top, 0px)); z-index: 1; display: flex; align-items: center; justify-content: space-between; margin: -14px -16px 0; padding: 14px 16px 10px; background: var(--ink); }
+.sheet-head b { font-size: 22px; letter-spacing: -.02em; }
+.sheet-head button { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: var(--key); color: var(--text); font-size: 16px; cursor: pointer; }
+.sheet-lead { margin: 2px 0 6px; font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+.acc { margin-top: 12px; padding: 14px; border-radius: 18px; background: var(--raised); border: 1px solid var(--line); }
+.acc h2 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 17px; }
+.acc h2 .logo { height: 24px; width: 24px; }
+.acc .st { display: flex; align-items: center; gap: 7px; margin: 8px 0 0; font-size: 14px; color: var(--text-2); }
+.acc .st::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.acc .st.ok::before { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.acc .err { margin: 6px 0 0; font-size: 13px; color: #ff9f8a; }
+.acc .help { margin: 8px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.acc ol { margin: 10px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.acc ol b { color: var(--text); word-break: break-all; }
+.acc input { display: block; width: 100%; box-sizing: border-box; height: 42px; margin-top: 8px; padding: 0 12px; font: inherit; font-size: 15px; color: var(--text);
+  background: var(--key); border: 1px solid var(--line); border-radius: 12px; }
+.acc input:focus { outline: 2px solid #ffffff60; outline-offset: 1px; }
+.acc .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.btn { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 14px; border: 0; border-radius: 12px;
+  background: var(--text); color: var(--ink); font: inherit; font-size: 14.5px; font-weight: 650; text-decoration: none; cursor: pointer; }
+.btn.ghost { background: var(--key); color: var(--text); border: 1px solid var(--line); }
+.btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+.code { margin-top: 10px; padding: 12px; border-radius: 14px; background: var(--key); text-align: center; }
+.code p { margin: 0; font-size: 13.5px; color: var(--text-2); }
+.code b { display: block; margin: 6px 0 10px; font-size: 38px; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
+.acc details { margin-top: 10px; font-size: 13px; color: var(--muted); }
+.acc summary { cursor: pointer; }
+
+/* very short screens (landscape, small phones): the page scrolls instead of squeezing */
+@media (max-height: 560px) { main { height: auto; min-height: 100dvh; } main > .pad-wrap { flex: none; height: 250px; } }
+@media (max-width: 350px) { .key { font-size: 12.5px; gap: 6px; } .ctrl { grid-template-columns: 1fr 1fr 64px; } }
+</style>
+
+<main>
+  <header>
+    <svg class="mark" viewBox="0 0 224 224" aria-hidden="true"><path fill="#FF5A1F" d="M224 57.8 H76 A18.2 18.2 0 0 0 76 94.2 H224 Z"/><path fill="#FF5A1F" d="M0 166.2 H148 A18.2 18.2 0 0 0 148 129.8 H0 Z"/><path fill="#FFFFFF" d="M58 0 H166 C201.96 0 224 22.04 224 58 V59 H76 A17 17 0 0 0 76 93 H224 V166 C224 201.96 201.96 224 166 224 H58 C22.04 224 0 201.96 0 166 V165 H148 A17 17 0 0 0 148 131 H0 V58 C0 22.04 22.04 0 58 0 Z"/></svg>
+    <div class="htext"><svg class="word" viewBox="22.58 69.45 638.26 117.2" role="img" aria-label="scaros"><path fill="currentColor" d="M71.78 186.65C99.46 186.65 119.30 172.86 119.30 151.01C119.30 134.57 109.01 124.81 86.84 120.15L66.69 116.01C57.36 114.0 51.84 109.86 51.84 103.18C51.84 95.54 59.06 89.60 70.83 89.60C83.03 89.60 91.19 96.92 91.40 106.89H116.54C115.90 83.87 97.34 69.56 70.19 69.56C42.83 69.56 25.12 83.45 25.12 104.03C25.12 121.0 36.36 131.92 57.78 136.37L76.87 140.30C86.31 142.31 92.15 146.24 92.15 153.03C92.15 160.98 84.30 166.60 71.36 166.60C58.0 166.60 50.15 160.34 48.98 149.42H22.57C24.27 173.5 44.53 186.65 71.78 186.65Z M186.07 186.54C214.39 186.54 234.96 168.30 236.87 143.80H210.46C207.92 156.21 200.39 164.27 186.39 164.27C168.78 164.27 158.39 150.16 158.39 128.10C158.39 105.93 168.89 91.72 186.39 91.72C200.28 91.72 208.66 100.10 210.68 112.09H236.87C234.54 87.16 214.18 69.45 186.07 69.45C153.30 69.45 131.34 93.53 131.34 128.10C131.34 162.68 153.30 186.54 186.07 186.54Z M287.95 185.80C306.19 185.80 315.63 178.16 320.93 168.19H321.36V184.0H347.66V107.63C347.66 84.30 330.37 69.77 301.21 69.77C271.93 69.77 253.69 84.51 252.42 106.78H278.19C278.93 97.34 287.63 90.56 300.68 90.56C313.51 90.56 321.15 97.34 321.15 106.89V107.74C321.15 115.37 314.04 115.69 293.25 118.03C270.13 120.46 249.24 126.72 249.24 152.18C249.24 174.56 265.68 185.80 287.95 185.80ZM294.53 165.96C282.86 165.96 275.33 160.77 275.33 151.96C275.33 141.78 285.09 137.65 296.54 135.95C307.57 134.25 317.96 132.56 321.25 130.43V142.53C321.25 155.57 312.03 165.96 294.53 165.96Z M370.31 184.0H397.04V120.57C397.04 103.07 406.90 94.27 419.63 94.27C424.93 94.27 430.24 94.80 432.25 95.12V71.36C430.13 71.15 427.16 70.93 423.56 70.93C409.13 70.93 400.54 77.72 396.40 90.56H396.09V72.0H370.31Z M496.69 186.54C529.68 186.54 551.95 162.89 551.95 128.10C551.95 93.31 529.68 69.45 496.69 69.45C463.71 69.45 441.43 93.31 441.43 128.10C441.43 162.89 463.71 186.54 496.69 186.54ZM496.69 164.16C479.40 164.16 468.48 150.48 468.48 128.10C468.48 105.62 479.51 91.83 496.69 91.83C513.77 91.83 524.80 105.72 524.80 128.10C524.80 150.37 513.87 164.16 496.69 164.16Z M613.31 186.65C641.0 186.65 660.83 172.86 660.83 151.01C660.83 134.57 650.54 124.81 628.37 120.15L608.22 116.01C598.89 114.0 593.37 109.86 593.37 103.18C593.37 95.54 600.59 89.60 612.36 89.60C624.56 89.60 632.72 96.92 632.93 106.89H658.07C657.43 83.87 638.87 69.56 611.72 69.56C584.36 69.56 566.65 83.45 566.65 104.03C566.65 121.0 577.89 131.92 599.31 136.37L618.40 140.30C627.84 142.31 633.68 146.24 633.68 153.03C633.68 160.98 625.83 166.60 612.89 166.60C599.53 166.60 591.68 160.34 590.51 149.42H564.10C565.80 173.5 586.06 186.65 613.31 186.65Z"/></svg><span class="now">À l’écran : <b id="now-app">le menu</b></span></div>
+    <button type="button" class="acc-btn" id="store-open" aria-label="App Store" data-icon="bag"></button>
+    <button type="button" class="acc-btn" id="acc-open" aria-label="Comptes : Plex, Overseerr, Spotify" data-icon="user"></button>
+    <span class="conn" id="conn"><span class="dot"></span><span id="conn-text">Connexion…</span></span>
+  </header>
+
+  <div class="banner" id="install" hidden><p id="install-text"></p><button type="button" id="install-x" aria-label="Masquer">✕</button></div>
+  <p class="offline" id="offline" hidden>Connexion perdue. Vérifie que ton téléphone est sur le même Wi-Fi. Si le PC a changé d’adresse, rescanne le QR code (bouton ≡ puis Télécommande).</p>
+
+  <form class="type" id="type">
+    <input id="text" type="text" enterkeyhint="send" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Taper du texte…" aria-label="Texte à envoyer à l’écran">
+    <button type="submit" aria-label="Envoyer" data-icon="send"></button>
+  </form>
+
+  <div class="seg" role="group" aria-label="Mode du pavé">
+    <button type="button" data-mode="arrows" data-icon="arrows" aria-pressed="true">Flèches</button>
+    <button type="button" data-mode="mouse" data-icon="mouse" aria-pressed="false">Souris</button>
+  </div>
+
+  <div class="pad-wrap">
+    <div class="tpad" id="tpad" role="application" aria-label="Trackpad : glisse pour déplacer le curseur, touche pour cliquer" hidden><span data-icon="mouse"></span><span class="touch" id="touch"></span></div>
+    <div class="dpad" id="dpad" role="group" aria-label="Pavé : glisse pour te déplacer, touche le centre pour valider">
+      <button type="button" data-a="up" aria-label="Haut" data-icon="up"></button>
+      <button type="button" data-a="left" aria-label="Gauche" data-icon="left"></button>
+      <button type="button" data-a="ok" aria-label="Valider">OK</button>
+      <button type="button" data-a="right" aria-label="Droite" data-icon="right"></button>
+      <button type="button" data-a="down" aria-label="Bas" data-icon="down"></button>
+    </div>
+    <p class="swipe-hint" id="hint">Glisse pour te déplacer · touche OK pour valider</p>
+  </div>
+
+  <div class="ctrl">
+    <button type="button" class="key" data-a="back" data-icon="back">Retour</button>
+    <button type="button" class="key" data-a="home" data-icon="home">Accueil</button>
+    <button type="button" class="key" data-a="playpause" data-icon="playpause">Lecture</button>
+    <button type="button" class="key" data-a="menu" aria-label="Centre de contrôle"><b>≡</b>Menu</button>
+    <div class="rocker" role="group" aria-label="Volume">
+      <button type="button" class="key" data-a="volup" data-repeat aria-label="Monter le volume">+</button>
+      <button type="button" class="level" id="level" data-a="mute" aria-label="Couper ou remettre le son">Vol<b id="vol-num">–</b></button>
+      <button type="button" class="key" data-a="voldown" data-repeat aria-label="Baisser le volume">−</button>
+    </div>
+  </div>
+
+  <div class="channels" id="channels"></div>
+</main>
+<div class="sheet" id="store" hidden role="dialog" aria-label="App Store">
+  <div class="sheet-head"><b>App Store</b><button type="button" id="store-close" aria-label="Fermer">✕</button></div>
+  <p class="sheet-lead">Installe des applis qui se pilotent bien à la télé, ou ajoute un site web comme une appli. Elles arrivent au bout de la bande des applis.</p>
+  <div id="store-body"><p class="sheet-lead">Chargement…</p></div>
+</div>
+<div class="sheet" id="acc" hidden role="dialog" aria-label="Comptes">
+  <div class="sheet-head"><b>Comptes</b><button type="button" id="acc-close" aria-label="Fermer">✕</button></div>
+  <p class="sheet-lead">Relie Plex, Overseerr et Spotify à Scaros. Les clés restent sur le PC de Scaros.</p>
+  <div id="acc-body"><p class="sheet-lead">Chargement…</p></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const I = {
+    up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
+    left: '<path d="M15 6l-6 6 6 6"/>', right: '<path d="M9 6l6 6-6 6"/>',
+    back: '<path d="M10 6l-6 6 6 6M4 12h16"/>', home: '<path d="M4 11l8-7 8 7M6.5 9.5V20h11V9.5"/>',
+    playpause: '<path d="M5 5.5v13l8-6.5z"/><path d="M16 6v12M20 6v12"/>',
+    send: '<path d="M4 12l16-7-6 16-3-7z"/>',
+    arrows: '<path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
+    mouse: '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3.5"/>',
+    user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+    bag: '<path d="M5.5 8.5h13l-1 11.2a1.5 1.5 0 0 1-1.5 1.3H8a1.5 1.5 0 0 1-1.5-1.3z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>'
+  };
+  const icon = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+  document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon) + el.innerHTML; });
+
+  const LOGOS = {
+    scarostv: '<svg class="logo" viewBox="0 0 256 256" style="aspect-ratio:1" aria-hidden="true"><defs><radialGradient id="stv0" cx=".1" cy=".1" r=".7"><stop offset="0" stop-color="#00c2d1" stop-opacity=".95"/><stop offset="1" stop-color="#00c2d1" stop-opacity="0"/></radialGradient><radialGradient id="stv1" cx=".9" cy=".2" r=".6"><stop offset="0" stop-color="#2f6bff"/><stop offset="1" stop-color="#2f6bff" stop-opacity="0"/></radialGradient><radialGradient id="stv2" cx=".8" cy=".95" r=".7"><stop offset="0" stop-color="#4b1fb8" stop-opacity=".9"/><stop offset="1" stop-color="#4b1fb8" stop-opacity="0"/></radialGradient></defs><rect width="256" height="256" rx="57" fill="#06204a"/><rect width="256" height="256" rx="57" fill="url(#stv0)"/><rect width="256" height="256" rx="57" fill="url(#stv1)"/><rect width="256" height="256" rx="57" fill="url(#stv2)"/><path d="M128 99.2 L112.2 66.8 M128 99.2 L146.5 75.5" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="112.2" cy="66.8" r="5.2" fill="#fff"/><circle cx="146.5" cy="75.5" r="5.2" fill="#fff"/><path d="M128.9 191.2C152.9 191.2 169.6 179.2 169.6 160.8C169.6 147.4 161.1 139.4 142.6 135.7L125.2 132.3C118.1 130.8 114 127.8 114 123.1C114 117.6 119.3 113.4 128.1 113.4C137.2 113.4 143.4 118.8 143.6 126.2H167.3C166.8 107.1 151.2 95.2 127.4 95.2C103.5 95.2 88.5 106.7 88.5 124C88.5 138.3 98 147.4 115.8 150.8L131.9 154C139.3 155.4 143.8 158.3 143.8 163.2C143.8 168.8 138 172.8 128.5 172.8C118.5 172.8 112.6 168 111.6 160H86.4C88 179.8 105.1 191.2 128.9 191.2Z" fill="#fff"/></svg>',
+    youtube: '<svg class="logo" viewBox="0 0 28 20" style="aspect-ratio:28/20" aria-hidden="true"><rect width="28" height="20" rx="5.6" fill="#ff0033"/><path d="M11.2 5.6v8.8l7.6-4.4z" fill="#fff"/></svg>',
+    jellyfin: '<svg class="logo" viewBox="20 18 483 483" style="aspect-ratio:1" aria-hidden="true"><defs><linearGradient id="jf" x1="110.25" y1="213.3" x2="496.14" y2="436.09" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aa5cc3"/><stop offset="1" stop-color="#00a4dc"/></linearGradient></defs><path fill="url(#jf)" d="M261.42 201.62c-20.44 0-86.24 119.29-76.2 139.43s142.48 19.92 152.4 0S281.86 201.63 261.42 201.62z"/><path fill="url(#jf)" d="M261.42 23.3C199.83 23.3 1.57 382.73 31.8 443.43s429.34 60 459.24 0S323 23.3 261.42 23.3zM411.9 390.76c-19.59 39.33-281.08 39.77-300.9 0S221.1 115.48 261.45 115.48 431.49 351.42 411.9 390.76z"/></svg>',
+    plex: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1f1f1f"/><path d="M6.6 3.8h5.4l6 8.2-6 8.2H6.6l6-8.2z" fill="#ebaf00"/></svg>',
+    twitch: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#9146ff"/><g transform="translate(4.2 4.2) scale(.65)"><path d="M6.857 1.714h13.714v9.429l-3.428 3.428h-3.429l-3 3v-3H6.857z" fill="#fff"/><path fill="#9146ff" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></g></svg>',
+    steamlink: '<svg class="logo" viewBox="0 0 24 24" style="aspect-ratio:1" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#1b2838"/><circle cx="15" cy="9" r="3.7" fill="none" stroke="#fff" stroke-width="1.7"/><circle cx="15" cy="9" r="1.6" fill="#66c0f4"/><path d="M8.3 15.5l5-4.3" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/><circle cx="8.1" cy="15.7" r="2.3" fill="#fff"/></svg>'
+  };
+
+  let apps = { scarostv: { name: 'Scaros TV' }, youtube: { name: 'YouTube' }, jellyfin: { name: 'Jellyfin' }, plex: { name: 'Plex' }, steamlink: { name: 'Steam Link' }, twitch: { name: 'Twitch' } };
+  const SHORT = { steamlink: 'Steam', scarostv: 'Scaros' };  // 6 chaînes sur une ligne : noms courts
+  let current = null, shown = false, volume = null, muted = false, airplay = null;
+
+  let toastTimer;
+  function toast(text) {
+    const t = $('#toast');
+    t.textContent = text; t.classList.add('on');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2400);
+  }
+
+  // Connexion : un seul flux d'événements, fermé quand la page passe en arrière-plan
+  // (téléphone verrouillé, autre appli) et rouvert au retour. Sinon le navigateur garde des
+  // connexions fantômes et finit par bloquer les boutons.
+  function setOnline(on) {
+    $('#conn').classList.toggle('online', on);
+    $('#conn-text').textContent = on ? 'Connecté' : 'Hors ligne';
+    $('#offline').hidden = on;
+  }
+  function post(path, body, quiet) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 4000);
+    return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store', signal: ctl.signal })
+      .then(r => { if (!r.ok) throw new Error(r.status); setOnline(true); return r.json(); })
+      .catch(e => {
+        setOnline(false);
+        if (!quiet) toast('Scaros ne répond pas.');
+        openStream();
+        throw e;
+      })
+      .finally(() => clearTimeout(timer));
+  }
+  function send(action) {
+    if (navigator.vibrate) navigator.vibrate(10);
+    if (!es) { retry = 0; openStream(); }  // la connexion s'était coupée : on la rouvre tout de suite
+    post('/api/input', { action }).catch(() => {});
+  }
+
+  let es = null, retry = 0, retryTimer = null;
+  const visible = () => document.visibilityState === 'visible';
+  function openStream() {
+    if (es || !visible()) return;
+    clearTimeout(retryTimer);
+    es = new EventSource('/api/events');
+    es.onopen = () => { retry = 0; setOnline(true); refresh(); };
+    es.onerror = () => {
+      closeStream();
+      setOnline(false);
+      // vite au début (le Wi-Fi du téléphone se réveille en une seconde ou deux), puis plus calmement
+      retryTimer = setTimeout(openStream, retry < 8 ? Math.min(1500, 300 * 2 ** retry++) : (retry++, 5000));
+    };
+    es.onmessage = e => {
+      let m; try { m = JSON.parse(e.data); } catch (err) { return; }
+      if (m.type === 'app') {
+        if (m.state === 'running') { current = m.id; shown = false; }
+        else if (m.state === 'shown') { if (current === m.id) shown = true; }
+        else if (current === m.id) current = null;
+        renderNow();
+        if (m.state === 'missing') toast(`${(apps[m.id] || {}).name || m.id} n’est pas installé.`);
+        else if (m.state === 'failed') toast(`${(apps[m.id] || {}).name || m.id} n’a pas pu démarrer.`);
+        else if (m.state === 'offline') toast(`${(apps[m.id] || {}).name || m.id} ne répond pas.`);
+      }
+      else if (m.type === 'home') { current = null; renderNow(); }
+      else if (m.type === 'volume') { muted = !!m.muted; renderVol(m.level); }
+      else if (m.type === 'airplay') { airplay = m.state === 'mirroring' ? (m.device || 'iPhone') : null; renderNow(); }
+      else if (m.type === 'mouse') { if (!!m.on !== mouseMode) setMode(!!m.on); }
+      else if ((m.type === 'accounts' || m.type === 'media') && m.accounts) { accounts = { ...(accounts || {}), ...m.accounts }; renderAccounts(); }
+      else if (m.type === 'toast' && (!$('#acc').hidden || !$('#store').hidden)) toast(m.text || '');
+      else if (m.type === 'store' && storeData) {
+        storeData.catalog.forEach(e => { e.job = (m.jobs || {})[e.id] || null; if (m.icons && m.icons[e.id]) e.icon = m.icons[e.id]; });
+        renderStore();
+      }
+      else if (m.type === 'apps') { apps = m.apps || apps; renderChannels(); if (!$('#store').hidden) openStore(); }
+    };
+  }
+  function closeStream() {
+    if (es) { es.close(); es = null; }
+  }
+  function refresh() {
+    // état léger : la réponse arrive tout de suite, même pendant une recherche Wi-Fi ou Bluetooth
+    fetch('/api/state?lite=1', { cache: 'no-store' }).then(r => r.json()).then(s => {
+      if (s.remoteBuild && BUILD && !BUILD.startsWith('__') && s.remoteBuild !== BUILD) return newVersion();
+      apps = s.apps; current = s.app; shown = !!s.shown; muted = !!s.muted;
+      airplay = s.airplay && s.airplay.state === 'mirroring' ? (s.airplay.device || 'iPhone') : null;
+      renderChannels(); renderNow(); renderVol(s.volume); setOnline(true);
+      if (!!s.mouse !== mouseMode) setMode(!!s.mouse);
+    }).catch(() => setOnline(false));
+  }
+  // la page vient du cache du téléphone (ouverture instantanée) : après une mise à jour de Scaros,
+  // on télécharge la nouvelle et on recharge, une seule fois
+  const BUILD = (document.querySelector('meta[name="scaros-build"]') || {}).content || '';
+  function newVersion() {
+    let tried = '';
+    try { tried = sessionStorage.getItem('scaros-reload') || ''; } catch (e) {}
+    if (tried === BUILD) return;
+    try { sessionStorage.setItem('scaros-reload', BUILD); } catch (e) {}
+    fetch('/remote', { cache: 'reload' }).catch(() => {}).finally(() => location.reload());
+  }
+  function wakeUp() {
+    if (!visible()) return;
+    retry = 0;
+    openStream();
+    post('/api/hello', {}, true).catch(() => {});
+  }
+  document.addEventListener('visibilitychange', () => { if (visible()) { wakeUp(); mouseSock(); } else { closeStream(); closeSock(); } });
+  addEventListener('pagehide', closeStream);
+  addEventListener('pageshow', wakeUp);
+  addEventListener('online', wakeUp);
+  setInterval(() => { if (visible()) post('/api/hello', {}, true).catch(() => {}); }, 15000);
+
+  // ---------- App Store ----------
+  let storeData = null;
+  function openStore() {
+    $('#store').hidden = false;
+    fetch('/api/store', { cache: 'no-store' }).then(r => r.json()).then(d => { storeData = d; renderStore(); }).catch(() => toast('Scaros ne répond pas.'));
+  }
+  function renderStore() {
+    const box = $('#store-body'), d = storeData;
+    if (!d || $('#store').hidden) return;
+    const keep = {};
+    box.querySelectorAll('input').forEach(i => { keep[i.id] = i.value; });
+    const ico = (name, color, icon) => `<span class="ico" style="--c:${color || '#5b7bff'}"><b>${esc((name || '?').charAt(0))}</b>${icon ? `<img src="${esc(icon)}" alt="" onerror="this.remove()">` : ''}</span>`;
+    const mine = Object.entries(apps).filter(([, a]) => a.store);
+    const btn = e => e.job ? `<button type="button" class="btn ghost" aria-disabled="true">${e.job.state === 'removing' ? 'Suppression…' : e.job.progress != null ? e.job.progress + ' %' : 'Installation…'}</button>`
+      : e.inMenu ? `<button type="button" class="btn ok" aria-disabled="true">Installée</button>`
+      : `<button type="button" class="btn" data-st="install:${e.id}">${e.installed ? 'Ajouter' : 'Installer'}</button>`;
+    box.innerHTML = `
+      ${mine.length ? `<section class="acc"><h2>Tes applis</h2>${mine.map(([id, a]) => `<div class="st-row">${ico(a.name, a.color, a.icon ? '/api/appicon/' + encodeURIComponent(id) : null)}
+        <div class="txt"><b>${esc(a.name)}</b><span>${a.web ? esc((d.web.find(w => w.id === id) || {}).url || 'Site web') : 'Installée depuis l’App Store'}</span></div>
+        <button type="button" class="btn ghost" data-st="remove:${id}">${a.web ? 'Retirer' : 'Désinstaller'}</button></div>`).join('')}</section>` : ''}
+      <section class="acc"><h2>Ajouter un site web</h2>
+        <input id="web-url" type="url" placeholder="Adresse, ex. www.arte.tv" autocapitalize="off" spellcheck="false">
+        <input id="web-name" placeholder="Nom (facultatif)" autocapitalize="words">
+        <div class="row"><button type="button" class="btn" data-st="web">Ajouter</button></div>
+        <p class="help">Il s’ouvre en plein écran sur la télé, comme Twitch. Netflix, Disney+ et Prime Video ne marchent pas (protection des vidéos).</p>
+      </section>
+      ${d.categories.map(([k, n]) => `<section class="acc"><h2>${esc(n)}</h2>${d.catalog.filter(e => e.cat === k).map(e => `<div class="st-row">${ico(e.name, e.color, e.icon)}
+        <div class="txt"><b>${esc(e.name)}</b><span>${esc(e.desc)}</span></div>${btn(e)}</div>`).join('')}</section>`).join('')}`;
+    for (const [id, v] of Object.entries(keep)) { const i = document.getElementById(id); if (i && v) i.value = v; }
+  }
+  $('#store-open').addEventListener('click', openStore);
+  $('#store-close').addEventListener('click', () => { $('#store').hidden = true; });
+  $('#store-body').addEventListener('click', e => {
+    const b = e.target.closest('[data-st]');
+    if (!b || b.getAttribute('aria-disabled') === 'true') return;
+    const [k, id] = b.dataset.st.split(':');
+    if (k === 'install') {
+      const it = storeData.catalog.find(x => x.id === id);
+      if (it) { it.job = { state: 'installing', progress: null }; renderStore(); }
+      postLong('/api/store/install', { id }).then(r => { if (r.error) toast(r.error); }).catch(() => {});
+    } else if (k === 'remove') {
+      postLong('/api/store/uninstall', { id }).then(r => { if (r.error) toast(r.error); }).catch(() => {});
+    } else if (k === 'web') {
+      const url = (document.getElementById('web-url').value || '').trim(), name = (document.getElementById('web-name').value || '').trim();
+      if (!url) return toast('Tape d’abord l’adresse du site.');
+      postLong('/api/store/web', { url, name }).then(r => {
+        if (!r.ok) return toast(r.error || 'Adresse refusée.');
+        document.getElementById('web-url').value = ''; document.getElementById('web-name').value = '';
+        toast('Ajouté au bout de la bande des applis.');
+      }).catch(() => {});
+    }
+  });
+
+  // ---------- Comptes ----------
+  let accounts = null, spAuth = null;
+  const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // les vérifications (Overseerr, serveur Plex) peuvent prendre quelques secondes
+  function postLong(path, body) {
+    return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' })
+      .then(r => r.json()).catch(e => { toast('Scaros ne répond pas.'); throw e; });
+  }
+  function openAccounts() {
+    $('#acc').hidden = false;
+    fetch('/api/accounts', { cache: 'no-store' }).then(r => r.json()).then(a => {
+      accounts = a; renderAccounts();
+      if (a.spotify && a.spotify.configured && !a.spotify.connected) fetchAuth();
+    }).catch(() => toast('Scaros ne répond pas.'));
+  }
+  function fetchAuth() {
+    postLong('/api/accounts/spotify', { action: 'auth' }).then(r => { spAuth = r.url || null; renderAccounts(); }).catch(() => {});
+  }
+  function renderAccounts() {
+    const box = $('#acc-body'), a = accounts;
+    if (!a || $('#acc').hidden) return;
+    // ce qui est en cours de frappe survit à la mise à jour de l'état
+    const keep = {}, focused = document.activeElement && document.activeElement.id;
+    box.querySelectorAll('input:not([readonly])').forEach(i => { keep[i.id] = i.value; });
+    const px = a.plex || {}, ov = a.overseerr || {}, sp = a.spotify || {};
+    const cs = { on: 'Spotify Connect activé : « Scaros » est dans la liste des appareils de l’appli Spotify.', off: 'Spotify Connect désactivé (Réglages › Comptes sur la télé).',
+      missing: 'Spotify Connect : spotifyd manque sur le PC (lance scaros-update).', error: 'Spotify Connect ne démarre pas sur le PC.', starting: 'Spotify Connect démarre…' }[sp.connect] || '';
+    box.innerHTML = `
+      <section class="acc"><h2>${LOGOS.plex}Plex</h2>
+        <p class="st${px.connected ? ' ok' : ''}">${px.connected ? `Connecté : ${esc(px.server || 'Plex')}` : 'Pas connecté'}</p>
+        ${px.error ? `<p class="err">${esc(px.error)}</p>` : ''}
+        ${px.link ? `<div class="code"><p>Sur plex.tv/link, tape ce code :</p><b>${esc(px.link.code)}</b><a class="btn" href="https://plex.tv/link" target="_blank" rel="noopener">Ouvrir plex.tv/link</a></div>` : ''}
+        <div class="row">${px.connected ? '<button type="button" class="btn ghost" data-acc="plex-link">Reconnecter</button><button type="button" class="btn ghost" data-acc="plex-logout">Déconnecter</button>'
+          : `<button type="button" class="btn" data-acc="plex-link">${px.link ? 'Nouveau code' : 'Connecter Plex'}</button>`}</div>
+        <details><summary>Adresse et jeton à la main (si le code ne trouve pas ton serveur)</summary>
+          <input id="px-server" type="url" placeholder="http://192.168.1.20:32400" autocapitalize="off" spellcheck="false">
+          <input id="px-token" type="password" placeholder="Jeton X-Plex-Token" autocapitalize="off" spellcheck="false">
+          <div class="row"><button type="button" class="btn ghost" data-acc="plex-manual">Enregistrer</button></div></details>
+      </section>
+      <section class="acc"><h2>Overseerr</h2>
+        <p class="st${ov.connected ? ' ok' : ''}">${ov.connected ? `Connecté${ov.user ? ` : ${esc(ov.user)}` : ''}` : 'Pas connecté'}</p>
+        ${ov.error ? `<p class="err">${esc(ov.error)}</p>` : ''}
+        <input id="ov-url" type="url" placeholder="http://192.168.1.20:5055" autocapitalize="off" spellcheck="false" value="${esc(ov.url || '')}">
+        <input id="ov-key" type="password" placeholder="Clé API" autocapitalize="off" spellcheck="false">
+        <div class="row"><button type="button" class="btn" data-acc="ov-save">${ov.connected ? 'Changer' : 'Connecter Overseerr'}</button>${ov.connected ? '<button type="button" class="btn ghost" data-acc="ov-logout">Déconnecter</button>' : ''}</div>
+        <p class="help">La clé : Overseerr (ou Jellyseerr) › Paramètres › Général › Clé API.</p>
+      </section>
+      <section class="acc"><h2>Spotify</h2>
+        <p class="st${sp.connected ? ' ok' : ''}">${sp.connected ? `Connecté${sp.user ? ` : ${esc(sp.user)}` : ''}` : sp.configured ? 'Client ID enregistré : il reste à te connecter' : 'Pas connecté'}</p>
+        ${sp.error ? `<p class="err">${esc(sp.error)}</p>` : ''}
+        ${sp.connected ? '<div class="row"><button type="button" class="btn ghost" data-acc="sp-logout">Déconnecter</button></div>'
+          : sp.configured ? `<div class="row"><a class="btn" ${spAuth ? `href="${esc(spAuth)}"` : 'aria-disabled="true"'} target="_blank" rel="noopener">Se connecter sur ce téléphone</a></div>
+              <p class="help">Après « Accepter », Safari affiche une page introuvable : c’est normal. Copie son adresse (elle commence par http://127.0.0.1), puis colle-la ici.</p>
+              <input id="sp-url" type="url" placeholder="http://127.0.0.1:8421/api/spotify/callback?code=…" autocapitalize="off" spellcheck="false">
+              <div class="row"><button type="button" class="btn ghost" data-acc="sp-code">Valider</button><button type="button" class="btn ghost" data-acc="sp-tv">Plutôt sur la télé</button></div>
+              <details><summary>Changer de Client ID</summary><input id="sp-client" placeholder="Client ID (32 caractères)" autocapitalize="off" spellcheck="false"><div class="row"><button type="button" class="btn ghost" data-acc="sp-client">Enregistrer</button></div></details>`
+          : `<ol><li>Ouvre <a class="link" href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com › Dashboard</a> et crée une appli (Create app).</li>
+              <li>Redirect URI : <b>${esc(sp.redirect || 'http://127.0.0.1:8421/api/spotify/callback')}</b></li><li>Coche « Web API », enregistre, puis copie le Client ID.</li></ol>
+              <input id="sp-redirect" readonly value="${esc(sp.redirect || '')}" aria-label="Redirect URI à copier">
+              <input id="sp-client" placeholder="Client ID (32 caractères)" autocapitalize="off" spellcheck="false">
+              <div class="row"><button type="button" class="btn" data-acc="sp-client">Enregistrer</button></div>
+              <p class="help">Il faut Spotify Premium. Rien n’est publié : l’appli reste en mode développement, pour toi seul.</p>`}
+        ${cs ? `<p class="help">${cs}</p>` : ''}
+      </section>`;
+    for (const [id, v] of Object.entries(keep)) { const i = document.getElementById(id); if (i && v) i.value = v; }
+    if (focused && document.getElementById(focused)) document.getElementById(focused).focus();
+  }
+  const val = id => ((document.getElementById(id) || {}).value || '').trim();
+  function accDone(r, okText) {
+    if (r.accounts) accounts = r.accounts;
+    if (r.ok === false || r.error) toast(r.error || 'Ça n’a pas marché.');
+    else if (okText) toast(okText);
+    renderAccounts();
+  }
+  $('#acc-open').addEventListener('click', openAccounts);
+  $('#acc-close').addEventListener('click', () => { $('#acc').hidden = true; });
+  $('#acc-body').addEventListener('focusin', e => { if (e.target.id === 'sp-redirect') e.target.select(); });
+  $('#acc-body').addEventListener('click', e => {
+    const b = e.target.closest('[data-acc]');
+    if (!b) return;
+    const k = b.dataset.acc;
+    if (k === 'plex-link') postLong('/api/accounts/plex', { action: 'link' }).then(r => accDone(r)).catch(() => {});
+    else if (k === 'plex-logout') postLong('/api/accounts/plex', { action: 'logout' }).then(r => accDone(r, 'Plex déconnecté.')).catch(() => {});
+    else if (k === 'plex-manual') postLong('/api/accounts/plex', { action: 'manual', server: val('px-server'), token: val('px-token') }).then(r => accDone(r, 'Plex connecté.')).catch(() => {});
+    else if (k === 'ov-save') {
+      if (!val('ov-url') || !val('ov-key')) return toast('Adresse et clé API, s’il te plaît.');
+      toast('Vérification…');
+      postLong('/api/accounts/overseerr', { url: val('ov-url'), key: val('ov-key') }).then(r => accDone(r, 'Overseerr est connecté.')).catch(() => {});
+    }
+    else if (k === 'ov-logout') postLong('/api/accounts/overseerr', { action: 'logout' }).then(r => accDone(r, 'Overseerr déconnecté.')).catch(() => {});
+    else if (k === 'sp-client') postLong('/api/accounts/spotify', { clientId: val('sp-client') }).then(r => { accDone(r, 'Client ID enregistré.'); if (r.ok) fetchAuth(); }).catch(() => {});
+    else if (k === 'sp-code') {
+      if (!val('sp-url')) return toast('Colle d’abord l’adresse de la page.');
+      postLong('/api/accounts/spotify', { action: 'code', url: val('sp-url') }).then(r => accDone(r, 'Spotify est connecté.')).catch(() => {});
+    }
+    else if (k === 'sp-tv') postLong('/api/accounts/spotify', { action: 'tv' }).then(r => accDone(r, 'La page de Spotify s’ouvre sur la télé : tape avec le clavier d’ici.')).catch(() => {});
+    else if (k === 'sp-logout') postLong('/api/accounts/spotify', { action: 'logout' }).then(r => accDone(r, 'Spotify déconnecté.')).catch(() => {});
+  });
+
+  function renderChannels() {
+    $('#channels').innerHTML = Object.entries(apps).slice(0, 6).map(([id, a], i) =>
+      `<button type="button" class="chan" data-a="ch${i + 1}" aria-disabled="${a.installed === false}" aria-label="${a.name}">${LOGOS[id] || ''}<span>${SHORT[id] || a.name}</span></button>`).join('');
+  }
+  function renderNow() {
+    const name = current ? (apps[current] || {}).name || { plexweb: 'Plex', spotifylogin: 'Spotify' }[current] || current : null;
+    $('#now-app').textContent = airplay ? `recopie de ${airplay}` : !name ? 'le menu' : shown ? name : `ouverture de ${name}…`;
+  }
+  function renderVol(level) {
+    if (level != null) volume = level;
+    if (volume == null) return;
+    $('#vol-num').textContent = muted ? 'muet' : volume;
+    $('#level').classList.toggle('muted', muted);
+    $('#level').setAttribute('aria-label', muted ? 'Son coupé : touche pour le remettre' : `Volume ${volume} % : touche pour couper le son`);
+  }
+
+  // pavé tactile : glisser = flèches (un glissé long en fait plusieurs), toucher = la zone touchée
+  const pad = $('#dpad');
+  // un glissé = un déplacement ; il faut glisser plus loin pour en enchaîner d'autres
+  const FIRST_STEP = 28, NEXT_STEP = 110;
+  let g = null;
+  function zoneAt(x, y) {
+    const r = pad.getBoundingClientRect();
+    const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
+    if (Math.hypot(dx, dy) < r.width * 0.2) return 'ok';
+    return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  }
+  const clearHl = () => pad.querySelectorAll('.hl').forEach(b => b.classList.remove('hl'));
+  function flash(a) {
+    const b = pad.querySelector(`[data-a="${a}"]`);
+    if (!b) return;
+    b.classList.add('hl'); setTimeout(() => b.classList.remove('hl'), 140);
+  }
+  // fin d'un appui : aussi quand le téléphone passe en arrière-plan en plein appui (appel,
+  // notification), sinon la répétition continuerait à envoyer des flèches jusqu'au retour
+  function endGesture() {
+    if (!g) return;
+    clearTimeout(g.hold); clearInterval(g.rep); clearHl();
+    g = null;
+  }
+  const holds = new Set();  // boutons maintenus (volume) : arrêtés au passage en arrière-plan
+  document.addEventListener('visibilitychange', () => { if (!visible()) { endGesture(); endTouch(); holds.forEach(stop => stop()); } });
+  pad.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    endGesture();
+    pad.setPointerCapture(e.pointerId);
+    const zone = zoneAt(e.clientX, e.clientY);
+    g = { x: e.clientX, y: e.clientY, moved: false, steps: 0, zone, hold: null, rep: null };
+    const b = pad.querySelector(`[data-a="${zone}"]`);
+    if (b) b.classList.add('hl');
+    // rester appuyé sur une flèche : ça défile
+    if (zone !== 'ok') g.hold = setTimeout(() => { g.moved = true; send(zone); g.rep = setInterval(() => send(zone), 140); }, 450);
+  });
+  pad.addEventListener('pointermove', e => {
+    if (!g) return;
+    const dx = e.clientX - g.x, dy = e.clientY - g.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < (g.steps ? NEXT_STEP : FIRST_STEP)) return;
+    clearTimeout(g.hold); clearInterval(g.rep); clearHl();
+    const a = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+    g.moved = true; g.steps++; g.x = e.clientX; g.y = e.clientY;
+    send(a); flash(a);
+  });
+  pad.addEventListener('pointerup', () => {
+    if (!g) return;
+    clearTimeout(g.hold); clearInterval(g.rep);
+    if (!g.moved) send(g.zone);
+    clearHl();
+    g = null;
+  });
+  pad.addEventListener('pointercancel', endGesture);
+
+  // ---------- mode souris : le pavé devient un trackpad ----------
+  // Un doigt déplace le curseur (plus vite quand on glisse vite), une touche = clic, un appui
+  // long ou une touche à deux doigts = clic droit, deux doigts = défiler (avec élan). Les gestes
+  // partent par une connexion WebSocket gardée ouverte, sans attendre de réponse.
+  const tpad = $('#tpad'), dot = $('#touch');
+  let mouseMode = false;
+  function setMode(on, tell) {
+    mouseMode = !!on;
+    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.mode === 'mouse') === mouseMode)));
+    tpad.hidden = !mouseMode;
+    pad.hidden = mouseMode;
+    $('#hint').textContent = mouseMode ? 'Touche pour cliquer · 2 doigts pour défiler · appui long : clic droit'
+      : 'Glisse pour te déplacer · touche OK pour valider';
+    endGesture(); endTouch();
+    if (mouseMode) mouseSock(); else closeSock();
+    if (tell) post('/api/mouse', { on: mouseMode }).catch(() => {});
+  }
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    const on = b.dataset.mode === 'mouse';
+    if (on === mouseMode) return;
+    if (navigator.vibrate) navigator.vibrate(10);
+    setMode(on, true);
+  }));
+
+  let sock = null, sockRetry = null, sockFails = 0, backlog = [], posting = false;
+  function mouseSock() {
+    if (sock || !mouseMode || !visible()) return;
+    clearTimeout(sockRetry);
+    let ws;
+    try { ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/mouse`); } catch (e) { sockFails++; return; }
+    let opened = false;
+    sock = ws;
+    ws.onopen = () => {
+      opened = true; sockFails = 0;
+      if (backlog.length) ws.send(backlog.splice(0).join('\n'));
+    };
+    ws.onclose = () => {
+      if (sock !== ws) return;
+      sock = null;
+      if (!opened) sockFails++;
+      if (backlog.length) flushPost();
+      if (mouseMode && visible()) sockRetry = setTimeout(mouseSock, sockFails > 3 ? 5000 : 800);
+    };
+  }
+  function closeSock() {
+    clearTimeout(sockRetry);
+    if (sock) { const ws = sock; sock = null; ws.close(); }
+  }
+  setInterval(() => { if (sock && sock.readyState === 1) sock.send('k'); }, 20000);
+  function mouseSend(line) {
+    if (sock && sock.readyState === 1) { sock.send(line); return; }
+    backlog.push(line);
+    if (backlog.length > 90) backlog.splice(0, backlog.length - 90);
+    if (!sock) mouseSock();
+    // WebSocket qui ne passe pas (réseau, proxy) : les gestes partent par requêtes groupées
+    if (!sock || sockFails >= 2) flushPost();
+  }
+  function flushPost() {
+    if (posting || !backlog.length) return;
+    posting = true;
+    post('/api/mouse', { events: backlog.splice(0) }, true).catch(() => {}).finally(() => { posting = false; if (backlog.length && !(sock && sock.readyState === 1)) flushPost(); });
+  }
+
+  // mouvements regroupés à chaque image (60 par seconde au plus)
+  let mx = 0, my = 0, sx = 0, sy = 0, frame = 0;
+  const schedule = () => { if (!frame) frame = requestAnimationFrame(flushMoves); };
+  function flushMoves() {
+    if (frame) cancelAnimationFrame(frame);
+    frame = 0;
+    const ix = Math.trunc(mx), iy = Math.trunc(my), jx = Math.trunc(sx), jy = Math.trunc(sy);
+    mx -= ix; my -= iy; sx -= jx; sy -= jy;
+    if (ix || iy) mouseSend(`m ${ix} ${iy}`);
+    if (jx || jy) mouseSend(`s ${jx} ${jy}`);
+  }
+  function click(btn) {
+    flushMoves();
+    mouseSend(`c ${btn}`);
+    if (navigator.vibrate) navigator.vibrate(btn === 'right' ? [10, 40, 10] : 8);
+    tpad.classList.add('clicked');
+    setTimeout(() => tpad.classList.remove('clicked'), 140);
+  }
+
+  const touches = new Map();   // doigts posés : id -> dernière position
+  let tg = null, glide = 0;    // geste en cours ; élan du défilement
+  function showDot(e) {
+    const r = tpad.getBoundingClientRect();
+    dot.style.left = (e.clientX - r.left) + 'px'; dot.style.top = (e.clientY - r.top) + 'px';
+    dot.classList.add('on');
+  }
+  function endTouch() {
+    touches.clear();
+    if (tg) clearTimeout(tg.hold);
+    tg = null;
+    cancelAnimationFrame(glide); glide = 0;
+    dot.classList.remove('on');
+  }
+  tpad.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    try { tpad.setPointerCapture(e.pointerId); } catch (err) {}
+    cancelAnimationFrame(glide); glide = 0;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const now = performance.now();
+    if (!tg) tg = { start: now, t: now, moved: 0, fingers: 0, hold: null, done: false, sx: 0, sy: 0, trail: [] };
+    tg.fingers = Math.max(tg.fingers, touches.size);
+    clearTimeout(tg.hold);
+    // appui long sans bouger : clic droit
+    if (touches.size === 1) tg.hold = setTimeout(() => { if (tg && tg.moved < 10 && touches.size === 1) { tg.done = true; click('right'); } }, 550);
+    if (touches.size === 1) showDot(e);
+  });
+  tpad.addEventListener('pointermove', e => {
+    const p = touches.get(e.pointerId);
+    if (!p || !tg) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    const now = performance.now(), dt = Math.max(4, now - tg.t);
+    tg.t = now;
+    tg.moved += Math.hypot(dx, dy);
+    if (tg.moved > 10) clearTimeout(tg.hold);
+    if (touches.size >= 2) {
+      // deux doigts : la page suit les doigts, comme sur l'iPhone (chaque doigt compte pour sa part)
+      const k = 3 / touches.size;
+      sx -= dx * k; sy -= dy * k;
+      // vitesse pour l'élan : mesurée sur les 100 dernières ms (les deux doigts bougent ensemble)
+      tg.sx -= dx * k; tg.sy -= dy * k;
+      tg.trail.push([now, tg.sx, tg.sy]);
+      while (tg.trail.length > 2 && now - tg.trail[0][0] > 100) tg.trail.shift();
+      schedule();
+    } else if (tg.fingers === 1 && !tg.done) {
+      const v = Math.hypot(dx, dy) / dt;  // vitesse du doigt, en px par ms
+      const gain = 1.2 + 2.4 * Math.min(1, Math.max(0, (v - 0.12) / 1.1));
+      mx += dx * gain; my += dy * gain;
+      schedule();
+    }
+    if (touches.keys().next().value === e.pointerId) showDot(e);
+  });
+  function touchEnd(e) {
+    if (!touches.delete(e.pointerId) || touches.size || !tg) return;
+    const g = tg;
+    clearTimeout(g.hold);
+    tg = null;
+    dot.classList.remove('on');
+    if (g.done) return;
+    if (performance.now() - g.start < 300 && g.moved < 12) { click(g.fingers >= 2 ? 'right' : 'left'); return; }
+    // défilement lancé : il continue un peu et ralentit
+    const first = g.trail[0], end = g.trail[g.trail.length - 1];
+    const span = first && end ? end[0] - first[0] : 0;
+    if (g.fingers >= 2 && span > 20 && performance.now() - g.t < 80) {
+      let vx = (end[1] - first[1]) / span, vy = (end[2] - first[2]) / span, last = performance.now();
+      if (Math.hypot(vx, vy) < 0.4) return;
+      const step = t => {
+        const d = Math.min(40, t - last); last = t;
+        sx += vx * d; sy += vy * d;
+        flushMoves();
+        vx *= Math.pow(0.92, d / 16); vy *= Math.pow(0.92, d / 16);
+        glide = Math.hypot(vx, vy) > 0.05 ? requestAnimationFrame(step) : 0;
+      };
+      glide = requestAnimationFrame(step);
+    }
+  }
+  tpad.addEventListener('pointerup', touchEnd);
+  tpad.addEventListener('pointercancel', e => { touches.delete(e.pointerId); if (!touches.size) endTouch(); });
+
+  // autres touches : réaction immédiate, répétition si on reste appuyé (volume)
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest('[data-a]');
+    if (!b || b.closest('form') || b.closest('#dpad')) return;
+    e.preventDefault();
+    const a = b.dataset.a;
+    b.classList.add('down');
+    send(a);
+    let t2;
+    const t1 = b.hasAttribute('data-repeat') ? setTimeout(() => { t2 = setInterval(() => send(a), 140); }, 420) : null;
+    const stop = () => {
+      clearTimeout(t1); clearInterval(t2); b.classList.remove('down'); holds.delete(stop);
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.removeEventListener(ev, stop));
+    };
+    holds.add(stop);
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, stop));
+  });
+  document.addEventListener('keydown', e => {
+    const b = e.target.closest && e.target.closest('[data-a]');
+    if (b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); send(b.dataset.a); }
+  });
+
+  $('#type').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = $('#text'), text = input.value.trim();
+    if (!text) return;
+    post('/api/text', { text }).then(() => { input.value = ''; input.blur(); toast('Envoyé à l’écran'); }).catch(() => {});
+  });
+
+  // installer sur l'écran d'accueil (Safari : Partager › Sur l'écran d'accueil)
+  const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let dismissed = false;
+  try { dismissed = localStorage.getItem('scaros-install-hint') === 'off'; } catch (e) {}
+  if (!standalone && !dismissed && matchMedia('(pointer: coarse)').matches) {
+    $('#install-text').textContent = ios
+      ? 'Garde la télécommande sur ton iPhone : touche Partager, puis « Sur l’écran d’accueil ».'
+      : 'Garde la télécommande sur ton téléphone : menu du navigateur, puis « Ajouter à l’écran d’accueil ».';
+    $('#install').hidden = false;
+    // ouverte par son adresse IP ? si scaros.local répond, mieux vaut l'installer depuis ce nom, qui ne change pas
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(location.hostname)) {
+      const ctl = new AbortController();
+      setTimeout(() => ctl.abort(), 2500);
+      fetch(`http://scaros.local:${location.port || 80}/api/ping`, { signal: ctl.signal, cache: 'no-store' })
+        .then(r => r.json()).then(() => {
+          const p = $('#install-text');
+          const a = document.createElement('a');
+          a.href = `http://scaros.local:${location.port || 80}/remote`;
+          a.textContent = 'scaros.local';
+          p.append(' Avant, ouvre plutôt ', a, ' : l’appli marchera même si l’adresse du PC change.');
+        }).catch(() => {});
+    }
+  }
+  $('#install-x').addEventListener('click', () => {
+    $('#install').hidden = true;
+    try { localStorage.setItem('scaros-install-hint', 'off'); } catch (e) {}
+  });
+
+  renderChannels();
+  refresh();
+  openStream();
+})();
+</script>
+</html>

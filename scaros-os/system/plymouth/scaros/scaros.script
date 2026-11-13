@@ -1,0 +1,98 @@
+# Scaros OS : écran de démarrage, dans le même style que l'animation du menu.
+# Dans le noir, une lueur se lève et le symbole se pose en grandissant légèrement.
+# Ses deux fentes s'allument en ambre avec un halo qui déborde puis se calme,
+# « scaros » monte doucement dessous, puis les fentes « respirent » jusqu'à ce que
+# le menu prenne le relais. Mêmes places que dans le menu (symbole de 220 px sur 1080).
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+w = Window.GetWidth();
+h = Window.GetHeight();
+size = h * 0.203;
+if (size > w * 0.3) size = w * 0.3;
+x = Window.GetX() + (w - size) / 2;
+y = Window.GetY() + h * 0.361;
+cx = x + size / 2;
+cy = y + size / 2;
+
+# lueur blanche très douce derrière le logo
+halo.size = size * 3.6;
+halo.sprite = Sprite(Image("halo.png").Scale(halo.size, halo.size));
+halo.sprite.SetPosition(cx - halo.size / 2, cy - halo.size / 2, 0);
+halo.sprite.SetOpacity(0);
+
+# halo ambre des fentes (image déjà floutée, plus grande que le symbole)
+glow.size = size * 1.5;
+glow.sprite = Sprite(Image("glow.png").Scale(glow.size, glow.size));
+glow.sprite.SetPosition(cx - glow.size / 2, cy - glow.size / 2, 1);
+glow.sprite.SetOpacity(0);
+
+slots.sprite = Sprite(Image("slots.png").Scale(size, size));
+slots.sprite.SetPosition(x, y, 2);
+slots.sprite.SetOpacity(0);
+
+# le symbole se pose en grandissant de 88 % à 100 % : quelques tailles préparées d'avance
+body.raw = Image("symbol.png");
+body.steps = 8;
+for (i = 0; i <= body.steps; i++)
+{
+  s = 0.88 + 0.12 * i / body.steps;
+  body.image[i] = body.raw.Scale(size * s, size * s);
+}
+body.sprite = Sprite(body.image[0]);
+body.sprite.SetPosition(cx - size * 0.44, cy - size * 0.44, 3);
+body.sprite.SetOpacity(0);
+body.shown = 0;
+
+word.raw = Image("word.png");
+word.width = size * 0.8667;
+word.image = word.raw.Scale(word.width, word.width * word.raw.GetHeight() / word.raw.GetWidth());
+word.x = Window.GetX() + (w - word.width) / 2;
+word.y = y + size * 1.29;
+word.sprite = Sprite(word.image);
+word.sprite.SetPosition(word.x, word.y + h * 0.012, 3);
+word.sprite.SetOpacity(0);
+
+fun clamp (v)
+{
+  if (v < 0) return 0;
+  if (v > 1) return 1;
+  return v;
+}
+
+# départ vif, arrivée tout en douceur (comme cubic-bezier(.16, 1, .3, 1) dans le menu)
+fun ease (v)
+{
+  v = clamp(v);
+  return 1 - (1 - v) * (1 - v) * (1 - v) * (1 - v);
+}
+
+t = 0;
+fun refresh_callback ()
+{
+  t++;                                          # environ 50 images par seconde
+  halo.sprite.SetOpacity(ease((t - 8) / 90));
+
+  k = ease((t - 18) / 55);
+  body.sprite.SetOpacity(k);
+  i = Math.Int(k * body.steps + 0.5);
+  if (i != body.shown)
+  {
+    body.shown = i;
+    s = 0.88 + 0.12 * i / body.steps;
+    body.sprite.SetImage(body.image[i]);
+    body.sprite.SetPosition(cx - size * s / 2, cy - size * s / 2, 3);
+  }
+
+  slots.sprite.SetOpacity(ease((t - 60) / 25));
+  if (t < 62) g = 0;
+  else if (t < 80) g = 0.95 * ease((t - 62) / 18);
+  else if (t < 140) g = 0.95 - 0.63 * ease((t - 80) / 60);
+  else g = 0.32 + 0.1 * Math.Sin((t - 140) / 35);    # respiration lente
+  glow.sprite.SetOpacity(g);
+
+  r = ease((t - 100) / 55);
+  word.sprite.SetOpacity(r);
+  word.sprite.SetY(word.y + h * 0.012 * (1 - r));
+}
+Plymouth.SetRefreshFunction(refresh_callback);

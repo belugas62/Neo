@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Scaros
+Description=Logo Scaros OS pendant le démarrage
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/scaros
+ScriptFile=/usr/share/plymouth/themes/scaros/scaros.script

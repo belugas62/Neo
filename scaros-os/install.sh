@@ -1,0 +1,357 @@
+#!/usr/bin/env bash
+# Installe Scaros OS sur un Debian 13 (trixie) minimal, fraîchement installé.
+#
+#   su -                 # passe en root (mot de passe root choisi pendant l'installation)
+#   bash install.sh
+#
+# Le script peut être relancé sans risque : il refait seulement ce qui manque.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEST=/opt/scaros
+FLATPAKS=(rocks.shy.VacuumTube org.jellyfin.JellyfinDesktop tv.plex.PlexHTPC com.valvesoftware.SteamLink)
+
+step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
+warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; WARNINGS+=("$*"); }
+die()  { printf '\033[1;31m[x] %s\033[0m\n' "$*"; exit 1; }
+WARNINGS=()
+
+[ "$(id -u)" -eq 0 ] || die "Lance ce script en root : tape « su - », puis « bash $HERE/install.sh »."
+[ "$(uname -m)" = x86_64 ] || die "Ce script vise un PC 64 bits (x86_64)."
+# shellcheck source=/dev/null
+. /etc/os-release
+[ "${ID:-}" = debian ] || warn "Script prévu pour Debian 13. Système détecté : ${PRETTY_NAME:-inconnu}."
+
+USER_NAME="${SCAROS_USER:-$(getent passwd 1000 | cut -d: -f1 || true)}"
+[ -n "$USER_NAME" ] || die "Aucun utilisateur trouvé. Crée-en un, ou lance : SCAROS_USER=nom bash install.sh"
+USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
+echo "Scaros va démarrer automatiquement sur le compte « $USER_NAME »."
+
+export DEBIAN_FRONTEND=noninteractive
+apt_install() { apt-get install -y --no-install-recommends "$@"; }
+
+write_polkit_rule() {
+  # le compte de la box gère Wi-Fi, Bluetooth, alimentation, applis et mises à jour sans mot de passe
+  mkdir -p /etc/polkit-1/rules.d
+  cat > /etc/polkit-1/rules.d/50-scaros.rules <<EOF
+// Scaros OS : le compte « $1 » pilote le Wi-Fi, l'alimentation, les applis et les mises à jour depuis le menu.
+polkit.addRule(function (action, subject) {
+  if (subject.user != "$1") return;
+  if (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
+      action.id.indexOf("org.freedesktop.login1.") == 0 ||
+      action.id.indexOf("org.freedesktop.Flatpak.") == 0) {
+    return polkit.Result.YES;
+  }
+  if (action.id == "org.freedesktop.systemd1.manage-units" &&
+      (action.lookup("unit") == "scaros-update.service" || action.lookup("unit") == "scaros-diag.service") &&
+      action.lookup("verb") == "start") {
+    return polkit.Result.YES;
+  }
+});
+EOF
+}
+
+# Spotify Connect : spotifyd (programme officiel du projet, publié sur GitHub). « Scaros » apparaît alors
+# dans la liste des appareils de l'appli Spotify (compte Premium) et le son sort par Scaros.
+SPOTIFYD_URL="https://github.com/Spotifyd/spotifyd/releases/download/v0.4.2/spotifyd-linux-x86_64-full.tar.gz"
+install_spotifyd() {
+  [ -x /usr/local/bin/spotifyd ] && return 0
+  local t; t="$(mktemp -d)"
+  if wget -q -O "$t/spotifyd.tar.gz" "$SPOTIFYD_URL" && tar -xzf "$t/spotifyd.tar.gz" -C "$t" \
+      && [ -n "$(find "$t" -type f -name spotifyd | head -n1)" ]; then
+    install -m 755 "$(find "$t" -type f -name spotifyd | head -n1)" /usr/local/bin/spotifyd
+    echo "Spotify Connect (spotifyd) installé."
+  else
+    warn "Téléchargement de spotifyd raté : Spotify Connect ne sera pas disponible (la musique du téléphone s'affichera quand même)."
+  fi
+  rm -rf "$t"
+  if [ -x /usr/local/bin/spotifyd ] && ldd /usr/local/bin/spotifyd 2>/dev/null | grep -q "not found"; then
+    warn "spotifyd : bibliothèques manquantes ($(ldd /usr/local/bin/spotifyd | grep 'not found' | awk '{print $1}' | xargs))."
+  fi
+}
+# réglages de spotifyd pour le compte de la box (gardés s'ils existent déjà)
+write_spotifyd_conf() {
+  local home="$1" user="$2" conf="$1/.config/spotifyd/spotifyd.conf"
+  [ -f "$conf" ] && return 0
+  install -d -o "$user" -g "$user" "$home/.config" "$home/.config/spotifyd"
+  cat > "$conf" <<'EOF'
+# Scaros OS : Spotify Connect. « Scaros » dans la liste des appareils de l'appli Spotify.
+[global]
+device_name = "Scaros"
+device_type = "t_v"
+backend = "pulseaudio"
+bitrate = 320
+initial_volume = 90
+volume_normalisation = true
+use_mpris = true
+dbus_type = "session"
+EOF
+  chown -R "$user:$user" "$home/.config/spotifyd"
+}
+
+# ---------------------------------------------------------------------------
+step "1/9 Paquets du système (affichage, son, manette, vidéo)"
+apt-get update
+apt_install \
+  xserver-xorg-core xserver-xorg-input-libinput xinit x11-xserver-utils xdotool openbox unclutter-xfixes \
+  chromium fonts-noto-core \
+  pipewire pipewire-pulse wireplumber pulseaudio-utils alsa-ucm-conf libspa-0.2-bluetooth \
+  intel-media-va-driver i965-va-driver vainfo \
+  bluez dbus-user-session polkitd playerctl \
+  python3 python3-evdev python3-qrcode \
+  python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-rsvg-2.0 fontconfig \
+  uxplay avahi-utils gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav \
+  gstreamer1.0-x gstreamer1.0-gl gstreamer1.0-pulseaudio \
+  curl ca-certificates wget flatpak plymouth avahi-daemon zram-tools wireless-tools iw openssh-server \
+  tcpdump iputils-arping
+
+# bibliothèques de spotifyd (Spotify Connect)
+apt_install libasound2t64 >/dev/null 2>&1 || apt_install libasound2 >/dev/null 2>&1 || true
+apt_install libpulse0 libdbus-1-3 >/dev/null 2>&1 || true
+
+# micrologiciels (son Intel SOF, Wi-Fi) : présents si la section non-free-firmware est activée
+for fw in firmware-sof-signed firmware-misc-nonfree firmware-iwlwifi firmware-realtek; do
+  apt_install "$fw" >/dev/null 2>&1 || warn "Micrologiciel $fw non installé (pas grave s'il n'est pas utile sur ce PC)."
+done
+
+# ---------------------------------------------------------------------------
+step "2/9 Wi-Fi géré par NetworkManager"
+apt_install network-manager
+IFACES=/etc/network/interfaces
+if grep -qE '^[[:space:]]*wpa-ssid' "$IFACES" 2>/dev/null; then
+  ssid="$(sed -nE 's/^[[:space:]]*wpa-ssid[[:space:]]+//p' "$IFACES" | head -n1)"
+  psk="$(sed -nE 's/^[[:space:]]*wpa-psk[[:space:]]+//p' "$IFACES" | head -n1)"
+  ssid="${ssid%\"}"; ssid="${ssid#\"}"; psk="${psk%\"}"; psk="${psk#\"}"
+  conf="/etc/NetworkManager/system-connections/scaros-wifi.nmconnection"
+  if [ -n "$ssid" ] && [ ! -f "$conf" ]; then
+    umask 077
+    {
+      printf '[connection]\nid=%s\ntype=wifi\nautoconnect=true\n\n' "$ssid"
+      printf '[wifi]\nmode=infrastructure\nssid=%s\n\n' "$ssid"
+      if [ -n "$psk" ]; then printf '[wifi-security]\nkey-mgmt=wpa-psk\npsk=%s\n\n' "$psk"; fi
+      printf '[ipv4]\nmethod=auto\n\n[ipv6]\nmethod=auto\n'
+    } > "$conf"
+    umask 022
+    cp -n "$IFACES" "$IFACES.avant-scaros"
+    # le Wi-Fi passe à NetworkManager au prochain démarrage
+    awk '/^(allow-hotplug|auto|iface)[[:space:]]+wl/ {wifi=1} /^(allow-hotplug|auto|iface)[[:space:]]+(lo|en|eth)/ {wifi=0} {print (wifi ? "# " : "") $0}' \
+      "$IFACES.avant-scaros" > "$IFACES"
+    echo "Wi-Fi « $ssid » repris par NetworkManager (copie de l'ancien réglage : $IFACES.avant-scaros)."
+  fi
+fi
+systemctl enable NetworkManager >/dev/null 2>&1 || true
+# sans économie d'énergie Wi-Fi, le portable reste joignable (télécommande, AirPlay, SSH) :
+# sinon la carte s'assoupit et le téléphone ne le trouve plus au bout d'un moment
+mkdir -p /etc/NetworkManager/conf.d
+printf '[connection]\nwifi.powersave = 2\n' > /etc/NetworkManager/conf.d/scaros-wifi.conf
+for dev in /sys/class/net/wl*; do
+  [ -e "$dev" ] && iw dev "$(basename "$dev")" set power_save off 2>/dev/null || true
+done
+wifi_modprobe="# Scaros : la carte Wi-Fi ne s'assoupit jamais (cartes Realtek et Intel)
+options rtw88_core disable_lps_deep=y
+options rtw89_core disable_ps_mode=y
+options iwlmvm power_scheme=1"
+printf '%s\n' "$wifi_modprobe" > /etc/modprobe.d/scaros-wifi.conf
+
+# ---------------------------------------------------------------------------
+step "3/9 Applis YouTube, Jellyfin, Plex et Steam Link (Flathub ; Twitch n'a besoin de rien), Spotify Connect"
+install_spotifyd
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+for app in "${FLATPAKS[@]}"; do
+  if flatpak info "$app" >/dev/null 2>&1; then
+    echo "$app déjà installé."
+  else
+    flatpak install -y --noninteractive flathub "$app" || warn "Installation de $app ratée. Relance install.sh plus tard."
+  fi
+done
+# décodage vidéo par la puce Intel aussi dans les applis Flatpak
+flatpak list --runtime --columns=application,branch 2>/dev/null | awk '$1=="org.freedesktop.Platform" {print $2}' | sort -u |
+  while read -r branch; do
+    flatpak install -y --noninteractive flathub "org.freedesktop.Platform.VAAPI.Intel//$branch" >/dev/null 2>&1 \
+      || echo "(pilote vidéo Intel pour le runtime $branch : déjà là ou indisponible)"
+  done
+
+# ---------------------------------------------------------------------------
+step "4/9 Fichiers de Scaros dans $DEST"
+mkdir -p "$DEST"
+rm -rf "$DEST/launcher" "$DEST/system"
+cp -r "$HERE/launcher" "$HERE/system" "$DEST/"
+chmod 755 "$DEST/system/session.sh" "$DEST/launcher/scaros.py" "$DEST/launcher/osd.py"
+install -m 755 "$HERE/update.sh" /usr/local/bin/scaros-update
+# dépôt GitHub d'où viendront les mises à jour (voir source.conf)
+[ -f "$HERE/source.conf" ] && install -D -m 644 "$HERE/source.conf" /etc/scaros/source.conf
+install -m 755 "$HERE/system/scaros-diag.sh" /usr/local/bin/scaros-diag
+mkdir -p /var/lib/scaros
+# mise à jour lancée depuis le menu (Réglages > À propos), en root, dans un service à part
+cat > /etc/systemd/system/scaros-update.service <<'EOF'
+[Unit]
+Description=Mise à jour de Scaros OS
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/scaros-update
+TimeoutStartSec=1800
+EOF
+# diagnostic réseau lancé depuis le menu (Réglages › Wi-Fi › Diagnostic réseau), en root
+cat > /etc/systemd/system/scaros-diag.service <<'EOF'
+[Unit]
+Description=Diagnostic réseau de Scaros OS
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/scaros-diag --service
+TimeoutStartSec=180
+EOF
+systemctl daemon-reload
+# polices du menu, aussi pour l'affichage par-dessus les applis
+rm -rf /usr/local/share/fonts/scaros
+mkdir -p /usr/local/share/fonts/scaros
+cp "$HERE"/launcher/ui/fonts/*.woff2 /usr/local/share/fonts/scaros/ 2>/dev/null && fc-cache -f >/dev/null 2>&1 || true
+mkdir -p /etc/chromium/policies/managed
+cat > /etc/chromium/policies/managed/scaros.json <<'EOF'
+{
+  "TranslateEnabled": false,
+  "PasswordManagerEnabled": false,
+  "BrowserSignin": 0,
+  "MetricsReportingEnabled": false,
+  "PromotionalTabsEnabled": false,
+  "DefaultBrowserSettingEnabled": false
+}
+EOF
+
+# ---------------------------------------------------------------------------
+step "5/9 Compte « $USER_NAME » : démarrage automatique de Scaros"
+write_polkit_rule "$USER_NAME"
+for g in input video render audio bluetooth; do
+  getent group "$g" >/dev/null && usermod -aG "$g" "$USER_NAME"
+done
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+cat > /etc/systemd/system/getty@tty1.service.d/scaros-autologin.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $USER_NAME --noclear --skip-login --nonewline --noissue %I \$TERM
+Type=idle
+EOF
+profile="$USER_HOME/.bash_profile"
+if [ ! -f "$profile" ]; then
+  # bash ne lit plus ~/.profile quand ~/.bash_profile existe : on le garde
+  printf '[ -f "$HOME/.profile" ] && . "$HOME/.profile"\n' > "$profile"
+fi
+if ! grep -q '>>> scaros >>>' "$profile"; then
+  cat >> "$profile" <<'EOF'
+
+# >>> scaros >>>
+# Lance Scaros sur l'écran principal. Pour l'empêcher une fois : crée le fichier ~/.scaros-off
+if [ -z "${DISPLAY:-}" ] && [ "$(tty)" = /dev/tty1 ] && [ ! -e "$HOME/.scaros-off" ]; then
+  mkdir -p "$HOME/.local/state/scaros"
+  exec startx /opt/scaros/system/session.sh -- -keeptty -nolisten tcp >"$HOME/.local/state/scaros/xorg.log" 2>&1
+fi
+# <<< scaros <<<
+EOF
+fi
+mkdir -p "$USER_HOME/.local/state/scaros"
+chown -R "$USER_NAME:$USER_NAME" "$profile" "$USER_HOME/.local"
+write_spotifyd_conf "$USER_HOME" "$USER_NAME"
+
+# ---------------------------------------------------------------------------
+step "6/9 Manette Bluetooth et nom réseau « scaros »"
+main_conf=/etc/bluetooth/main.conf
+if [ -f "$main_conf" ]; then
+  sed -i -E 's/^#?[[:space:]]*FastConnectable[[:space:]]*=.*/FastConnectable = true/;
+             s/^#?[[:space:]]*JustWorksRepairing[[:space:]]*=.*/JustWorksRepairing = always/;
+             s/^#?[[:space:]]*AutoEnable[[:space:]]*=.*/AutoEnable=true/' "$main_conf"
+fi
+echo "options bluetooth disable_ertm=Y" > /etc/modprobe.d/scaros-xbox.conf
+systemctl enable bluetooth >/dev/null 2>&1 || true
+if [ "$(hostname)" != scaros ]; then
+  old="$(hostname)"
+  hostnamectl set-hostname scaros
+  sed -i "s/\b$old\b/scaros/g" /etc/hosts
+fi
+# AirPlay : l'iPhone trouve Scaros grâce à Avahi (Bonjour). Il doit tourner et publier les
+# services (une option « disable-publishing » ou IPv4 coupé le rendrait invisible)
+avahi_conf=/etc/avahi/avahi-daemon.conf
+if [ -f "$avahi_conf" ]; then
+  sed -E 's/^[[:space:]]*disable-publishing[[:space:]]*=[[:space:]]*yes/disable-publishing=no/;
+          s/^[[:space:]]*use-ipv4[[:space:]]*=[[:space:]]*no/use-ipv4=yes/' "$avahi_conf" > "$avahi_conf.scaros"
+  if cmp -s "$avahi_conf" "$avahi_conf.scaros"; then rm -f "$avahi_conf.scaros"
+  else mv -f "$avahi_conf.scaros" "$avahi_conf"; systemctl restart avahi-daemon >/dev/null 2>&1 || true; fi
+fi
+systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
+# mode souris (télécommande et manette) : une souris virtuelle (uinput) que le compte de la box
+# a le droit de créer, sans accélération ajoutée par Xorg (la télécommande et la manette la calculent)
+echo uinput > /etc/modules-load.d/scaros-uinput.conf
+cat > /etc/udev/rules.d/60-scaros-uinput.rules <<'EOF'
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"
+EOF
+modprobe uinput 2>/dev/null || true
+udevadm control --reload-rules 2>/dev/null || true
+if [ -e /dev/uinput ]; then chgrp input /dev/uinput 2>/dev/null && chmod 660 /dev/uinput 2>/dev/null || true; fi
+mkdir -p /etc/X11/xorg.conf.d
+cat > /etc/X11/xorg.conf.d/40-scaros-souris.conf <<'EOF'
+# Scaros OS : souris virtuelle du mode souris, sans accélération (calculée par la télécommande)
+Section "InputClass"
+    Identifier "Scaros souris"
+    MatchProduct "Scaros souris"
+    Option "AccelProfile" "flat"
+    Option "AccelSpeed" "0"
+EndSection
+EOF
+
+# ---------------------------------------------------------------------------
+step "7/9 Portable fermé + télé : pas de mise en veille"
+mkdir -p /etc/systemd/logind.conf.d
+cat > /etc/systemd/logind.conf.d/scaros.conf <<'EOF'
+[Login]
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore
+EOF
+cat > /etc/default/zramswap <<'EOF'
+ALGO=zstd
+PERCENT=50
+EOF
+systemctl enable zramswap >/dev/null 2>&1 || true
+
+# ---------------------------------------------------------------------------
+step "8/9 Écran de démarrage Scaros"
+rm -rf /usr/share/plymouth/themes/scaros
+cp -r "$DEST/system/plymouth/scaros" /usr/share/plymouth/themes/scaros
+grep -qx i915 /etc/initramfs-tools/modules || echo i915 >> /etc/initramfs-tools/modules
+plymouth-set-default-theme scaros
+update-initramfs -u
+grub=/etc/default/grub
+if [ -f "$grub" ]; then
+  set_grub() { if grep -q "^$1=" "$grub"; then sed -i "s|^$1=.*|$1=$2|" "$grub"; else echo "$1=$2" >> "$grub"; fi; }
+  set_grub GRUB_TIMEOUT 0
+  set_grub GRUB_TIMEOUT_STYLE hidden
+  set_grub GRUB_CMDLINE_LINUX_DEFAULT '"quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false vt.global_cursor_default=0"'
+  update-grub
+else
+  warn "GRUB introuvable : l'écran de démarrage n'est pas activé."
+fi
+
+# ---------------------------------------------------------------------------
+step "9/9 Vérifications"
+vainfo --display drm --device /dev/dri/renderD128 2>/dev/null | grep -qi "VAProfileVP9" && echo "Décodage vidéo par la puce Intel : OK (VP9 disponible)." \
+  || warn "Le décodage vidéo matériel n'a pas pu être vérifié (normal tant que la session graphique n'a pas démarré)."
+for app in "${FLATPAKS[@]}"; do flatpak info "$app" >/dev/null 2>&1 || warn "$app manquant."; done
+[ -x /usr/local/bin/spotifyd ] || warn "spotifyd manquant : Scaros n'apparaîtra pas dans l'appli Spotify (relance install.sh)."
+
+echo
+if [ "${#WARNINGS[@]}" -gt 0 ]; then
+  printf '\033[1;33mÀ vérifier :\033[0m\n'
+  printf '  - %s\n' "${WARNINGS[@]}"
+  echo
+fi
+printf '\033[1;32mScaros OS est installé.\033[0m\n'
+echo "Étape suivante : appairer la manette Xbox."
+if [ -t 0 ]; then
+  read -r -p "L'appairer maintenant ? Mets-la en mode appairage (bouton au-dessus, 3 s) puis tape Entrée. [O/n] " answer
+  if [ "${answer:-o}" != n ] && [ "${answer:-o}" != N ]; then
+    systemctl start bluetooth || true
+    python3 "$DEST/launcher/scaros.py" --pair && echo "Manette appairée." || echo "Pas trouvée : tu pourras réessayer depuis Réglages > Manette."
+  fi
+fi
+echo "Redémarre avec la commande : reboot"
